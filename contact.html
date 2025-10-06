@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Contact — glö</title>
+<meta name="description" content="Get in touch with glö. Send a case via scans. Made in USA. Delivery in 7 business days." />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  /* Equal spacing above/below the cards, plus even vertical rhythm */
+  main.container.contact-stack { padding: 36px 0 40px; }
+  .contact-stack .card { margin: 6px 0; }
+</style>
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span><span class="wordmark">glö</span>
+      </div>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="work.html">Our Work</a>
+        <a href="about.html">About</a>
+        <a class="active" href="contact.html">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-hero">
+    <div class="container">
+      <h1>Contact & Send a Case</h1>
+      <p class="muted">Flat price. Fast turnaround. <b>Made in USA</b>. We promise delivery in <b>7 business days</b>. Our global design team enables overnight responsiveness; communication is fast and clear.</p>
+    </div>
+  </section>
+
+  <main class="container contact-stack">
+    <div class="grid" style="grid-template-columns: 1.2fr 1fr; gap:22px;">
+      <div class="card">
+        <h2 style="margin:0 0 8px">Send Scans Via Email</h2>
+        <p class="muted">Attach STL/PLY files, photos, shade, and notes. We’ll reply quickly with design confirmation and next steps.</p>
+        <p style="margin:12px 0 18px"><a class="btn primary" href="mailto:hello@glo.dental?subject=Case%20Submission%20—%20The%20Crown">Email hello@glo.dental</a></p>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap:12px;">
+          <div>
+            <div class="muted" style="font-size:14px; opacity:.85;">Phone</div>
+            <div class="card" style="padding:10px 12px;">+1 (000) 000-0000</div>
+          </div>
+          <div>
+            <div class="muted" style="font-size:14px; opacity:.85;">Delivery</div>
+            <div class="card" style="padding:10px 12px;">7 business days</div>
+          </div>
+        </div>
+        <div style="margin-top:14px">
+          <a class="btn glass" href="#">Download RX (PDF)</a>
+        </div>
+      </div>
+
+      <aside class="card">
+        <h3 style="margin-top:0">Submissions</h3>
+        <p class="muted"><b>Scans only</b> (no hard impressions). We support common formats (STL/PLY). We’ll ship the finished crown to your office.</p>
+        <h3>Communication</h3>
+        <p class="muted">Highly responsive team; global designers keep projects moving overnight.</p>
+        <h3>Address</h3>
+        <p class="muted">glö dental lab<br/>[Your street line]<br/>[City, ST ZIP] — <b>Made in USA</b></p>
+      </aside>
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">© <span id="year"></span> glö dental lab. All rights reserved.</div>
+  </footer>
+
+  <script src="main.js" defer></script>
+</body>
+</html>

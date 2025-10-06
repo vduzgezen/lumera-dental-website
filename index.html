@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>glö — The Crown</title>
+<meta name="description" content="glö dental lab — The Crown. $60 all-in. Zirconia perfected. Made in USA. Delivery in 7 business days." />
+<link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="wordmark">glö</span>
+      </div>
+      <nav>
+        <a href="index.html" class="active">Home</a>
+        <a href="work.html">Our Work</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+
+  <section class="hero">
+    <div class="orb" aria-hidden="true">
+      <svg viewBox="0 0 600 600">
+        <defs>
+          <radialGradient id="orb" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#BFF0FF" stop-opacity=".9"/>
+            <stop offset="38%" stop-color="#64D1FF" stop-opacity=".35"/>
+            <stop offset="100%" stop-color="#88FFEE" stop-opacity=".05"/>
+          </radialGradient>
+          <filter id="blur" x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="18"/>
+          </filter>
+        </defs>
+        <circle cx="300" cy="300" r="250" fill="url(#orb)" filter="url(#blur)"/>
+      </svg>
+    </div>
+
+    <div class="container hero-main">
+      <div>
+        <h1 class="reveal">The Crown</h1>
+        <p class="lede reveal">One product. $60 all-in. Zirconia perfected — no menus, no upsells, no confusion. The only crown you’ll need.</p>
+        <div class="cta-row reveal">
+          <a class="btn primary" href="contact.html">Send a case</a>
+          <a class="btn glass" href="#quality">See the craft</a>
+        </div>
+        <div class="hero-meta reveal">
+          <span class="dot"></span>
+          <span>Made in USA • Delivery in 7 business days • Precision fit • Natural translucency</span>
+        </div>
+      </div>
+
+      <div class="crown-card reveal" id="card3d" aria-label="Product card for The Crown">
+        <div class="crown-glow"></div>
+        <div class="card-top">
+          <div class="badge-row">
+            <span class="badge">Zirconia</span>
+            <span class="badge">Made in USA</span>
+            <span class="badge">7 business days</span>
+          </div>
+          <span class="price" aria-hidden="true">$60 <span style="opacity:.65;font-weight:600">all-in</span></span>
+        </div>
+
+        <!-- Transparent GIF -->
+        <div class="tooth-hero">
+          <img src="Images/CrownLoop.gif" alt="Rotating zirconia crown loop" class="tooth-gif" />
+        </div>
+
+        <!-- Four highlights -->
+        <div class="specs">
+          <div class="spec"><span>Strength</span><b>1200 MPa</b></div>
+          <div class="spec"><span>Translucency</span><b>43%</b></div>
+          <div class="spec"><span>Margin thickness</span><b>0.2 mm</b></div>
+          <div class="spec"><span>Yttrium</span><b>3Y composition</b></div>
+        </div>
+        <p class="legal">Made in USA. We promise delivery in 7 business days; complex clinical situations may adjust schedule.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="quality">
+    <div class="container">
+      <h2 class="section-title reveal">Quality without the complexity</h2>
+      <p class="muted reveal">We focus on one thing—zirconia crowns—so every step is tuned for repeatable excellence. Our globally distributed design team keeps work moving overnight; US manufacturing ensures consistent quality.</p>
+      <div class="cards">
+        <div class="card reveal"><h3>Microscopic fit</h3><p class="muted">Margins verified under magnification; designed for a consistent passive fit to reduce chairside adjustment.</p></div>
+        <div class="card reveal"><h3>Global design, local quality</h3><p class="muted">Overnight responsiveness from our global design team; <b>Made in USA</b> production for precision and reliability.</p></div>
+        <div class="card reveal"><h3>Always responsive</h3><p class="muted">A highly responsive team with clear communication at every step.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="container small">
+      © <span id="year"></span> glö dental lab. All rights reserved.
+    </div>
+  </footer>
+
+  <script src="main.js" defer></script>
+</body>
+</html>

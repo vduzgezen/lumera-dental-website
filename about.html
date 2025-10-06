@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>About — glö</title>
+<meta name="description" content="About glö dental lab — Founded by a Dentist, a Dental Group Owner, and a Biomedical/Software Engineer. Boutique origins serving 50+ clinics; now open to the public. Made in USA." />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  /* Page breathing room and header logo styling */
+  main.container.about-stack { padding: 36px 0 40px; }   /* equal space above/below card stack */
+  .about-stack .card { margin: 6px 0; }                  /* even rhythm between cards */
+
+  .logo-script{
+    font-family: "Miss Fajardose", cursive;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    font-size: 1.5em;           /* comparable to the H1 size */
+    line-height: 1;
+    display: inline-block;
+    transform: translateY(0px);  /* baseline alignment with 'About' */
+    margin-left: .25ch;
+  }
+
+  .founders { display:grid; grid-template-columns: repeat(3,1fr); gap:16px; }
+  @media (max-width: 960px){ .founders{ grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="wordmark">glö</span>
+      </div>
+      <nav>
+        <a href="index.html">Home</a>
+        <a href="work.html">Our Work</a>
+        <a class="active" href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-hero">
+    <div class="container">
+      <h1>About <span class="logo-script">Oria</span></h1>
+      <p class="muted">
+        We build one thing exceptionally well: zirconia crowns. When other restorations reach the efficiency and reliability of The Crown, we’ll add them. Never before.
+      </p>
+    </div>
+  </section>
+
+  <main class="container about-stack">
+    <div class="grid" style="grid-template-columns: 1fr; gap:28px;">
+
+      <section class="card">
+        <h2>Our Story</h2>
+        <p class="muted">
+          We started as a <b>boutique lab for personalized restorations</b>, a small team obsessed with detail and dependable seat times. As a private lab we served a network of <b>50+ clinics</b> in the Northeast (52 at launch) and refined a single workflow end to end. Today we’re opening to the public with that same craft and focus.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Founders</h2>
+        <div class="founders">
+          <div class="card" style="padding:16px;">
+            <h3 style="margin:0 0 6px;">Dentist</h3>
+            <p class="muted" style="margin:0;">Clinical Lead. Sets standards for margin capture, occlusion, contour, finish, and chairside simplicity.</p>
+          </div>
+          <div class="card" style="padding:16px;">
+            <h3 style="margin:0 0 6px;">Dental Group Owner</h3>
+            <p class="muted" style="margin:0;">Operations and Doctor Experience. Ensures submission clarity, communication speed, and predictable delivery.</p>
+          </div>
+          <div class="card" style="padding:16px;">
+            <h3 style="margin:0 0 6px;">Biomedical / Software Engineer</h3>
+            <p class="muted" style="margin:0;">Automation and QA. Operations, data flow, and reliability across production.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>How We Work</h2>
+        <p class="muted">
+          <b>Scans only</b> (STL/PLY), no hard impressions. Our globally distributed design team keeps projects moving overnight and answers questions quickly. Production is <b>Made in USA</b> for consistency and precision. We promise delivery in <b>7 business days</b>.
+        </p>
+        <p class="muted" style="margin-top:8px;">
+          Our design bench has <b>generational experience with top quality dentists</b>, pairing clinical nuance with modern automation. The result is a fast, clear, repeatable workflow.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Roadmap</h2>
+        <p class="muted">
+          As additional restorations meet our Crown-level efficiency and outcomes, we will add them methodically. Today <b>The Crown is $60 all-in</b>. Future products will launch with a single, simple price and the same clarity.
+        </p>
+      </section>
+
+    </div>
+  </main>
+
+  <footer>
+    <div class="container">© <span id="year"></span> glö dental lab. All rights reserved.</div>
+  </footer>
+
+  <script src="main.js" defer></script>
+</body>
+</html>

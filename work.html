@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Our Work — glö</title>
+<meta name="description" content="Explore glö cases: interactive STL designs on the left, finished results on the right." />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  /* Page-specific layout */
+  .work-grid{ display:grid; grid-template-columns: 1.1fr 1fr; gap:22px; }
+  @media (max-width: 1100px){ .work-grid{ grid-template-columns: 1fr; } }
+
+  .viewer-card, .gallery-card{ min-height: 520px; }
+  .viewer{ position:relative; height: 520px; border-radius:20px; overflow:hidden; background: rgba(255,255,255,.04); border:1px solid var(--border); }
+  .viewer canvas{ display:block; width:100%; height:100%; }
+
+  .dropzone{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    text-align:center; color:var(--ink-60); font-size:14px; padding:18px;
+    border:2px dashed rgba(255,255,255,.15); border-radius:18px;
+    background: repeating-linear-gradient(135deg, rgba(255,255,255,.03), rgba(255,255,255,.03) 10px, rgba(255,255,255,0) 10px, rgba(255,255,255,0) 20px);
+    pointer-events:none; opacity:.9;
+  }
+  .drop-hint{ font-weight:600; color:#fff; }
+  .dz-hidden{ display:none; }
+
+  .toolbar{
+    position:absolute; top:10px; left:10px; display:flex; gap:8px;
+    background: var(--glass); border:1px solid var(--border); border-radius:999px; padding:6px 8px;
+    backdrop-filter: blur(6px);
+  }
+  .tool-btn{ font-size:12px; padding:6px 10px; border-radius:999px; background:transparent; color:#fff; border:1px solid rgba(255,255,255,.15); cursor:pointer; }
+  .tool-btn:hover{ background:rgba(255,255,255,.08); }
+  .tool-btn.active{ background:#fff; color:#0c1115; }
+
+  .gallery{ display:grid; grid-template-rows: 340px auto; gap:12px; height: 520px; }
+  .hero-img{
+    width:100%; height:100%; object-fit:contain; border-radius:20px;
+    background: rgba(255,255,255,.04); border:1px solid var(--border);
+  }
+  .thumbs{
+    display:flex; gap:10px; overflow:auto; padding-bottom:6px;
+  }
+  .thumb{
+    width:120px; height:88px; flex:0 0 auto; border-radius:12px; overflow:hidden; border:1px solid var(--border);
+    background: rgba(255,255,255,.04); cursor:pointer;
+  }
+  .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .empty{
+    display:flex; align-items:center; justify-content:center; text-align:center;
+    color:var(--ink-60); font-size:14px; border-radius:20px; border:1px dashed rgba(255,255,255,.2);
+    background: rgba(255,255,255,.03);
+  }
+  .uploader{ display:flex; gap:8px; flex-wrap:wrap; }
+  .uploader .btn{ padding:10px 14px; }
+  input[type="file"]{ display:none; }
+</style>
+</head>
+<body>
+  <header class="nav">
+    <div class="container nav-inner">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span class="wordmark">glö</span>
+      </div>
+      <nav>
+        <a href="index.html">Home</a>
+        <a class="active" href="work.html">Our Work</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="page-hero">
+    <div class="container">
+      <h1>Our Work</h1>
+      <p class="muted">Interact with the <b>design</b> on the left (STL, fully rotatable) and browse <b>finished results</b> on the right. When you’re ready, drop your media into the project and this page will light up.</p>
+      <div class="uploader" style="margin-top:12px;">
+        <!-- Optional local testing without uploading to server -->
+        <label class="btn glass" for="stlInput">Load STL (local)</label>
+        <input id="stlInput" type="file" accept=".stl" />
+        <label class="btn glass" for="imgInput">Load images (local)</label>
+        <input id="imgInput" type="file" accept="image/*" multiple />
+      </div>
+      <p class="muted" style="margin-top:8px;">Deploy-ready paths (for later): put STL files in <code>/Gallery/models/</code> and images in <code>/Gallery/images/</code>, then wire them below (search for TODO in HTML).</p>
+    </div>
+  </section>
+
+  <main class="container work-grid">
+    <!-- LEFT: STL VIEWER -->
+    <section class="card viewer-card">
+      <h2 style="margin:0 0 10px;">Design (STL)</h2>
+      <div id="viewer" class="viewer">
+        <div id="dropzone" class="dropzone">
+          <div>
+            <div class="drop-hint">Drag & drop an STL here</div>
+            <div>or click “Load STL (local)” above</div>
+          </div>
+        </div>
+        <div class="toolbar">
+          <button id="spinBtn" class="tool-btn">Auto-spin</button>
+          <button id="resetBtn" class="tool-btn">Reset</button>
+          <button id="wireBtn" class="tool-btn">Wireframe</button>
+        </div>
+      </div>
+      <!-- TODO: To preload a hosted STL later, give it a path here:
+           <script>window.DEFAULT_STL = 'Gallery/models/case001.stl'</script>
+      -->
+    </section>
+
+    <!-- RIGHT: IMAGE GALLERY -->
+    <section class="card gallery-card">
+      <h2 style="margin:0 0 10px;">Finished product</h2>
+      <div class="gallery">
+        <img id="heroImg" class="hero-img" alt="Finished crown preview"
+             src="" onerror="this.style.display='none'; document.getElementById('imgEmpty').style.display='flex';" />
+        <div id="imgEmpty" class="empty">Drop images here or click “Load images (local)” to preview.</div>
+        <div id="thumbs" class="thumbs"></div>
+      </div>
+
+      <!-- TODO: To preload hosted images later, use something like this:
+      <script>
+        window.PRESET_IMAGES = [
+          'Gallery/images/case001_1.jpg',
+          'Gallery/images/case001_2.jpg',
+          'Gallery/images/case001_3.jpg'
+        ];
+      </script> -->
+    </section>
+  </main>
+
+  <footer>
+    <div class="container">© <span id="year"></span> glö dental lab. All rights reserved.</div>
+  </footer>
+
+  <!-- Site shared JS -->
+  <script src="main.js" defer></script>
+
+  <!-- Three.js STL viewer (module) -->
+  <script type="module">
+    import * as THREE from "https://unpkg.com/three@0.160.0/build/three.module.js";
+    import { OrbitControls } from "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js";
+    import { STLLoader } from "https://unpkg.com/three@0.160.0/examples/jsm/loaders/STLLoader.js";
+
+    const viewer = document.getElementById('viewer');
+    const dropzone = document.getElementById('dropzone');
+    const spinBtn = document.getElementById('spinBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const wireBtn = document.getElementById('wireBtn');
+    const fileInput = document.getElementById('stlInput');
+
+    // Scene
+    const scene = new THREE.Scene();
+    scene.background = null;
+
+    // Camera
+    const camera = new THREE.PerspectiveCamera(35, viewer.clientWidth / viewer.clientHeight, 0.1, 2000);
+    camera.position.set(0, 40, 140);
+
+    // Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setSize(viewer.clientWidth, viewer.clientHeight);
+    renderer.shadowMap.enabled = true;
+    viewer.appendChild(renderer.domElement);
+
+    // Lights
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x0a1020, 0.8);
+    scene.add(hemi);
+    const dir = new THREE.DirectionalLight(0xffffff, 1.0);
+    dir.position.set(60, 120, 80);
+    dir.castShadow = true;
+    scene.add(dir);
+    const rim = new THREE.DirectionalLight(0xbfe9ff, 0.5);
+    rim.position.set(-80, 60, -60);
+    scene.add(rim);
+
+    // Ground (soft)
+    const groundGeo = new THREE.CircleGeometry(120, 64);
+    const groundMat = new THREE.ShadowMaterial({ opacity: 0.25 });
+    const ground = new THREE.Mesh(groundGeo, groundMat);
+    ground.rotation.x = -Math.PI/2; ground.position.y = -30; ground.receiveShadow = true;
+    scene.add(ground);
+
+    // Controls
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.minDistance = 60;
+    controls.maxDistance = 260;
+    controls.target.set(0, 0, 0);
+
+    // Model state
+    let mesh = null, edges = null, autoSpin = false, wireframe = false;
+    const loader = new STLLoader();
+
+    function fitCameraToObject(obj, offset = 1.2) {
+      const box = new THREE.Box3().setFromObject(obj);
+      const size = new THREE.Vector3(); box.getSize(size);
+      const center = new THREE.Vector3(); box.getCenter(center);
+
+      // Recenter
+      obj.position.x += (obj.position.x - center.x);
+      obj.position.y += (obj.position.y - center.y);
+      obj.position.z += (obj.position.z - center.z);
+      THREE.SceneUtils && THREE.SceneUtils.retarget ? THREE.SceneUtils.retarget(obj, center) : obj.position.sub(center);
+
+      // Camera distance
+      const maxDim = Math.max(size.x, size.y, size.z);
+      const fov = camera.fov * (Math.PI / 180);
+      let dist = Math.abs(maxDim/2 / Math.tan(fov/2));
+      dist *= offset;
+      camera.position.set(dist, dist * 0.35, dist);
+      controls.target.set(0, 0, 0);
+      controls.update();
+    }
+
+    function clearModel(){
+      if(mesh){ scene.remove(mesh); mesh.geometry.dispose(); mesh.material.dispose(); mesh = null; }
+      if(edges){ scene.remove(edges); edges.geometry.dispose(); edges.material.dispose(); edges = null; }
+    }
+
+    function loadArrayBufferAsSTL(arrayBuffer){
+      clearModel();
+      const geometry = loader.parse(arrayBuffer);
+      geometry.computeVertexNormals();
+      // Material tuned to your brand vibe
+      const material = new THREE.MeshStandardMaterial({
+        color: 0x9de1ff, metalness: 0.0, roughness: 0.25, envMapIntensity: 0.6
+      });
+      mesh = new THREE.Mesh(geometry, material);
+      mesh.castShadow = true; mesh.receiveShadow = false;
+
+      // Edges overlay for crisp silhouette
+      const egeo = new THREE.EdgesGeometry(geometry, 20);
+      edges = new THREE.LineSegments(egeo, new THREE.LineBasicMaterial({ color: 0xffffff, opacity: 0.35, transparent: true }));
+
+      // Normalize & center
+      const box = new THREE.Box3().setFromObject(mesh);
+      const size = new THREE.Vector3(); box.getSize(size);
+      const scale = 80 / Math.max(size.x, size.y, size.z); // fit approx height 80
+      mesh.scale.setScalar(scale);
+      edges.scale.setScalar(scale);
+
+      // recenter to origin
+      const center = new THREE.Vector3(); box.getCenter(center);
+      mesh.position.sub(center.multiplyScalar(scale));
+      edges.position.copy(mesh.position);
+
+      scene.add(mesh); scene.add(edges);
+      fitCameraToObject(mesh, 1.3);
+      dropzone.classList.add('dz-hidden');
+    }
+
+    // Local file input
+    fileInput.addEventListener('change', async (e) => {
+      const file = e.target.files?.[0];
+      if(!file) return;
+      const buf = await file.arrayBuffer();
+      loadArrayBufferAsSTL(buf);
+    });
+
+    // Drag & drop
+    ['dragenter','dragover'].forEach(ev =>
+      viewer.addEventListener(ev, (e)=>{ e.preventDefault(); dropzone.classList.remove('dz-hidden'); }, false)
+    );
+    ['dragleave','drop'].forEach(ev =>
+      viewer.addEventListener(ev, (e)=>{ e.preventDefault(); if(ev==='dragleave') dropzone.classList.add('dz-hidden'); }, false)
+    );
+    viewer.addEventListener('drop', async (e) => {
+      const file = e.dataTransfer.files?.[0];
+      if(!file || !/\.stl$/i.test(file.name)) return;
+      const buf = await file.arrayBuffer();
+      loadArrayBufferAsSTL(buf);
+    });
+
+    // Optional: preload a hosted STL path if provided
+    if (window.DEFAULT_STL) {
+      fetch(window.DEFAULT_STL).then(r => r.arrayBuffer()).then(loadArrayBufferAsSTL).catch(()=>{ /* ignore */ });
+    }
+
+    // Toolbar
+    spinBtn.addEventListener('click', ()=>{ autoSpin = !autoSpin; spinBtn.classList.toggle('active', autoSpin); });
+    resetBtn.addEventListener('click', ()=>{ controls.reset(); });
+    wireBtn.addEventListener('click', ()=>{
+      wireframe = !wireframe;
+      if(mesh){ mesh.material.wireframe = wireframe; }
+      wireBtn.classList.toggle('active', wireframe);
+    });
+
+    // Render loop
+    function animate(){
+      requestAnimationFrame(animate);
+      if(autoSpin && mesh){ mesh.rotation.y += 0.01; edges.rotation.y += 0.01; }
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    animate();
+
+    // Resize
+    window.addEventListener('resize', ()=>{
+      const w = viewer.clientWidth, h = viewer.clientHeight;
+      camera.aspect = w / h; camera.updateProjectionMatrix();
+      renderer.setSize(w, h);
+    });
+
+    // ===== Image gallery (local preview + optional hosted) =====
+    const imgInput = document.getElementById('imgInput');
+    const heroImg = document.getElementById('heroImg');
+    const thumbs = document.getElementById('thumbs');
+    const imgEmpty = document.getElementById('imgEmpty');
+
+    function addImage(url){
+      if(imgEmpty) imgEmpty.style.display='none';
+      if(heroImg && !heroImg.src) { heroImg.src = url; heroImg.style.display='block'; }
+      const t = document.createElement('div'); t.className='thumb';
+      const im = document.createElement('img'); im.src = url; t.appendChild(im);
+      t.addEventListener('click', ()=>{ heroImg.src = url; });
+      thumbs.appendChild(t);
+    }
+
+    imgInput.addEventListener('change', (e)=>{
+      const files = Array.from(e.target.files || []);
+      files.forEach(f => addImage(URL.createObjectURL(f)));
+    });
+
+    // Drag & drop images into the right card
+    const galleryCard = document.querySelector('.gallery-card');
+    galleryCard.addEventListener('dragover', (e)=>{ e.preventDefault(); });
+    galleryCard.addEventListener('drop', (e)=>{
+      e.preventDefault();
+      const files = Array.from(e.dataTransfer.files || []).filter(f => /^image\//.test(f.type));
+      files.forEach(f => addImage(URL.createObjectURL(f)));
+    });
+
+    // Optional: preload hosted images
+    if (Array.isArray(window.PRESET_IMAGES)) {
+      window.PRESET_IMAGES.forEach(src => addImage(src));
+    }
+  </script>
+</body>
+</html>
