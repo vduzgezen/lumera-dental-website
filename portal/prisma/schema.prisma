@@ -1,0 +1,121 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  customer
+  lab
+  admin
+}
+
+enum CaseStatus {
+  NEW
+  IN_DESIGN
+  READY_FOR_REVIEW
+  CHANGES_REQUESTED
+  APPROVED
+  IN_MILLING
+  SHIPPED
+}
+
+enum FileKind {
+  STL
+  PHOTO
+  OTHER
+}
+
+// --- Production tracker ---
+enum ProductionStage {
+  DESIGN
+  MILLING_GLAZING
+  SHIPPING
+}
+
+model Clinic {
+  id    String       @id @default(cuid())
+  name  String
+  users User[]
+  cases DentalCase[] // <— updated
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  role      Role
+  clinicId  String?
+  clinic    Clinic?  @relation(fields: [clinicId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DentalCase {
+  id           String        @id @default(cuid())
+  clinicId     String
+  clinic       Clinic        @relation(fields: [clinicId], references: [id])
+  patientAlias String
+  toothCodes   String
+  material     String?
+  shade        String?
+  dueDate      DateTime?
+  status       CaseStatus    @default(NEW)
+  files        CaseFile[]
+  events       StatusEvent[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  stage      ProductionStage @default(DESIGN)
+  designedAt DateTime? // when design marked ready
+  milledAt   DateTime?
+  shippedAt  DateTime?
+
+  // --- Doctor review (optional) ---
+  needsReview       Boolean   @default(false)
+  reviewQuestion    String? // short prompt from designer to doctor
+  reviewRequestedAt DateTime?
+
+  // --- Shipping ---
+  shippingCarrier String?
+  trackingNumber  String?
+  shippingEta     DateTime?
+  CaseComment     CaseComment[]
+
+  @@map("Case") // keep underlying table name as "Case"
+}
+
+model CaseFile {
+  id        String     @id @default(cuid())
+  caseId    String
+  case      DentalCase @relation(fields: [caseId], references: [id]) // <— updated
+  kind      FileKind
+  url       String
+  sizeBytes Int?
+  createdAt DateTime   @default(now())
+}
+
+model StatusEvent {
+  id      String      @id @default(cuid())
+  caseId  String
+  case    DentalCase  @relation(fields: [caseId], references: [id])
+  from    CaseStatus?
+  to      CaseStatus
+  note    String? // ← NEW
+  at      DateTime    @default(now())
+  actorId String?
+}
+
+model CaseComment {
+  id        String     @id @default(cuid())
+  caseId    String
+  case      DentalCase @relation(fields: [caseId], references: [id])
+  authorId  String
+  body      String
+  createdAt DateTime   @default(now())
+}
