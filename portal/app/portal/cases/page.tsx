@@ -1,23 +1,20 @@
 // app/portal/cases/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 
-export const dynamic = "force-dynamic"; // avoid caching while developing
+export const dynamic = "force-dynamic";
 
 type CaseRow = {
   id: string;
   patientAlias: string;
   toothCodes: string;
-  status: string;        // we'll switch to $Enums.CaseStatus later
+  status: string;
   dueDate: Date | null;
   updatedAt: Date;
   clinic: { name: string };
 };
-
-function fmtDate(d?: Date | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString();
-}
 
 /** Picks the correct model getter no matter how Prisma named it */
 function getCaseModel(): any {
@@ -25,19 +22,19 @@ function getCaseModel(): any {
   return client.dentalCase ?? client.case ?? client.case_;
 }
 
+function fmtDate(d?: Date | null) {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString();
+}
+
 export default async function CasesPage() {
   const session = await getSession();
-  if (!session) {
-    return (
-      <main className="p-6 text-red-400">
-        <p>Unauthorized</p>
-      </main>
-    );
-  }
+  if (!session) return notFound();
 
-  const where =
-    session.role === "customer" && session.clinicId
-      ? { clinicId: session.clinicId }
+  // STRICT: doctors see only their own cases (no clinic fallback)
+  const where: any =
+    session.role === "customer"
+      ? { doctorUserId: session.userId ?? "__none__" }
       : {};
 
   const model = getCaseModel();
@@ -57,9 +54,21 @@ export default async function CasesPage() {
     },
   });
 
+  const canCreate = session.role === "lab" || session.role === "admin";
+
   return (
     <section>
-      <h1 className="text-2xl font-semibold mb-4">Cases</h1>
+      <header className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-semibold">Cases</h1>
+        {canCreate && (
+          <Link
+            href="/portal/cases/new"
+            className="px-3 py-1.5 rounded-lg bg-white text-black text-sm"
+          >
+            + New Case
+          </Link>
+        )}
+      </header>
 
       <div className="rounded-xl border border-white/10 overflow-hidden">
         <table className="w-full text-sm">

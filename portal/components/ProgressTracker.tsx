@@ -1,46 +1,69 @@
+// components/ProgressTracker.tsx
 "use client";
 
 type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING";
+type Role = "customer" | "lab" | "admin";
+
+const STAGES: Stage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING"];
 
 export default function ProgressTracker({
+  caseId,
   stage,
-  onClickStage,
+  role,
 }: {
+  caseId: string;
   stage: Stage;
-  onClickStage?: (s: Stage) => void;
+  role: Role;
 }) {
-  const order: Stage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING"];
-  const idx = order.indexOf(stage);
+  const activeIdx = STAGES.indexOf(stage);
+  const canAdvance = role === "lab" || role === "admin";
 
-  const label = (s: Stage) =>
-    s === "DESIGN" ? "Design"
-    : s === "MILLING_GLAZING" ? "Milling & Glazing"
-    : "Shipping";
+  async function goTo(idx: number) {
+    if (!canAdvance) return;
+    const target = STAGES[idx];
+    // Map stage click → a status we store for auditing
+    const to =
+      target === "DESIGN"
+        ? "IN_DESIGN"
+        : target === "MILLING_GLAZING"
+        ? "IN_MILLING"
+        : "SHIPPED";
+
+    await fetch(`/api/cases/${caseId}/transition`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ to }),
+    });
+    location.reload();
+  }
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center gap-2">
-        {order.map((s, i) => {
-          const active = i <= idx;
-          const common = "flex-1 h-2 rounded-full transition-colors";
+    <div className="rounded-xl border border-white/10 p-4">
+      <div className="flex items-center justify-between">
+        {STAGES.map((s, i) => {
+          const done = i < activeIdx;
+          const active = i === activeIdx;
           return (
             <button
               key={s}
               type="button"
-              onClick={() => onClickStage?.(s)}
-              title={label(s)}
-              aria-label={label(s)}
-              className={`${common} ${active ? "bg-white" : "bg-white/20"} ${
-                onClickStage ? "cursor-pointer" : "cursor-default"
-              }`}
-            />
+              onClick={() => goTo(i)}
+              className={[
+                "flex-1 mx-1 py-2 rounded-lg text-sm border",
+                active
+                  ? "bg-white text-black border-white"
+                  : done
+                  ? "bg-white/20 text-white border-white/20"
+                  : "bg-white/10 text-white/70 border-white/10",
+                canAdvance ? "cursor-pointer" : "cursor-default",
+              ].join(" ")}
+              disabled={!canAdvance}
+              title={canAdvance ? `Set stage to ${s}` : undefined}
+            >
+              {s.replace("_", " ")}
+            </button>
           );
         })}
-      </div>
-      <div className="flex justify-between text-xs text-white/70">
-        {order.map((s) => (
-          <span key={s}>{label(s)}</span>
-        ))}
       </div>
     </div>
   );

@@ -27,73 +27,95 @@ enum CaseStatus {
 
 enum FileKind {
   STL
+  PLY
+  OBJ
   PHOTO
   OTHER
 }
 
-// --- Production tracker ---
 enum ProductionStage {
   DESIGN
   MILLING_GLAZING
   SHIPPING
 }
 
+enum ProductKind {
+  ZIRCONIA
+  MULTILAYER_ZIRCONIA
+  EMAX
+  INLAY_ONLAY
+}
+
 model Clinic {
   id    String       @id @default(cuid())
   name  String
   users User[]
-  cases DentalCase[] // <— updated
+  cases DentalCase[]
 }
 
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
   password  String
+  name      String? // NEW: display name for doctors
   role      Role
   clinicId  String?
   clinic    Clinic?  @relation(fields: [clinicId], references: [id])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  doctorCases DentalCase[] @relation("DoctorCases")
 }
 
 model DentalCase {
-  id           String        @id @default(cuid())
-  clinicId     String
-  clinic       Clinic        @relation(fields: [clinicId], references: [id])
+  id       String @id @default(cuid())
+  clinicId String
+  clinic   Clinic @relation(fields: [clinicId], references: [id])
+
+  doctorUserId String?
+  doctorUser   User?   @relation("DoctorCases", fields: [doctorUserId], references: [id])
+
   patientAlias String
+  doctorName   String? // snapshot from User.name for display
   toothCodes   String
-  material     String?
-  shade        String?
-  dueDate      DateTime?
-  status       CaseStatus    @default(NEW)
-  files        CaseFile[]
-  events       StatusEvent[]
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+
+  orderDate DateTime    @default(now())
+  product   ProductKind @default(ZIRCONIA)
+
+  material String?
+  shade    String?
+  dueDate  DateTime?
+
+  status   CaseStatus    @default(IN_DESIGN)
+  files    CaseFile[]
+  events   StatusEvent[]
+  comments CaseComment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   stage      ProductionStage @default(DESIGN)
-  designedAt DateTime? // when design marked ready
+  designedAt DateTime?
   milledAt   DateTime?
   shippedAt  DateTime?
 
-  // --- Doctor review (optional) ---
   needsReview       Boolean   @default(false)
-  reviewQuestion    String? // short prompt from designer to doctor
+  reviewQuestion    String?
   reviewRequestedAt DateTime?
+  reviewDeadline    DateTime?
 
-  // --- Shipping ---
   shippingCarrier String?
   trackingNumber  String?
   shippingEta     DateTime?
-  CaseComment     CaseComment[]
 
-  @@map("Case") // keep underlying table name as "Case"
+  @@map("Case")
 }
 
 model CaseFile {
   id        String     @id @default(cuid())
   caseId    String
-  case      DentalCase @relation(fields: [caseId], references: [id]) // <— updated
+  case      DentalCase @relation(fields: [caseId], references: [id])
+  label     String? // 'scan' | 'design_with_model' | 'design_only'
   kind      FileKind
   url       String
   sizeBytes Int?
@@ -106,7 +128,7 @@ model StatusEvent {
   case    DentalCase  @relation(fields: [caseId], references: [id])
   from    CaseStatus?
   to      CaseStatus
-  note    String? // ← NEW
+  note    String?
   at      DateTime    @default(now())
   actorId String?
 }

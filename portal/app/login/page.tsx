@@ -4,8 +4,8 @@ import { useState } from "react";
 
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@lumera.dental");
-  const [password, setPassword] = useState("Passw0rd!");
+  const [email, setEmail] = useState("admin@lumera.test");
+  const [password, setPassword] = useState("password123");
   const [error, setError] = useState<string|undefined>();
   const router = useRouter();
 

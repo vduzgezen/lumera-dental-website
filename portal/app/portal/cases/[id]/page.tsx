@@ -1,17 +1,17 @@
-// app/portal/cases/[id]/page.tsx
-import { prisma } from "@/lib/prisma";
-import { getSession } from "@/lib/auth";
-import { notFound } from "next/navigation";
-import CaseActions from "@/components/CaseActions";
-import FileUploader from "@/components/FileUploader";
-import STLViewer from "@/components/STLViewer";
-import ProgressTracker from "@/components/ProgressTracker";
-import Comments from "@/components/Comments";
+import { prisma } from '@/lib/prisma';
+import { getSession } from '@/lib/auth';
+import { notFound } from 'next/navigation';
+import Link from 'next/link';
+import CaseActions from '@/components/CaseActions';
+import FileUploader from '@/components/FileUploader';
+import Case3DPanel from '@/components/Case3DPanel';
 
-export const dynamic = "force-dynamic";
+export const dynamic = 'force-dynamic';
+
+type Params = Promise<{ id: string }>;
 
 function fmtDate(d?: Date | null) {
-  if (!d) return "—";
+  if (!d) return '—';
   return new Date(d).toLocaleString();
 }
 
@@ -21,137 +21,115 @@ function getCaseModel(): any {
   return client.dentalCase ?? client.case ?? client.case_;
 }
 
-type Props = { params: { id: string } };
-
-export default async function CaseDetailPage({ params }: Props) {
+export default async function CaseDetailPage({
+  params,
+}: {
+  params: Params;
+}) {
+  const { id } = await params; // Next 15: params is async
   const session = await getSession();
   if (!session) return notFound();
 
   const model = getCaseModel();
 
   const item = await model.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       clinic: true,
-      files: true,
-      events: { orderBy: { at: "asc" } },
+      files: { orderBy: { createdAt: 'asc' } },
+      events: { orderBy: { at: 'asc' } },
     },
   });
 
   if (!item) return notFound();
 
-  // Customers can only view their own clinic’s cases
-  if (session.role === "customer" && session.clinicId !== item.clinicId) {
+  // Customers can only view their own clinic's cases (tighten further to doctorUserId if you’ve added it)
+  if (session.role === 'customer' && session.clinicId !== item.clinicId) {
     return notFound();
   }
 
-  const hasSTL = item.files.some((f: any) => f.kind === "STL");
-  const firstSTL = item.files.find((f: any) => f.kind === "STL");
+  // Choose an STL for the 3D preview if available
+  const firstStl = item.files.find((f: any) => f.kind === 'STL')?.url ?? null;
+
+  const isLabOrAdmin = session.role === 'lab' || session.role === 'admin';
 
   return (
     <section className="space-y-6">
-      {/* Top header */}
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold">{item.patientAlias}</h1>
-        <p className="text-white/70">
-          Clinic: {item.clinic.name} • Teeth: {item.toothCodes} • Status: {item.status}
-        </p>
-        <p className="text-white/50">Due: {fmtDate(item.dueDate)}</p>
-      </header>
-
-      {/* 3-part production tracker */}
-      <div className="rounded-xl border border-white/10 p-4">
-        <h2 className="font-medium mb-3">Production Progress</h2>
-        <ProgressTracker stage={item.stage as any} />
-        <div className="mt-3 grid gap-2 sm:grid-cols-3 text-sm text-white/80">
-          <div>
-            <div className="font-medium">Design</div>
-            <div>Designed: {fmtDate(item.designedAt)}</div>
-          </div>
-          <div>
-            <div className="font-medium">Milling &amp; Glazing</div>
-            <div>Milled/Glazed: {fmtDate(item.milledAt)}</div>
-          </div>
-          <div>
-            <div className="font-medium">Shipping</div>
-            <div>Shipped: {fmtDate(item.shippedAt)}</div>
-          </div>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold">{item.patientAlias}</h1>
+          <p className="text-white/70">
+            Clinic: {item.clinic.name} • Teeth: {item.toothCodes} • Status: {item.status}
+          </p>
+          <p className="text-white/50">Due: {fmtDate(item.dueDate)}</p>
         </div>
+
+        <Link
+          href="/portal/cases"
+          className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition"
+        >
+          ← Back to cases
+        </Link>
       </div>
 
-      {/* Main content grid */}
-      <div className="grid md:grid-cols-2 gap-4">
-        {/* Design & Files (viewer + photos + uploader) */}
-        <div className="rounded-xl border border-white/10 p-4" id="design-section">
-          <h2 className="font-medium mb-2">Design & Files</h2>
-
-          {/* Optional designer question for doctor review */}
-          {item.needsReview && item.reviewQuestion && (
-            <p className="mb-2 text-amber-300">Designer note: {item.reviewQuestion}</p>
-          )}
-
-          {/* STL viewer */}
-          {hasSTL ? (
-            <STLViewer url={firstSTL!.url} height={420} />
+      <div className="grid lg:grid-cols-3 gap-4">
+        {/* Left: Files list + uploaders */}
+        <div className="rounded-xl border border-white/10 p-4 lg:col-span-1">
+          <h2 className="font-medium mb-2">Files</h2>
+          {item.files.length === 0 ? (
+            <p className="text-white/60">No files yet.</p>
           ) : (
-            <p className="text-white/60 mb-2">No STL uploaded yet.</p>
+            <ul className="text-white/80 space-y-2">
+              {item.files.map((f: any) => (
+                <li key={f.id} className="flex items-center justify-between">
+                  <span>
+                    {f.kind} • <code className="text-xs">{f.url}</code>
+                  </span>
+                  <a
+                    href={f.url}
+                    target="_blank"
+                    className="underline text-sm"
+                    rel="noreferrer"
+                  >
+                    Open
+                  </a>
+                </li>
+              ))}
+            </ul>
           )}
 
-          {/* Image thumbnails */}
-          <div className="mt-3 grid grid-cols-2 md:grid-cols-3 gap-2">
-            {item.files.filter((f: any) => f.kind === "PHOTO").map((f: any) => (
-              <a key={f.id} href={f.url} target="_blank" className="block">
-                <img
-                  src={f.url}
-                  alt="case photo"
-                  className="w-full h-28 object-cover rounded-lg border border-white/10"
-                />
-              </a>
-            ))}
-            {item.files.filter((f: any) => f.kind === "PHOTO").length === 0 && (
-              <p className="text-white/60">No photos yet.</p>
-            )}
-          </div>
-
-          {/* Uploader (lab/admin only) */}
-          <div className="mt-4">
-            <FileUploader caseId={item.id} role={session.role as any} />
-          </div>
+          {/* ✅ Lab/Admin: three explicit uploaders with required props */}
+          {isLabOrAdmin && (
+            <div className="mt-4 space-y-3">
+              <FileUploader
+                caseId={item.id}
+                role={session.role as any}
+                slot="scan"
+              />
+              <FileUploader
+                caseId={item.id}
+                role={session.role as any}
+                slot="design_with_model"
+              />
+              <FileUploader
+                caseId={item.id}
+                role={session.role as any}
+                slot="design_only"
+              />
+              <p className="text-xs text-white/50 mt-2">
+                Re-uploads allowed while in DESIGN stage. Files are stored under <code>/public/uploads</code>.
+              </p>
+            </div>
+          )}
         </div>
 
-        {/* Order / Shipping info and Timeline */}
-        <div className="space-y-4">
-          <div className="rounded-xl border border-white/10 p-4">
-            <h2 className="font-medium mb-2">Order & Shipping</h2>
-            <ul className="text-white/80 space-y-1">
-              <li>Stage: <b>{item.stage}</b></li>
-              <li>Carrier: {item.shippingCarrier ?? "—"}</li>
-              <li>Tracking: {item.trackingNumber ?? "—"}</li>
-              <li>ETA: {fmtDate(item.shippingEta)}</li>
-            </ul>
-          </div>
-
-          <div className="rounded-xl border border-white/10 p-4">
-            <h2 className="font-medium mb-2">Status Timeline</h2>
-            {item.events.length === 0 ? (
-              <p className="text-white/60">No events yet.</p>
-            ) : (
-              <ol className="text-white/80 space-y-1">
-                {item.events.map((ev: any) => (
-                  <li key={ev.id}>
-                    {ev.from ? `${ev.from} → ` : ""}{ev.to}
-                    {" • "}
-                    {fmtDate(ev.at)}
-                    {ev.note ? <> — <span className="text-white/70">{ev.note}</span></> : null}
-                  </li>
-                ))}
-              </ol>
-            )}
-          </div>
+        {/* Middle/Right: 3D panel */}
+        <div className="lg:col-span-2">
+          <Case3DPanel url={firstStl} title="3D Preview (STL)" />
         </div>
       </div>
 
-      {/* Actions (Approve / Request Changes) */}
+      {/* Actions */}
       <div className="rounded-xl border border-white/10 p-4">
         <h2 className="font-medium mb-2">Actions</h2>
         <CaseActions
@@ -160,14 +138,24 @@ export default async function CaseDetailPage({ params }: Props) {
           currentStatus={item.status as any}
         />
         <p className="text-white/60 mt-2 text-sm">
-          Approve / Request Changes available now.
+          Approve / Request Changes updates the status timeline.
         </p>
       </div>
 
-      {/* Comments thread */}
+      {/* Status timeline */}
       <div className="rounded-xl border border-white/10 p-4">
-        <h2 className="font-medium mb-2">Comments</h2>
-        <Comments caseId={item.id} />
+        <h2 className="font-medium mb-2">Status Timeline</h2>
+        {item.events.length === 0 ? (
+          <p className="text-white/60">No events yet.</p>
+        ) : (
+          <ol className="text-white/80 space-y-1">
+            {item.events.map((ev: any) => (
+              <li key={ev.id}>
+                {ev.from ? `${ev.from} → ` : ''}{ev.to} • {fmtDate(ev.at)} {ev.note ? `— ${ev.note}` : ''}
+              </li>
+            ))}
+          </ol>
+        )}
       </div>
     </section>
   );

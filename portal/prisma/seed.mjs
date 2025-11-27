@@ -1,80 +1,69 @@
-// prisma/seed.mjs (ESM)
-import { PrismaClient } from '@prisma/client';
-import { hash } from '@node-rs/argon2';
+// prisma/seed.mjs
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
-function daysFromNow(n) {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return d;
-}
-
 async function main() {
-  // Clinic
-  const clinic = await prisma.clinic.upsert({
-    where: { id: 'seed-north' },
-    update: {},
-    create: { id: 'seed-north', name: 'North Dental' },
-  });
+  const clinics = await prisma.$transaction([
+    prisma.clinic.upsert({ where: { id: "seed-north" }, update: {}, create: { id: "seed-north", name: "North Dental" } }),
+    prisma.clinic.upsert({ where: { id: "seed-river" }, update: {}, create: { id: "seed-river", name: "River Smiles" } }),
+    prisma.clinic.upsert({ where: { id: "seed-harbor" }, update: {}, create: { id: "seed-harbor", name: "Harbor Family Dental" } }),
+  ]);
+  const [north, river, harbor] = clinics;
 
-  // Users
-  const pwHash = await hash('Passw0rd!', { memoryCost: 19456, timeCost: 2, parallelism: 1 });
+  const pw = await bcrypt.hash("password123", 10);
 
-  await prisma.user.upsert({
-    where: { email: 'admin@lumera.dental' },
-    update: {},
-    create: { email: 'admin@lumera.dental', password: pwHash, role: 'admin' },
-  });
-  await prisma.user.upsert({
-    where: { email: 'tech@lumera.dental' },
-    update: {},
-    create: { email: 'tech@lumera.dental', password: pwHash, role: 'lab' },
-  });
-  await prisma.user.upsert({
-    where: { email: 'doc@northdental.com' },
-    update: {},
-    create: { email: 'doc@northdental.com', password: pwHash, role: 'customer', clinicId: clinic.id },
-  });
+  await prisma.$transaction([
+    prisma.user.upsert({
+      where: { email: "dr.north.1@example.com" },
+      update: {},
+      create: { email: "dr.north.1@example.com", name: "Dr. North One", password: pw, role: "customer", clinicId: north.id },
+    }),
+    prisma.user.upsert({
+      where: { email: "dr.north.2@example.com" },
+      update: {},
+      create: { email: "dr.north.2@example.com", name: "Dr. North Two", password: pw, role: "customer", clinicId: north.id },
+    }),
+    prisma.user.upsert({
+      where: { email: "dr.river.1@example.com" },
+      update: {},
+      create: { email: "dr.river.1@example.com", name: "Dr. River One", password: pw, role: "customer", clinicId: river.id },
+    }),
+    prisma.user.upsert({
+      where: { email: "dr.river.2@example.com" },
+      update: {},
+      create: { email: "dr.river.2@example.com", name: "Dr. River Two", password: pw, role: "customer", clinicId: river.id },
+    }),
+    prisma.user.upsert({
+      where: { email: "dr.harbor.1@example.com" },
+      update: {},
+      create: { email: "dr.harbor.1@example.com", name: "Dr. Harbor One", password: pw, role: "customer", clinicId: harbor.id },
+    }),
+    prisma.user.upsert({
+      where: { email: "dr.harbor.2@example.com" },
+      update: {},
+      create: { email: "dr.harbor.2@example.com", name: "Dr. Harbor Two", password: pw, role: "customer", clinicId: harbor.id },
+    }),
 
-  // Cases
-  const cases = [
-    { patientAlias: 'PAT-001', toothCodes: '#19',   status: 'NEW',                dueDate: daysFromNow(3)  },
-    { patientAlias: 'PAT-002', toothCodes: '#8,#9', status: 'IN_DESIGN',          dueDate: daysFromNow(5)  },
-    { patientAlias: 'PAT-003', toothCodes: '#30',   status: 'READY_FOR_REVIEW',   dueDate: daysFromNow(2)  },
-    { patientAlias: 'PAT-004', toothCodes: '#14',   status: 'CHANGES_REQUESTED',  dueDate: daysFromNow(7)  },
-    { patientAlias: 'PAT-005', toothCodes: '#3',    status: 'APPROVED',           dueDate: daysFromNow(1)  },
-    { patientAlias: 'PAT-006', toothCodes: '#22',   status: 'IN_MILLING',         dueDate: daysFromNow(4)  },
-  ];
+    prisma.user.upsert({
+      where: { email: "lab@lumera.test" },
+      update: {},
+      create: { email: "lab@lumera.test", name: "Lumera Lab", password: pw, role: "lab" },
+    }),
+    prisma.user.upsert({
+      where: { email: "admin@lumera.test" },
+      update: {},
+      create: { email: "admin@lumera.test", name: "Lumera Admin", password: pw, role: "admin" },
+    }),
+  ]);
 
-  for (const c of cases) {
-    await prisma.dentalCase.create({
-      data: {
-        clinicId: clinic.id,
-        patientAlias: c.patientAlias,
-        toothCodes: c.toothCodes,
-        status: c.status,
-        dueDate: c.dueDate,
-        files: {
-          create: [{ kind: 'PHOTO', url: '/images/sample1.jpg' }],
-        },
-        events: {
-          create: [
-            { from: null, to: 'NEW' },
-            ...(c.status !== 'NEW' ? [{ from: 'NEW', to: c.status }] : []),
-          ],
-        },
-      },
-    });
-  }
+  console.log("Seed complete. Password for all: password123");
 }
 
-try {
-  await main();
-  console.log('Seed complete');
-} catch (e) {
-  console.error('Seed error:', e);
+main().catch((e) => {
+  console.error(e);
   process.exit(1);
-} finally {
+}).finally(async () => {
   await prisma.$disconnect();
-}
+});
