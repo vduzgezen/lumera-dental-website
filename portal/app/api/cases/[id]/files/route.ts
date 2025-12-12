@@ -5,31 +5,64 @@ import { getSession } from "@/lib/auth";
 import path from "node:path";
 import fs from "node:fs/promises";
 
+// Small helper: keep extension, clean base (no spaces, #, ?)
+function sanitizeFileName(original: string): string {
+  // Replace spaces with underscores
+  const noSpaces = original.replace(/\s+/g, "_");
+
+  const lastDot = noSpaces.lastIndexOf(".");
+  if (lastDot === -1) {
+    // No extension – just strip bad chars from whole string
+    return noSpaces.replace(/[?#]/g, "");
+  }
+
+  const base = noSpaces.slice(0, lastDot);
+  const ext = noSpaces.slice(lastDot); // includes the "."
+
+  // Remove URL-fragment-ish characters from the base
+  const cleanedBase = base.replace(/[?#]/g, "");
+
+  return cleanedBase + ext;
+}
+
 export async function POST(
   req: Request,
   ctx: { params: Promise<{ id: string }> }
 ) {
   const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   // ⬅️ Next.js 15: params is async
   const { id } = await ctx.params;
 
   const form = await req.formData();
-  const files = form.getAll("file");
-  const label = (form.get("label") as string) || "OTHER"; // SCAN | MODEL_PLUS_DESIGN | DESIGN_ONLY
-  const kind = (form.get("kind") as string) || "OTHER";   // Your enum mapping if needed
+
+  // Your client currently uses "files", but we also accept "file" as a fallback.
+  let files = form.getAll("files");
+  if (!files || files.length === 0) {
+    files = form.getAll("file");
+  }
+
+  const label = (form.get("label") as string) || "OTHER"; // e.g. "scan", "design_with_model", "design_only"
+  const kind = (form.get("kind") as string) || "OTHER";   // optional extra enum if you’re using it
 
   if (!files || files.length === 0) {
     return NextResponse.json({ error: "No files" }, { status: 400 });
   }
 
   const item = await prisma.dentalCase.findUnique({ where: { id } });
-  if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (!item) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
 
-  // Business rule: allow replacing SCAN only while in DESIGN stage (adjust if needed)
+  // (Optional) Stage rule – currently only wired for label === "SCAN"
   if (label === "SCAN" && item.stage !== "DESIGN") {
-    return NextResponse.json({ error: "Scan cannot be replaced after DESIGN stage" }, { status: 400 });
+    return NextResponse.json(
+      { error: "Scan cannot be replaced after DESIGN stage" },
+      { status: 400 }
+    );
   }
 
   const root = path.join(process.cwd(), "public", "uploads", id);
@@ -43,16 +76,17 @@ export async function POST(
     const arr = await file.arrayBuffer();
     const buf = Buffer.from(arr);
 
-    const name = file.name.replace(/\s+/g, "_");
-    const fullpath = path.join(root, name);
+    // ✅ Sanitize: keep extension (.stl/.ply/.obj), remove `#` etc from base
+    const safeName = sanitizeFileName(file.name || "file");
+    const fullpath = path.join(root, safeName);
     await fs.writeFile(fullpath, buf);
 
-    const publicUrl = `/uploads/${id}/${name}`;
+    const publicUrl = `/uploads/${id}/${safeName}`;
 
-    // Replace existing file(s) for this label
+    // ✅ One file per slot/label: replace existing entries
     await prisma.caseFile.deleteMany({ where: { caseId: id, label } });
 
-    const kindAny = kind as any; // keep loose if your enum is narrower
+    const kindAny = kind as any;
     const rec = await prisma.caseFile.create({
       data: {
         caseId: id,
