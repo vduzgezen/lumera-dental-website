@@ -5,8 +5,9 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import CaseActions from "@/components/CaseActions";
 import FileUploader from "@/components/FileUploader";
-import CasePreviewSwitcher from "@/components/CasePreviewSwitcher";
 import CaseProcessBar from "@/components/CaseProcessBar";
+import HtmlViewerUploader from "@/components/HtmlViewerUploader";
+import CaseViewerTabs from "@/components/CaseViewerTabs";
 
 export const dynamic = "force-dynamic";
 
@@ -81,27 +82,52 @@ export default async function CaseDetailPage({
 
   const isLabOrAdmin = session.role === "lab" || session.role === "admin";
 
-  // Pick the latest file for each slot based on label
+  // Latest files per slot
   let scanFile: any = null;
   let designWithModelFile: any = null;
   let designOnlyFile: any = null;
 
-  for (const f of item.files ?? []) {
-    const slot = normalizeSlot(f.label);
-    if (!slot) continue;
+  // HTML viewer files
+  let scanHtmlFile: any = null;
+  let designHtmlFile: any = null;
 
-    if (slot === "scan") scanFile = f;
-    if (slot === "design_with_model") designWithModelFile = f;
-    if (slot === "design_only") designOnlyFile = f;
+  for (const f of item.files ?? []) {
+    const lbl = String(f.label ?? "").toLowerCase();
+    const slot = normalizeSlot(lbl);
+
+    if (slot === "scan") {
+      scanFile = f;
+      continue;
+    }
+    if (slot === "design_with_model") {
+      designWithModelFile = f;
+      continue;
+    }
+    if (slot === "design_only") {
+      designOnlyFile = f;
+      continue;
+    }
+
+    if (lbl === "scan_html") {
+      scanHtmlFile = f;
+      continue;
+    }
+    if (lbl === "design_with_model_html") {
+      designHtmlFile = f;
+      continue;
+    }
   }
 
-  const scanUrl = is3DUrl(scanFile?.url) ? scanFile.url : null;
-  const designWithModelUrl = is3DUrl(designWithModelFile?.url)
+  const scan3DUrl = is3DUrl(scanFile?.url) ? scanFile.url : null;
+  const designWithModel3DUrl = is3DUrl(designWithModelFile?.url)
     ? designWithModelFile.url
     : null;
-  const designOnlyUrl = is3DUrl(designOnlyFile?.url)
+  const designOnly3DUrl = is3DUrl(designOnlyFile?.url)
     ? designOnlyFile.url
     : null;
+
+  const scanHtmlUrl = scanHtmlFile?.url ?? null;
+  const designHtmlUrl = designHtmlFile?.url ?? null;
 
   return (
     <section className="space-y-6">
@@ -131,78 +157,84 @@ export default async function CaseDetailPage({
       </div>
 
       <div className="grid gap-4 lg:grid-cols-3">
-        {/* Left: three slot cards with file name + uploader */}
+        {/* Left: slot cards + uploaders */}
         <div className="lg:col-span-1 space-y-4">
-          {/* Scan slot */}
-          <div className="rounded-xl border border-white/10 p-3 space-y-2">
+          {/* Scan slot (HTML-only upload) */}
+          <div className="rounded-xl border border-white/10 p-3 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-white">Scan</span>
-              {scanFile && (
+              {scanHtmlFile && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                  1 file
+                  Viewer
                 </span>
               )}
             </div>
+
             <div className="rounded-lg bg-black/40 border border-white/10 px-3 py-2">
-              {scanFile ? (
+              {scanHtmlFile ? (
                 <div
                   className="text-xs text-white/80 truncate"
-                  title={baseNameFromUrl(scanFile.url)}
+                  title={baseNameFromUrl(scanHtmlFile.url)}
                 >
-                  {baseNameFromUrl(scanFile.url)}
+                  {baseNameFromUrl(scanHtmlFile.url)}
                 </div>
               ) : (
                 <div className="text-xs text-white/50">
-                  No file uploaded.
+                  No Exocad scan viewer uploaded.
                 </div>
               )}
             </div>
+
             {isLabOrAdmin && (
-              <FileUploader
+              <HtmlViewerUploader
                 caseId={item.id}
                 role={session.role as any}
-                slot="scan"
+                label="scan_html"
+                description="Upload Exocad scan HTML viewer"
               />
             )}
           </div>
 
-          {/* Design + Model slot */}
-          <div className="rounded-xl border border-white/10 p-3 space-y-2">
+          {/* Design + Model slot (HTML-only upload) */}
+          <div className="rounded-xl border border-white/10 p-3 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-white">
                 Design + Model
               </span>
-              {designWithModelFile && (
+              {designHtmlFile && (
                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                  1 file
+                  Viewer
                 </span>
               )}
             </div>
+
             <div className="rounded-lg bg-black/40 border border-white/10 px-3 py-2">
-              {designWithModelFile ? (
+              {designHtmlFile ? (
                 <div
                   className="text-xs text-white/80 truncate"
-                  title={baseNameFromUrl(designWithModelFile.url)}
+                  title={baseNameFromUrl(designHtmlFile.url)}
                 >
-                  {baseNameFromUrl(designWithModelFile.url)}
+                  {baseNameFromUrl(designHtmlFile.url)}
                 </div>
               ) : (
                 <div className="text-xs text-white/50">
-                  No file uploaded.
+                  No Exocad design viewer uploaded.
                 </div>
               )}
             </div>
+
             {isLabOrAdmin && (
-              <FileUploader
+              <HtmlViewerUploader
                 caseId={item.id}
                 role={session.role as any}
-                slot="design_with_model"
+                label="design_with_model_html"
+                description="Upload Exocad design + model HTML viewer"
               />
             )}
           </div>
 
-          {/* Design Only slot */}
-          <div className="rounded-xl border border-white/10 p-3 space-y-2">
+          {/* Design Only slot (3D Lumera viewer) */}
+          <div className="rounded-xl border border-white/10 p-3 space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium text-white">
                 Design Only
@@ -213,6 +245,7 @@ export default async function CaseDetailPage({
                 </span>
               )}
             </div>
+
             <div className="rounded-lg bg-black/40 border border-white/10 px-3 py-2">
               {designOnlyFile ? (
                 <div
@@ -223,10 +256,11 @@ export default async function CaseDetailPage({
                 </div>
               ) : (
                 <div className="text-xs text-white/50">
-                  No file uploaded.
+                  No design-only 3D file uploaded.
                 </div>
               )}
             </div>
+
             {isLabOrAdmin && (
               <FileUploader
                 caseId={item.id}
@@ -237,12 +271,14 @@ export default async function CaseDetailPage({
           </div>
         </div>
 
-        {/* Right: preview switcher */}
+        {/* Right: mixed viewer tabs (Exoviewer + Lumera) */}
         <div className="lg:col-span-2">
-          <CasePreviewSwitcher
-            scanUrl={scanUrl}
-            designWithModelUrl={designWithModelUrl}
-            designOnlyUrl={designOnlyUrl}
+          <CaseViewerTabs
+            scan3DUrl={scan3DUrl}
+            designWithModel3DUrl={designWithModel3DUrl}
+            designOnly3DUrl={designOnly3DUrl}
+            scanHtmlUrl={scanHtmlUrl}
+            designHtmlUrl={designHtmlUrl}
           />
         </div>
       </div>

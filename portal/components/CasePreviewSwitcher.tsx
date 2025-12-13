@@ -27,21 +27,34 @@ export default function CasePreviewSwitcher({
     design_only: designOnlyUrl,
   };
 
-  // Pick a default based on availability and slot priority
   const [selected, setSelected] = useState<SlotKey>("scan");
 
+  // 🔁 Remember the last selected slot across refreshes / uploads
   useEffect(() => {
-    const ordered: SlotKey[] = [
-      "design_with_model",
-      "design_only",
-      "scan",
-    ];
-    for (const key of ordered) {
+    // Only runs in the browser
+    if (typeof window === "undefined") return;
+
+    const stored = window.localStorage.getItem(
+      "lumera.casePreviewSlot",
+    ) as SlotKey | null;
+
+    const order: SlotKey[] = ["design_with_model", "design_only", "scan"];
+
+    // If we have a stored value and that slot actually has a file, use it.
+    if (stored && slotUrls[stored]) {
+      setSelected(stored);
+      return;
+    }
+
+    // Otherwise pick first available in priority order
+    for (const key of order) {
       if (slotUrls[key]) {
         setSelected(key);
         return;
       }
     }
+
+    // Fallback
     setSelected("scan");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scanUrl, designWithModelUrl, designOnlyUrl]);
@@ -50,6 +63,14 @@ export default function CasePreviewSwitcher({
     () => slotUrls[selected] ?? null,
     [slotUrls, selected],
   );
+
+  function handleSelect(key: SlotKey) {
+    if (!slotUrls[key]) return;
+    setSelected(key);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("lumera.casePreviewSlot", key);
+    }
+  }
 
   return (
     <div className="rounded-xl border border-white/10 p-4 h-full flex flex-col">
@@ -70,14 +91,14 @@ export default function CasePreviewSwitcher({
                 key={key}
                 type="button"
                 disabled={!enabled}
-                onClick={() => enabled && setSelected(key)}
+                onClick={() => enabled && handleSelect(key)}
                 className={[
                   "px-3 py-1 text-xs sm:text-sm",
                   "transition-colors",
                   enabled
                     ? selected === key
                       ? "bg-white text-black"
-                      : "text-white/80 hover:bg-white/10"
+                      : "text-white/80 hover:bg.white/10"
                     : "text-white/30 cursor-not-allowed",
                 ].join(" ")}
               >

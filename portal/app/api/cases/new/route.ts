@@ -5,8 +5,7 @@ import { getSession } from "@/lib/auth";
 import path from "node:path";
 import fs from "node:fs/promises";
 
-const ACCEPT_SCAN_EXT = new Set([".stl", ".ply", ".obj"]);
-const MAX_SCAN_BYTES = 200 * 1024 * 1024; // 200MB
+const MAX_SCAN_VIEWER_BYTES = 200 * 1024 * 1024; // 200MB
 
 /** DentalCase may be named differently in Prisma client */
 function getCaseModel(p: any) {
@@ -20,39 +19,104 @@ function addDays(d: Date, n: number) {
   return x;
 }
 
-function chooseExtAndKind(
-  originalName: string,
-): { ext: string; kind: "STL" | "PLY" | "OBJ" } {
-  const lower = originalName.toLowerCase();
-  if (lower.endsWith(".stl")) return { ext: ".stl", kind: "STL" };
-  if (lower.endsWith(".ply")) return { ext: ".ply", kind: "PLY" };
-  if (lower.endsWith(".obj")) return { ext: ".obj", kind: "OBJ" };
+/**
+ * Sanitize an HTML filename:
+ * - Replace spaces with underscores
+ * - Keep/force .html or .htm extension
+ * - Strip problematic URL chars like '#' and '?'
+ */
+function sanitizeHtmlFileName(original: string, fallbackBase: string): string {
+  const baseName = (original || fallbackBase).replace(/\s+/g, "_");
+  const lower = baseName.toLowerCase();
 
-  // Default to STL if extension missing but we accepted it as a scan
-  return { ext: ".stl", kind: "STL" };
+  let ext = ".html";
+  if (lower.endsWith(".html")) {
+    ext = ".html";
+  } else if (lower.endsWith(".htm")) {
+    ext = ".htm";
+  }
+
+  let nameWithoutExt = baseName;
+  if (lower.endsWith(".html") || lower.endsWith(".htm")) {
+    const idx = baseName.lastIndexOf(".");
+    if (idx >= 0) {
+      nameWithoutExt = baseName.slice(0, idx);
+    }
+  }
+
+  const cleanedBase = nameWithoutExt.replace(/[?#]/g, "");
+  return cleanedBase + ext;
 }
 
 /**
- * Sanitize the uploaded filename:
- * - Replace spaces with underscores
- * - Keep the extension (.stl/.ply/.obj)
- * - Strip problematic URL chars like '#' and '?'
+ * Normalize Exocad HTML text:
+ * 1) Keep original content.
+ * 2) Inject a small script that runs after load and translates
+ *    common Turkish slider labels into English in the DOM.
  */
-function sanitizeFileName(original: string): string {
-  const noSpaces = original.replace(/\s+/g, "_");
+function normalizeExocadHtml(html: string): string {
+  const script = `
+<script>
+(function() {
+  var MAP = {
+    "Antagonistler": "Antagonists",
+    "Çene taramaları": "Jaw scans",
+    "Çene taramaları": "Jaw scans",
+    "Cene taramalari": "Jaw scans",
+    "Çene taraması": "Jaw scan",
+    "Tam anatomik": "Full anatomy",
+    "Alt tasarım": "Lower design",
+    "Alt tasarim": "Lower design",
+    "Minimum kalınlık": "Minimum thickness",
+    "Minimum kalinlik": "Minimum thickness",
+    "Bütün çene": "Whole jaw",
+    "Butun cene": "Whole jaw",
+    "Dolgu boslugu": "Filling gap"
+  };
 
-  const lastDot = noSpaces.lastIndexOf(".");
-  if (lastDot === -1) {
-    // No extension – just strip bad chars from whole string
-    return noSpaces.replace(/[?#]/g, "");
+  function translateNode(node) {
+    if (!node) return;
+    if (node.nodeType === 3) { // text
+      var text = node.nodeValue || "";
+      var changed = false;
+      for (var key in MAP) {
+        if (!Object.prototype.hasOwnProperty.call(MAP, key)) continue;
+        if (text.indexOf(key) !== -1) {
+          text = text.split(key).join(MAP[key]);
+          changed = true;
+        }
+      }
+      if (changed) {
+        node.nodeValue = text;
+      }
+      return;
+    }
+    if (node.nodeType === 1 && node.childNodes && node.childNodes.length) {
+      for (var i = 0; i < node.childNodes.length; i++) {
+        translateNode(node.childNodes[i]);
+      }
+    }
   }
 
-  const base = noSpaces.slice(0, lastDot);
-  const ext = noSpaces.slice(lastDot); // includes '.'
+  function run() {
+    try {
+      translateNode(document.body);
+    } catch (e) {
+      console.error("Exocad translation script error:", e);
+    }
+  }
 
-  const cleanedBase = base.replace(/[?#]/g, "");
+  window.addEventListener("load", function() {
+    setTimeout(run, 500);
+  });
+})();
+</script>
+`;
 
-  return cleanedBase + ext;
+  if (html.includes("</body>")) {
+    return html.replace("</body>", script + "\n</body>");
+  }
+  return html + script;
 }
 
 export async function POST(req: Request) {
@@ -77,7 +141,9 @@ export async function POST(req: Request) {
     const product = form.get("product");
     const material = form.get("material");
     const shade = form.get("shade");
-    const scan = form.get("scan");
+
+    // Scan viewer HTML: prefer explicit field, fall back to "scan" for compatibility
+    const scanViewerRaw = form.get("scanHtml") ?? form.get("scan");
 
     if (typeof alias !== "string" || !alias.trim()) {
       return NextResponse.json(
@@ -109,9 +175,10 @@ export async function POST(req: Request) {
         { status: 400 },
       );
     }
-    if (!(scan instanceof File)) {
+
+    if (!(scanViewerRaw instanceof File)) {
       return NextResponse.json(
-        { error: "Scan file is required." },
+        { error: "Scan viewer HTML is required." },
         { status: 400 },
       );
     }
@@ -150,22 +217,21 @@ export async function POST(req: Request) {
       );
     }
 
-    // Validate scan extension and size
-    const originalName = scan.name || "scan";
+    // Validate scan viewer type and size
+    const scanViewer = scanViewerRaw as File;
+    const originalName = scanViewer.name || "scan_viewer.html";
     const lower = originalName.toLowerCase();
-    const ext =
-      lower.lastIndexOf(".") !== -1 ? lower.slice(lower.lastIndexOf(".")) : "";
-    if (!ACCEPT_SCAN_EXT.has(ext as any)) {
+    if (!lower.endsWith(".html") && !lower.endsWith(".htm")) {
       return NextResponse.json(
-        { error: "Scan must be STL, PLY, or OBJ." },
+        { error: "Scan viewer must be an HTML file." },
         { status: 400 },
       );
     }
 
-    const scanBuf = Buffer.from(await scan.arrayBuffer());
-    if (scanBuf.length > MAX_SCAN_BYTES) {
+    const scanBuf = Buffer.from(await scanViewer.arrayBuffer());
+    if (scanBuf.length > MAX_SCAN_VIEWER_BYTES) {
       return NextResponse.json(
-        { error: "Scan file is too large." },
+        { error: "Scan viewer file is too large." },
         { status: 400 },
       );
     }
@@ -194,7 +260,7 @@ export async function POST(req: Request) {
       select: { id: true },
     });
 
-    // Save scan under /public/uploads/<caseId>/<safe filename>
+    // Save scan viewer HTML under /public/uploads/<caseId>/<filename>
     const uploadsRoot = path.join(
       process.cwd(),
       "public",
@@ -203,28 +269,28 @@ export async function POST(req: Request) {
     );
     await fs.mkdir(uploadsRoot, { recursive: true });
 
-    const { ext: chosenExt, kind } = chooseExtAndKind(originalName);
+    const safeName = sanitizeHtmlFileName(
+      originalName,
+      "scan_viewer.html",
+    );
 
-    // ✅ Sanitize filename & ensure correct extension
-    let safeName = sanitizeFileName(originalName);
-    if (!safeName.toLowerCase().endsWith(chosenExt)) {
-      // If user had weird/missing/ext, enforce what we decided in chooseExtAndKind
-      safeName = safeName.replace(/\.+$/, ""); // trim trailing dots if any
-      safeName += chosenExt;
-    }
+    // Normalize content (inject DOM translator) before saving
+    const htmlText = scanBuf.toString("utf8");
+    const normalized = normalizeExocadHtml(htmlText);
+    const finalBuf = Buffer.from(normalized, "utf8");
 
     const fullPath = path.join(uploadsRoot, safeName);
-    await fs.writeFile(fullPath, scanBuf);
+    await fs.writeFile(fullPath, finalBuf);
 
     const publicUrl = `/uploads/${created.id}/${safeName}`;
 
     await prisma.caseFile.create({
       data: {
         caseId: created.id,
-        label: "scan",
-        kind: kind as any,
+        label: "scan_html",
+        kind: "OTHER" as any,
         url: publicUrl,
-        sizeBytes: scanBuf.length,
+        sizeBytes: finalBuf.length,
       } as any,
     });
 

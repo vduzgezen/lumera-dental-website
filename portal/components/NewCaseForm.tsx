@@ -63,7 +63,7 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
 
   function applyDoctor(doc: Doctor) {
     setDoctorUserId(doc.id);
-    setQuery(doc.email); // show the chosen email in the search box
+    setQuery(doc.email); // show chosen email
     setDropdownOpen(false);
   }
 
@@ -103,28 +103,47 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
   const [product, setProduct] = useState<
     "ZIRCONIA" | "MULTILAYER_ZIRCONIA" | "EMAX" | "INLAY_ONLAY"
   >("ZIRCONIA");
-  const [material, setMaterial] = useState("");
   const [shade, setShade] = useState("");
-  const [scan, setScan] = useState<File | null>(null);
+  const [material, setMaterial] = useState("");
+
+  // Single required scan viewer HTML
+  const [scanHtml, setScanHtml] = useState<File | null>(null);
 
   function friendly(e: unknown): string {
     const s = String((e as any)?.message || e || "");
-    if (/order date/i.test(s)) {
+
+    // Order date invalid
+    if (/order date invalid/i.test(s)) {
       return "Invalid date. Please use the date picker (YYYY-MM-DD).";
     }
-    if (/Doctor/.test(s) && /clinic/.test(s)) {
+
+    // Doctor/clinic linkage issues
+    if (/Doctor account not found/i.test(s)) {
+      return "The selected doctor account could not be found.";
+    }
+    if (/Doctor has no clinic linked/i.test(s)) {
       return "The selected doctor isn’t linked to a clinic.";
     }
-    if (/Scan must be/.test(s)) {
-      return "Scan must be STL, PLY, or OBJ.";
+
+    // Backend: scan viewer HTML missing
+    if (/Scan viewer HTML is required/i.test(s)) {
+      return "Please upload a scan viewer HTML file.";
     }
-    if (/too large/i.test(s)) {
-      return "Scan file is too large (max ~200MB).";
+
+    // Backend: wrong type
+    if (/Scan viewer must be an HTML file/i.test(s)) {
+      return "Scan viewer must be an HTML (.html) file.";
     }
+
+    // Backend: size too large
+    if (/Scan viewer file is too large/i.test(s)) {
+      return "Scan viewer file is too large.";
+    }
+
     return s || "Please correct the highlighted fields and try again.";
   }
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setErr(undefined);
     setOk(undefined);
@@ -138,24 +157,26 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
     if (!tooth.trim()) {
       return setErr("Tooth codes are required.");
     }
-    if (!scan) {
-      return setErr("Scan file is required (STL / PLY / OBJ).");
+    if (!scanHtml) {
+      return setErr("Please upload a scan viewer HTML file.");
     }
 
     const parsed = new Date(orderDate);
     if (isNaN(parsed.getTime())) {
-      return setErr("Invalid order date.");
+      return setErr("Invalid date.");
     }
 
     const fd = new FormData();
     fd.append("patientAlias", alias.trim());
     fd.append("doctorUserId", doctorUserId);
     fd.append("toothCodes", tooth.trim());
+    // API expects a string; it parses with new Date(orderDateRaw)
     fd.append("orderDate", new Date(orderDate).toISOString());
     fd.append("product", product);
     if (material) fd.append("material", material);
     if (shade) fd.append("shade", shade);
-    fd.append("scan", scan);
+    // IMPORTANT: this is now HTML, not STL/PLY/OBJ
+    fd.append("scanHtml", scanHtml);
 
     setBusy(true);
     try {
@@ -179,7 +200,9 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
     <form onSubmit={submit} className="space-y-5 max-w-3xl">
       {/* Doctor picker */}
       <div className="rounded-xl border border-white/10 p-4 space-y-3">
-        <div className="text-sm text-white/70">Doctor (search by email/name/clinic)</div>
+        <div className="text-sm text-white/70">
+          Doctor (search by email/name/clinic)
+        </div>
 
         <div className="relative">
           <input
@@ -189,7 +212,6 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
             onChange={handleQueryChange}
             onFocus={() => setDropdownOpen(true)}
             onBlur={() => {
-              // small delay so clicks on the menu still register
               setTimeout(() => setDropdownOpen(false), 120);
             }}
             onKeyDown={handleQueryKeyDown}
@@ -208,21 +230,22 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
                     <button
                       key={d.id}
                       type="button"
-                      className={`w-full px-3 py-2 text-left text-sm flex flex-col sm:flex-row sm:items-center sm:justify-between ${
-                        active ? "bg-white/10" : "hover:bg-white/5"
-                      }`}
-                      onMouseDown={(ev) => {
-                        // prevent blur so selection works smoothly
-                        ev.preventDefault();
+                      onMouseDown={(e) => {
+                        e.preventDefault();
                         applyDoctor(d);
                       }}
+                      className={[
+                        "w-full text-left px-3 py-2 text-sm",
+                        active ? "bg-white/15" : "hover:bg-white/10",
+                      ].join(" ")}
                     >
-                      <span className="font-medium text-white truncate">
-                        {d.email}
-                      </span>
-                      <span className="text-xs text-white/60 sm:ml-3 truncate">
-                        {d.name ? `${d.name} • ${d.clinic.name}` : d.clinic.name}
-                      </span>
+                      <div className="font-medium text-white">
+                        {d.name || d.email}
+                      </div>
+                      <div className="text-xs text-white/70">{d.email}</div>
+                      <div className="text-xs text-white/50">
+                        {d.clinic.name}
+                      </div>
                     </button>
                   );
                 })
@@ -231,50 +254,35 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
           )}
         </div>
 
-        {/* Snapshot of the linked doctor/clinic */}
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-white/70">
           <div>
-            <div className="text-xs text-white/60 mb-1">Doctor name</div>
-            <input
-              className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white/80 text-sm"
-              value={doctorNameDisplay}
-              readOnly
-              placeholder="Select a doctor…"
-            />
+            <div className="text-white/50">Doctor Name</div>
+            <div className="mt-0.5 text-white/90 truncate">
+              {doctorNameDisplay || "—"}
+            </div>
           </div>
           <div>
-            <div className="text-xs text-white/60 mb-1">Doctor email</div>
-            <input
-              className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white/80 text-sm"
-              value={doctorEmailDisplay}
-              readOnly
-              placeholder="Select a doctor…"
-            />
+            <div className="text-white/50">Doctor Email</div>
+            <div className="mt-0.5 text-white/90 truncate">
+              {doctorEmailDisplay || "—"}
+            </div>
           </div>
           <div>
-            <div className="text-xs text-white/60 mb-1">Clinic</div>
-            <input
-              className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white/80 text-sm"
-              value={clinicNameDisplay}
-              readOnly
-              placeholder="Clinic is set automatically"
-            />
+            <div className="text-white/50">Clinic</div>
+            <div className="mt-0.5 text-white/90 truncate">
+              {clinicNameDisplay || "—"}
+            </div>
           </div>
         </div>
-
-        <p className="text-xs text-white/50">
-          The clinic is pulled from the doctor account and will be used for the new
-          case automatically.
-        </p>
       </div>
 
-      {/* Case basics */}
+      {/* Patient + tooth */}
       <div className="grid gap-3 sm:grid-cols-2">
         <div>
-          <div className="text-sm text-white/70 mb-1">Alias</div>
+          <div className="text-sm text-white/70 mb-1">Patient Alias</div>
           <input
             className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            placeholder="Patient alias (e.g., JD-0425)"
+            placeholder="e.g. JD-0425"
             value={alias}
             onChange={(e) => setAlias(e.target.value)}
             required
@@ -284,7 +292,7 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
           <div className="text-sm text-white/70 mb-1">Tooth Codes</div>
           <input
             className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            placeholder="e.g., 19, 20"
+            placeholder="e.g. 19, 20"
             value={tooth}
             onChange={(e) => setTooth(e.target.value)}
             required
@@ -325,7 +333,9 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
             onChange={(e) => setProduct(e.target.value as any)}
           >
             <option value="ZIRCONIA">Zirconia Crown</option>
-            <option value="MULTILAYER_ZIRCONIA">Multilayer Zirconia Crown</option>
+            <option value="MULTILAYER_ZIRCONIA">
+              Multilayer Zirconia Crown
+            </option>
             <option value="EMAX">Emax Crown</option>
             <option value="INLAY_ONLAY">Inlay/Onlay</option>
           </select>
@@ -334,63 +344,82 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
           <div className="text-sm text-white/70 mb-1">Shade</div>
           <input
             className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            placeholder="e.g., A2"
+            placeholder="e.g. A2"
             value={shade}
             onChange={(e) => setShade(e.target.value)}
           />
         </div>
         <div>
-          <div className="text-sm text-white/70 mb-1">Material (optional)</div>
+          <div className="text-sm text-white/70 mb-1">
+            Material (optional)
+          </div>
           <input
             className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            placeholder="e.g., Zirconia"
+            placeholder="e.g. Zirconia"
             value={material}
             onChange={(e) => setMaterial(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Scan upload */}
-      <div>
-        <div className="text-sm text-white/70 mb-1">
-          Upload Scan (STL / PLY / OBJ)
-        </div>
-        <label className="flex items-center justify-between gap-3 rounded-lg p-3 bg-black/40 border border-white/10 cursor-pointer">
-          <div className="flex-1 text-white/80">
-            {scan ? (
-              <>
-                <div className="font-medium truncate">{scan.name}</div>
-                <div className="text-xs text-white/60">
-                  {(scan.size / (1024 * 1024)).toFixed(2)} MB
+      {/* Scan viewer HTML upload */}
+      <div className="space-y-3">
+        <div>
+          <div className="text-sm text-white/70 mb-1">
+            Upload Scan Viewer (Exocad HTML)
+          </div>
+          <label className="flex items-center justify-between gap-3 rounded-lg p-3 bg-black/40 border border-white/10 cursor-pointer">
+            <div className="flex-1 min-w-0 text-white/80">
+              {scanHtml ? (
+                <>
+                  <div
+                    className="font-medium text-xs truncate"
+                    title={scanHtml.name}
+                  >
+                    {scanHtml.name}
+                  </div>
+                  <div className="text-[10px] text-white/60">
+                    {(scanHtml.size / (1024 * 1024)).toFixed(2)} MB
+                  </div>
+                </>
+              ) : (
+                <div className="text-xs text-white/60 truncate">
+                  Choose scan viewer HTML…
                 </div>
-              </>
-            ) : (
-              <div className="text-white/60">Choose a file…</div>
-            )}
-          </div>
-          <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-sm">
-            Browse
-          </div>
-          <input
-            type="file"
-            accept=".stl,.ply,.obj"
-            onChange={(e) => setScan(e.target.files?.[0] || null)}
-            className="hidden"
-            required
-          />
-        </label>
-        <p className="text-xs text-white/50 mt-1">
-          You can re-upload the scan later from the case detail page while the case
-          is in DESIGN.
-        </p>
+              )}
+            </div>
+            <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs">
+              Browse
+            </div>
+            <input
+              type="file"
+              accept=".html,.htm,text/html"
+              onChange={(e) => {
+                const f = e.target.files?.[0] ?? null;
+                setScanHtml(f);
+              }}
+              className="hidden"
+            />
+          </label>
+        </div>
       </div>
 
-      {err && <p className="text-red-400 text-sm">{err}</p>}
-      {ok && <p className="text-emerald-400 text-sm">{ok}</p>}
+      {/* Errors / status */}
+      {err && (
+        <div className="text-sm text-red-400">
+          {err}
+        </div>
+      )}
+      {ok && (
+        <div className="text-sm text-emerald-400">
+          {ok}
+        </div>
+      )}
 
       <button
+        type="submit"
         disabled={busy}
-        className="rounded-lg px-4 py-2 bg-white text-black disabled:opacity-60"
+        className="px-4 py-2 rounded-lg bg-white text-black text-sm disabled:opacity-60"
       >
         {busy ? "Creating…" : "Create Case"}
       </button>
