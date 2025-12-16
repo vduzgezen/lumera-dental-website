@@ -1,4 +1,4 @@
-// app/api/cases/[id]/stage/route.ts
+// portal/app/api/cases/[id]/stage/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -6,10 +6,6 @@ import { getSession } from "@/lib/auth";
 type Params = {
   params: Promise<{ id: string }>;
 };
-
-function getCaseModel(p: any) {
-  return p.dentalCase ?? p.case ?? p.case_;
-}
 
 type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING";
 
@@ -47,9 +43,8 @@ export async function PATCH(req: Request, { params }: Params) {
     );
   }
 
-  const model = getCaseModel(prisma as any);
-
-  const existing = await model.findUnique({
+  // DIRECT FIX: Use prisma.dentalCase directly
+  const existing = await prisma.dentalCase.findUnique({
     where: { id },
     select: {
       id: true,
@@ -116,12 +111,12 @@ export async function PATCH(req: Request, { params }: Params) {
     );
   }
 
-  const updated = await model.update({
+  const updated = await prisma.dentalCase.update({
     where: { id },
     data: {
       stage: targetStage,
       status: nextStatus as any,
-    } as any,
+    },
     select: { id: true, stage: true, status: true },
   });
 

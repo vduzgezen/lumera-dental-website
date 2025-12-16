@@ -1,0 +1,12 @@
+{
+  "[project]/components/STLViewer.tsx [app-client] (ecmascript, next/dynamic entry)": {
+    "id": "[project]/components/STLViewer.tsx [app-client] (ecmascript, next/dynamic entry)",
+    "files": [
+      "static/chunks/node_modules_three_examples_jsm_9723feed._.js",
+      "static/chunks/node_modules_three_build_three_core_996ef05a.js",
+      "static/chunks/node_modules_three_build_three_module_0c59ee63.js",
+      "static/chunks/components_STLViewer_tsx_7bac63d3._.js",
+      "static/chunks/components_STLViewer_tsx_c0a9cc8b._.js"
+    ]
+  }
+}

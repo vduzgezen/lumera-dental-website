@@ -8,6 +8,7 @@ import FileUploader from "@/components/FileUploader";
 import CaseProcessBar from "@/components/CaseProcessBar";
 import HtmlViewerUploader from "@/components/HtmlViewerUploader";
 import CaseViewerTabs from "@/components/CaseViewerTabs";
+import { CaseFile, CaseStatus, ProductionStage } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +19,8 @@ function fmtDate(d?: Date | null) {
   return new Date(d).toLocaleString();
 }
 
-/** Picks the correct model getter no matter how Prisma named it */
-function getCaseModel(): any {
-  const client: any = prisma as any;
-  return client.dentalCase ?? client.case ?? client.case_;
-}
-
 function normalizeSlot(
-  label: any,
+  label: string | null,
 ): "scan" | "design_with_model" | "design_only" | null {
   const lower = String(label ?? "").toLowerCase();
   if (lower === "scan") return "scan";
@@ -58,13 +53,12 @@ export default async function CaseDetailPage({
 }: {
   params: Params;
 }) {
-  const { id } = await params; // Next 15: params is async
+  const { id } = await params;
   const session = await getSession();
   if (!session) return notFound();
 
-  const model = getCaseModel();
-
-  const item = await model.findUnique({
+  // DIRECT FIX: Use prisma.dentalCase directly
+  const item = await prisma.dentalCase.findUnique({
     where: { id },
     include: {
       clinic: true,
@@ -83,15 +77,15 @@ export default async function CaseDetailPage({
   const isLabOrAdmin = session.role === "lab" || session.role === "admin";
 
   // Latest files per slot
-  let scanFile: any = null;
-  let designWithModelFile: any = null;
-  let designOnlyFile: any = null;
+  let scanFile: CaseFile | null = null;
+  let designWithModelFile: CaseFile | null = null;
+  let designOnlyFile: CaseFile | null = null;
 
   // HTML viewer files
-  let scanHtmlFile: any = null;
-  let designHtmlFile: any = null;
+  let scanHtmlFile: CaseFile | null = null;
+  let designHtmlFile: CaseFile | null = null;
 
-  for (const f of item.files ?? []) {
+  for (const f of item.files) {
     const lbl = String(f.label ?? "").toLowerCase();
     const slot = normalizeSlot(lbl);
 
@@ -118,12 +112,12 @@ export default async function CaseDetailPage({
     }
   }
 
-  const scan3DUrl = is3DUrl(scanFile?.url) ? scanFile.url : null;
+  const scan3DUrl = is3DUrl(scanFile?.url) ? scanFile!.url : null;
   const designWithModel3DUrl = is3DUrl(designWithModelFile?.url)
-    ? designWithModelFile.url
+    ? designWithModelFile!.url
     : null;
   const designOnly3DUrl = is3DUrl(designOnlyFile?.url)
-    ? designOnlyFile.url
+    ? designOnlyFile!.url
     : null;
 
   const scanHtmlUrl = scanHtmlFile?.url ?? null;
@@ -134,8 +128,8 @@ export default async function CaseDetailPage({
       {/* Process bar */}
       <CaseProcessBar
         caseId={item.id}
-        stage={item.stage as any}
-        role={session.role as any}
+        stage={item.stage as ProductionStage}
+        role={session.role}
       />
 
       <div className="flex items-center justify-between">
@@ -188,7 +182,7 @@ export default async function CaseDetailPage({
             {isLabOrAdmin && (
               <HtmlViewerUploader
                 caseId={item.id}
-                role={session.role as any}
+                role={session.role}
                 label="scan_html"
                 description="Upload Exocad scan HTML viewer"
               />
@@ -226,7 +220,7 @@ export default async function CaseDetailPage({
             {isLabOrAdmin && (
               <HtmlViewerUploader
                 caseId={item.id}
-                role={session.role as any}
+                role={session.role}
                 label="design_with_model_html"
                 description="Upload Exocad design + model HTML viewer"
               />
@@ -264,7 +258,7 @@ export default async function CaseDetailPage({
             {isLabOrAdmin && (
               <FileUploader
                 caseId={item.id}
-                role={session.role as any}
+                role={session.role}
                 slot="design_only"
               />
             )}
@@ -288,8 +282,8 @@ export default async function CaseDetailPage({
         <h2 className="font-medium mb-2">Actions</h2>
         <CaseActions
           caseId={item.id}
-          role={session.role as any}
-          currentStatus={item.status as any}
+          role={session.role}
+          currentStatus={item.status as CaseStatus}
         />
         <p className="text-white/60 mt-2 text-sm">
           Approve / Request Changes updates the status timeline.
@@ -303,7 +297,7 @@ export default async function CaseDetailPage({
           <p className="text-white/60">No events yet.</p>
         ) : (
           <ol className="text-white/80 space-y-1">
-            {item.events.map((ev: any) => (
+            {item.events.map((ev) => (
               <li key={ev.id}>
                 {ev.from ? `${ev.from} → ` : ""}
                 {ev.to} • {fmtDate(ev.at)}{" "}
