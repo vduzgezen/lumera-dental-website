@@ -57,7 +57,6 @@ export default async function CaseDetailPage({
   const session = await getSession();
   if (!session) return notFound();
 
-  // DIRECT FIX: Use prisma.dentalCase directly
   const item = await prisma.dentalCase.findUnique({
     where: { id },
     include: {
@@ -69,7 +68,6 @@ export default async function CaseDetailPage({
 
   if (!item) return notFound();
 
-  // Customers can only view their own clinic's cases
   if (session.role === "customer" && session.clinicId !== item.clinicId) {
     return notFound();
   }
@@ -80,8 +78,6 @@ export default async function CaseDetailPage({
   let scanFile: CaseFile | null = null;
   let designWithModelFile: CaseFile | null = null;
   let designOnlyFile: CaseFile | null = null;
-
-  // HTML viewer files
   let scanHtmlFile: CaseFile | null = null;
   let designHtmlFile: CaseFile | null = null;
 
@@ -101,7 +97,6 @@ export default async function CaseDetailPage({
       designOnlyFile = f;
       continue;
     }
-
     if (lbl === "scan_html") {
       scanHtmlFile = f;
       continue;
@@ -119,154 +114,114 @@ export default async function CaseDetailPage({
   const designOnly3DUrl = is3DUrl(designOnlyFile?.url)
     ? designOnlyFile!.url
     : null;
-
   const scanHtmlUrl = scanHtmlFile?.url ?? null;
   const designHtmlUrl = designHtmlFile?.url ?? null;
 
-  return (
-    <section className="space-y-6">
-      {/* Process bar */}
-      <CaseProcessBar
-        caseId={item.id}
-        stage={item.stage as ProductionStage}
-        role={session.role}
-      />
-
-      <div className="flex items-center justify-between">
+  // Reusable Actions Panel
+  const ActionsPanel = () => (
+    <div className="rounded-xl border border-white/10 bg-black/20 flex flex-col h-full">
+      {/* FIX: h-14 to match Tabs header exact height */}
+      <div className="border-b border-white/10 px-4 bg-white/5 h-14 flex items-center">
+        <h2 className="font-medium text-sm text-white">Status & Actions</h2>
+      </div>
+      
+      <div className="p-4 space-y-6 flex-1 overflow-y-auto">
         <div>
-          <h1 className="text-2xl font-semibold">{item.patientAlias}</h1>
-          <p className="text-white/70">
-            Clinic: {item.clinic.name} • Teeth: {item.toothCodes} • Status:{" "}
-            {item.status}
-          </p>
-          <p className="text-white/50">Due: {fmtDate(item.dueDate)}</p>
+          <CaseActions
+            caseId={item.id}
+            role={session.role}
+            currentStatus={item.status as CaseStatus}
+          />
         </div>
 
-        <Link
-          href="/portal/cases"
-          className="px-3 py-2 rounded-lg bg-white/10 hover:bg-white/20 transition"
-        >
-          ← Back to cases
-        </Link>
+        <div className="pt-4 border-t border-white/10">
+          <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4">
+            History
+          </h3>
+          {item.events.length === 0 ? (
+            <p className="text-white/60 text-sm">No events yet.</p>
+          ) : (
+            <div className="relative border-l border-white/10 ml-1 space-y-6">
+              {item.events.map((ev) => (
+                <div key={ev.id} className="ml-4 relative">
+                  <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-blue-500 border border-black" />
+                  <p className="text-sm font-medium text-white">
+                    {ev.to.replace(/_/g, " ")}
+                  </p>
+                  <p className="text-xs text-white/50">{fmtDate(ev.at)}</p>
+                  {ev.note && (
+                    <div className="mt-2 text-sm text-white/80 bg-white/5 p-2 rounded border border-white/5">
+                      {ev.note}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <section className="space-y-6 h-[calc(100vh-120px)] flex flex-col">
+      <div className="flex-none space-y-6">
+        <CaseProcessBar
+          caseId={item.id}
+          stage={item.stage as ProductionStage}
+          role={session.role}
+        />
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold">{item.patientAlias}</h1>
+            <p className="text-white/70 text-sm mt-1">
+              Clinic: <span className="text-white">{item.clinic.name}</span> • 
+              Teeth: <span className="text-white">{item.toothCodes}</span> • 
+              Status: <span className="text-white font-medium">{item.status.replace(/_/g, " ")}</span>
+            </p>
+          </div>
+          <Link
+            href="/portal/cases"
+            className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm"
+          >
+            ← Back to Cases
+          </Link>
+        </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        {/* Left: slot cards + uploaders */}
-        <div className="lg:col-span-1 space-y-4">
-          {/* Scan slot (HTML-only upload) */}
-          <div className="rounded-xl border border-white/10 p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-white">Scan</span>
-              {scanHtmlFile && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                  Viewer
-                </span>
-              )}
+      <div className="flex-1 min-h-0 grid gap-4 lg:grid-cols-3 items-stretch">
+        
+        {/* LAB UPLOADS */}
+        {isLabOrAdmin && (
+          <div className="lg:col-span-1 space-y-4 overflow-y-auto pr-2">
+             <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white">Scan</span>
+                {scanHtmlFile && <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-200">Viewer Ready</span>}
+              </div>
+              <HtmlViewerUploader caseId={item.id} role={session.role} label="scan_html" description="Upload Scan Viewer" />
             </div>
 
-            <div className="rounded-lg bg-black/40 border border-white/10 px-3 py-2">
-              {scanHtmlFile ? (
-                <div
-                  className="text-xs text-white/80 truncate"
-                  title={baseNameFromUrl(scanHtmlFile.url)}
-                >
-                  {baseNameFromUrl(scanHtmlFile.url)}
-                </div>
-              ) : (
-                <div className="text-xs text-white/50">
-                  No Exocad scan viewer uploaded.
-                </div>
-              )}
+            <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white">Design + Model</span>
+                {designHtmlFile && <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-200">Viewer Ready</span>}
+              </div>
+              <HtmlViewerUploader caseId={item.id} role={session.role} label="design_with_model_html" description="Upload Design Viewer" />
             </div>
 
-            {isLabOrAdmin && (
-              <HtmlViewerUploader
-                caseId={item.id}
-                role={session.role}
-                label="scan_html"
-                description="Upload Exocad scan HTML viewer"
-              />
-            )}
+            <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-white">Design Only (3D)</span>
+                {designOnlyFile && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200">3D Ready</span>}
+              </div>
+              <FileUploader caseId={item.id} role={session.role} slot="design_only" />
+            </div>
           </div>
+        )}
 
-          {/* Design + Model slot (HTML-only upload) */}
-          <div className="rounded-xl border border-white/10 p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-white">
-                Design + Model
-              </span>
-              {designHtmlFile && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                  Viewer
-                </span>
-              )}
-            </div>
-
-            <div className="rounded-lg bg-black/40 border border-white/10 px-3 py-2">
-              {designHtmlFile ? (
-                <div
-                  className="text-xs text-white/80 truncate"
-                  title={baseNameFromUrl(designHtmlFile.url)}
-                >
-                  {baseNameFromUrl(designHtmlFile.url)}
-                </div>
-              ) : (
-                <div className="text-xs text-white/50">
-                  No Exocad design viewer uploaded.
-                </div>
-              )}
-            </div>
-
-            {isLabOrAdmin && (
-              <HtmlViewerUploader
-                caseId={item.id}
-                role={session.role}
-                label="design_with_model_html"
-                description="Upload Exocad design + model HTML viewer"
-              />
-            )}
-          </div>
-
-          {/* Design Only slot (3D Lumera viewer) */}
-          <div className="rounded-xl border border-white/10 p-3 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-white">
-                Design Only
-              </span>
-              {designOnlyFile && (
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-white/10 text-white/70">
-                  1 file
-                </span>
-              )}
-            </div>
-
-            <div className="rounded-lg bg-black/40 border border-white/10 px-3 py-2">
-              {designOnlyFile ? (
-                <div
-                  className="text-xs text-white/80 truncate"
-                  title={baseNameFromUrl(designOnlyFile.url)}
-                >
-                  {baseNameFromUrl(designOnlyFile.url)}
-                </div>
-              ) : (
-                <div className="text-xs text-white/50">
-                  No design-only 3D file uploaded.
-                </div>
-              )}
-            </div>
-
-            {isLabOrAdmin && (
-              <FileUploader
-                caseId={item.id}
-                role={session.role}
-                slot="design_only"
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Right: mixed viewer tabs (Exoviewer + Lumera) */}
-        <div className="lg:col-span-2">
+        {/* VIEWER */}
+        <div className={isLabOrAdmin ? "lg:col-span-1" : "lg:col-span-2"}>
           <CaseViewerTabs
             scan3DUrl={scan3DUrl}
             designWithModel3DUrl={designWithModel3DUrl}
@@ -275,37 +230,11 @@ export default async function CaseDetailPage({
             designHtmlUrl={designHtmlUrl}
           />
         </div>
-      </div>
 
-      {/* Actions */}
-      <div className="rounded-xl border border-white/10 p-4">
-        <h2 className="font-medium mb-2">Actions</h2>
-        <CaseActions
-          caseId={item.id}
-          role={session.role}
-          currentStatus={item.status as CaseStatus}
-        />
-        <p className="text-white/60 mt-2 text-sm">
-          Approve / Request Changes updates the status timeline.
-        </p>
-      </div>
-
-      {/* Status timeline */}
-      <div className="rounded-xl border border-white/10 p-4">
-        <h2 className="font-medium mb-2">Status Timeline</h2>
-        {item.events.length === 0 ? (
-          <p className="text-white/60">No events yet.</p>
-        ) : (
-          <ol className="text-white/80 space-y-1">
-            {item.events.map((ev) => (
-              <li key={ev.id}>
-                {ev.from ? `${ev.from} → ` : ""}
-                {ev.to} • {fmtDate(ev.at)}{" "}
-                {ev.note ? `— ${ev.note}` : ""}
-              </li>
-            ))}
-          </ol>
-        )}
+        {/* ACTIONS */}
+        <div className="lg:col-span-1">
+          <ActionsPanel />
+        </div>
       </div>
     </section>
   );

@@ -1,8 +1,10 @@
-// components/STLViewer.tsx
+// portal/components/STLViewer.tsx
 "use client";
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
+import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
+import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 export default function STLViewer({ url }: { url: string }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -18,148 +20,166 @@ export default function STLViewer({ url }: { url: string }) {
     const width = container.clientWidth || 400;
     const height = container.clientHeight || 320;
 
+    // 1. Scene Setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x000000);
+    // Slightly darker background to make the white model pop more
+    scene.background = new THREE.Color(0x111111);
 
+    // 2. Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
-    camera.position.set(0, 0, 200);
+    camera.position.set(0, 0, 150);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    // 3. Renderer
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
-    renderer.setPixelRatio(window.devicePixelRatio || 1);
-
+    // Max pixel ratio 2 is good balance of quality vs performance
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
     container.appendChild(renderer.domElement);
 
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x444444, 0.9);
-    scene.add(hemi);
+    // 4. Lighting (High Contrast for Detail View)
+    
+    // Lower ambient light = darker shadows
+    const ambient = new THREE.AmbientLight(0xffffff, 0.3); 
+    scene.add(ambient);
 
-    const dir = new THREE.DirectionalLight(0xffffff, 0.7);
-    dir.position.set(5, 10, 7.5);
-    scene.add(dir);
+    // Stronger key light = brighter highlights and more defined shape
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
+    dirLight.position.set(15, 25, 20); // Slightly higher angle
+    scene.add(dirLight);
+
+    // Fill light (side)
+    const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
+    fillLight.position.set(-15, 5, 10);
+    scene.add(fillLight);
+
+    // Rim light (back) to separate model from background
+    const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+    backLight.position.set(0, -10, -20);
+    scene.add(backLight);
 
     const group = new THREE.Group();
     scene.add(group);
 
-    let controls: any;
+    let controls: OrbitControls | undefined;
     let raf = 0;
 
-    async function setupControls() {
-      const mod = await import(
-        "three/examples/jsm/controls/OrbitControls.js"
-      );
-      const OrbitControls = mod.OrbitControls;
+    const init = async () => {
+      const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls.js");
+      const { STLLoader } = await import("three/examples/jsm/loaders/STLLoader.js");
+      const { PLYLoader } = await import("three/examples/jsm/loaders/PLYLoader.js");
+      const { OBJLoader } = await import("three/examples/jsm/loaders/OBJLoader.js");
+      const { mergeVertices } = await import("three/examples/jsm/utils/BufferGeometryUtils.js");
+
+      if (cancelled) return;
+
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
-    }
+      controls.dampingFactor = 0.05;
+      controls.rotateSpeed = 0.8;
 
-    const frameObject = (obj: THREE.Object3D) => {
-      const box = new THREE.Box3().setFromObject(obj);
-      const size = new THREE.Vector3();
-      const center = new THREE.Vector3();
-      box.getSize(size);
-      box.getCenter(center);
+      const fitCameraToObj = (obj: THREE.Object3D) => {
+        const box = new THREE.Box3().setFromObject(obj);
+        const size = new THREE.Vector3();
+        const center = new THREE.Vector3();
+        box.getSize(size);
+        box.getCenter(center);
 
-      obj.position.sub(center);
+        obj.position.sub(center);
 
-      const maxDim = Math.max(size.x, size.y, size.z) || 1;
-      const fov = (camera.fov * Math.PI) / 180;
-      let cameraZ = maxDim / (2 * Math.tan(fov / 2));
-      cameraZ *= 1.6;
+        const maxDim = Math.max(size.x, size.y, size.z) || 10;
+        const fov = camera.fov * (Math.PI / 180);
+        let cameraZ = Math.abs(maxDim / (2 * Math.tan(fov / 2)));
+        cameraZ *= 2.0;
 
-      camera.position.set(0, 0, cameraZ);
-      camera.lookAt(0, 0, 0);
-      controls?.target.set(0, 0, 0);
-      controls?.update();
-    };
+        camera.position.set(0, 0, cameraZ);
+        camera.lookAt(0, 0, 0);
+        controls?.target.set(0, 0, 0);
+        controls?.update();
+      };
 
-    const addGeometry = (geometry: THREE.BufferGeometry) => {
-      geometry.computeVertexNormals?.();
-      const material = new THREE.MeshStandardMaterial({
-        color: 0xffffff,
-        metalness: 0.1,
-        roughness: 0.8,
-      });
-      const mesh = new THREE.Mesh(geometry, material);
-      group.add(mesh);
-      frameObject(mesh);
-    };
+      const processGeometry = (geometry: THREE.BufferGeometry) => {
+        geometry.deleteAttribute('normal'); 
+        geometry.deleteAttribute('uv'); 
+        let smoothGeometry = mergeVertices(geometry, 1e-4);
+        smoothGeometry.computeVertexNormals();
+        return smoothGeometry;
+      };
 
-    const onLoadError = (err: any) => {
-      if (cancelled) return;
-      console.error("3D model load failed:", err);
-      setError("Could not load this 3D file.");
-    };
+      const addMesh = (geometry: THREE.BufferGeometry) => {
+        const smoothGeo = processGeometry(geometry);
 
-    async function loadModel() {
-      // ✅ Only strip query params, NOT '#'
-      let cleanUrl = url.toLowerCase();
-      const qIndex = cleanUrl.indexOf("?");
-      if (qIndex >= 0) {
-        cleanUrl = cleanUrl.slice(0, qIndex);
-      }
+        // Dental Plaster Material
+        // Slightly off-white color prevents blown-out highlights under strong light
+        const material = new THREE.MeshStandardMaterial({
+          color: 0xf0f0f0, 
+          roughness: 0.65,   // Slightly rougher for more diffuse light scatter
+          metalness: 0.0,    // Non-metallic
+          flatShading: false,
+        });
 
+        const mesh = new THREE.Mesh(smoothGeo, material);
+        group.add(mesh);
+        fitCameraToObj(mesh);
+      };
+
+      const cleanUrl = url.split("?")[0].toLowerCase();
+      
       try {
         if (cleanUrl.endsWith(".stl")) {
-          const mod = await import(
-            "three/examples/jsm/loaders/STLLoader.js"
-          );
-          const STLLoader = mod.STLLoader;
-          const loader = new STLLoader();
-          loader.load(
+          new STLLoader().load(
             url,
-            (geometry: any) => {
-              if (cancelled) return;
-              addGeometry(geometry as THREE.BufferGeometry);
-            },
+            (geo) => !cancelled && addMesh(geo),
             undefined,
-            onLoadError,
+            (err) => !cancelled && handleError(err)
           );
         } else if (cleanUrl.endsWith(".ply")) {
-          const mod = await import(
-            "three/examples/jsm/loaders/PLYLoader.js"
-          );
-          const PLYLoader = mod.PLYLoader;
-          const loader = new PLYLoader();
-          loader.load(
+          new PLYLoader().load(
             url,
-            (geometry: any) => {
-              if (cancelled) return;
-              addGeometry(geometry as THREE.BufferGeometry);
-            },
+            (geo) => !cancelled && addMesh(geo),
             undefined,
-            onLoadError,
+            (err) => !cancelled && handleError(err)
           );
         } else if (cleanUrl.endsWith(".obj")) {
-          const mod = await import(
-            "three/examples/jsm/loaders/OBJLoader.js"
-          );
-          const OBJLoader = mod.OBJLoader;
-          const loader = new OBJLoader();
-          loader.load(
+          new OBJLoader().load(
             url,
-            (object: THREE.Object3D) => {
+            (obj) => {
               if (cancelled) return;
-              group.add(object);
-              frameObject(object);
+              obj.traverse((child) => {
+                if ((child as THREE.Mesh).isMesh) {
+                  const mesh = child as THREE.Mesh;
+                  const processed = processGeometry(mesh.geometry.clone());
+                  mesh.geometry = processed;
+                  mesh.material = new THREE.MeshStandardMaterial({
+                     color: 0xf0f0f0,
+                     roughness: 0.65,
+                     metalness: 0.0
+                  });
+                }
+              });
+              group.add(obj);
+              fitCameraToObj(obj);
             },
             undefined,
-            onLoadError,
+            (err) => !cancelled && handleError(err)
           );
         } else {
-          console.warn("Unsupported 3D file type:", url);
-          setError("This file type is not supported for 3D preview.");
+          throw new Error(`Unsupported file format: ${cleanUrl}`);
         }
-      } catch (e) {
-        onLoadError(e);
+      } catch (err) {
+        handleError(err);
       }
-    }
+    };
 
-    setupControls()
-      .then(loadModel)
-      .catch((err) => onLoadError(err));
+    const handleError = (err: any) => {
+      console.error("3D Load Error:", err);
+      setError("Failed to load 3D model.");
+    };
+
+    init();
 
     const animate = () => {
       if (cancelled) return;
@@ -170,8 +190,9 @@ export default function STLViewer({ url }: { url: string }) {
     animate();
 
     const onResize = () => {
-      const w = container.clientWidth || width;
-      const h = container.clientHeight || height;
+      if (!container) return;
+      const w = container.clientWidth;
+      const h = container.clientHeight;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -183,19 +204,20 @@ export default function STLViewer({ url }: { url: string }) {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", onResize);
       renderer.dispose();
+      controls?.dispose();
       scene.clear();
-      while (container.firstChild) {
-        container.removeChild(container.firstChild);
+      if (container.contains(renderer.domElement)) {
+        container.removeChild(renderer.domElement);
       }
     };
   }, [url]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={ref} className="w-full h-full" />
+    <div className="relative w-full h-full bg-black/20">
+      <div ref={ref} className="w-full h-full cursor-move" />
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60">
-          <p className="text-xs text-red-300 px-3 text-center">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
+          <p className="text-sm text-red-400 font-medium px-4 py-2 bg-black/80 rounded-md border border-red-500/30">
             {error}
           </p>
         </div>
