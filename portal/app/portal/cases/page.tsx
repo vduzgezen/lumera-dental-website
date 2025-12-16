@@ -1,11 +1,13 @@
-// app/portal/cases/page.tsx
+// portal/app/portal/cases/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
+// Use inferred types from Prisma to stay safe
 type CaseRow = {
   id: string;
   patientAlias: string;
@@ -16,12 +18,6 @@ type CaseRow = {
   doctorName: string | null;
   clinic: { name: string };
 };
-
-/** Picks the correct model getter no matter how Prisma named it */
-function getCaseModel(): any {
-  const client: any = prisma as any;
-  return client.dentalCase ?? client.case ?? client.case_;
-}
 
 function fmtDate(d?: Date | null) {
   if (!d) return "—";
@@ -55,7 +51,7 @@ export default async function CasesPage({
   const dateFilter = getParam("date");
   const aliasFilter = getParam("alias"); // for doctors
 
-  const where: any = {};
+  const where: Prisma.DentalCaseWhereInput = {};
 
   if (isDoctor) {
     // STRICT: doctors see only their own cases
@@ -77,7 +73,6 @@ export default async function CasesPage({
     }
 
     if (doctorFilter && doctorFilter.trim()) {
-      // doctorName is nullable; simple contains filter
       where.doctorName = {
         contains: doctorFilter.trim(),
       };
@@ -96,15 +91,13 @@ export default async function CasesPage({
         start.setHours(0, 0, 0, 0);
         const end = new Date(start);
         end.setDate(end.getDate() + 1);
-        // Filter on dueDate, not orderDate
         where.dueDate = { gte: start, lt: end };
       }
     }
   }
 
-  const model = getCaseModel();
-
-  const rows = (await model.findMany({
+  // DIRECT FIX: Use prisma.dentalCase directly
+  const rows = (await prisma.dentalCase.findMany({
     where,
     orderBy: [{ updatedAt: "desc" }],
     take: 50,

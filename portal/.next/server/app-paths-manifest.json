@@ -1,0 +1,12 @@
+{
+  "/api/auth/login/route": "app/api/auth/login/route.js",
+  "/api/cases/[id]/files/route": "app/api/cases/[id]/files/route.js",
+  "/api/cases/[id]/transition/route": "app/api/cases/[id]/transition/route.js",
+  "/api/cases/new/route": "app/api/cases/new/route.js",
+  "/favicon.ico/route": "app/favicon.ico/route.js",
+  "/login/page": "app/login/page.js",
+  "/page": "app/page.js",
+  "/portal/cases/[id]/page": "app/portal/cases/[id]/page.js",
+  "/portal/cases/new/page": "app/portal/cases/new/page.js",
+  "/portal/cases/page": "app/portal/cases/page.js"
+}

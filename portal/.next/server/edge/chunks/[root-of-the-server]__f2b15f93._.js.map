@@ -1,0 +1,6 @@
+{
+  "version": 3,
+  "sources": [],
+  "sections": [
+    {"offset": {"line": 16, "column": 0}, "map": {"version":3,"sources":["turbopack:///[project]/middleware.ts"],"sourcesContent":["// portal/middleware.ts\nimport { NextResponse } from \"next/server\";\nimport type { NextRequest } from \"next/server\";\n\nconst PROTECTED = /^\\/portal(\\/|$)/;\n\nexport function middleware(req: NextRequest) {\n  // Only guard /portal/*\n  if (!PROTECTED.test(req.nextUrl.pathname)) return NextResponse.next();\n\n  // Edge runtime: don't verify here, just require the cookie to exist.\n  // (Verification happens server-side in your pages via getSession().)\n  const has = req.cookies.has(\"lumera_session\");\n  if (!has) {\n    return NextResponse.redirect(new URL(\"/login\", req.url));\n  }\n  return NextResponse.next();\n}\n"],"names":[],"mappings":"AAAA,uBAAuB;;;;;AACvB;AAAA;;AAGA,MAAM,YAAY;AAEX,SAAS,WAAW,GAAgB;IACzC,uBAAuB;IACvB,IAAI,CAAC,UAAU,IAAI,CAAC,IAAI,OAAO,CAAC,QAAQ,GAAG,OAAO,gMAAY,CAAC,IAAI;IAEnE,qEAAqE;IACrE,qEAAqE;IACrE,MAAM,MAAM,IAAI,OAAO,CAAC,GAAG,CAAC;IAC5B,IAAI,CAAC,KAAK;QACR,OAAO,gMAAY,CAAC,QAAQ,CAAC,IAAI,IAAI,UAAU,IAAI,GAAG;IACxD;IACA,OAAO,gMAAY,CAAC,IAAI;AAC1B"}}]
+}

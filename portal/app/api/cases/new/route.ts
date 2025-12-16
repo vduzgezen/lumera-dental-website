@@ -4,13 +4,9 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import path from "node:path";
 import fs from "node:fs/promises";
+import { ProductKind, FileKind, CaseStatus, ProductionStage } from "@prisma/client";
 
 const MAX_SCAN_VIEWER_BYTES = 200 * 1024 * 1024; // 200MB
-
-/** DentalCase may be named differently in Prisma client */
-function getCaseModel(p: any) {
-  return p.dentalCase ?? p.case ?? p.case_;
-}
 
 function addDays(d: Date, n: number) {
   const x = new Date(d);
@@ -20,10 +16,7 @@ function addDays(d: Date, n: number) {
 }
 
 /**
- * Sanitize an HTML filename:
- * - Replace spaces with underscores
- * - Keep/force .html or .htm extension
- * - Strip problematic URL chars like '#' and '?'
+ * Sanitize an HTML filename
  */
 function sanitizeHtmlFileName(original: string, fallbackBase: string): string {
   const baseName = (original || fallbackBase).replace(/\s+/g, "_");
@@ -49,10 +42,7 @@ function sanitizeHtmlFileName(original: string, fallbackBase: string): string {
 }
 
 /**
- * Normalize Exocad HTML text:
- * 1) Keep original content.
- * 2) Inject a small script that runs after load and translates
- *    common Turkish slider labels into English in the DOM.
+ * Normalize Exocad HTML text
  */
 function normalizeExocadHtml(html: string): string {
   const script = `
@@ -236,9 +226,8 @@ export async function POST(req: Request) {
       );
     }
 
-    const caseModel = getCaseModel(prisma as any);
-
-    const created = await caseModel.create({
+    // DIRECT FIX: Use prisma.dentalCase.create and proper Enum casting
+    const created = await prisma.dentalCase.create({
       data: {
         clinicId: doctor.clinic.id,
         doctorUserId: doctor.id,
@@ -247,16 +236,16 @@ export async function POST(req: Request) {
         toothCodes: toothCodes.trim(),
         orderDate,
         dueDate,
-        product: product as any,
+        product: product as ProductKind, // Enforce Enum
         material:
           typeof material === "string" && material.trim()
             ? material.trim()
             : null,
         shade:
           typeof shade === "string" && shade.trim() ? shade.trim() : null,
-        status: "IN_DESIGN",
-        stage: "DESIGN",
-      } as any,
+        status: CaseStatus.IN_DESIGN,
+        stage: ProductionStage.DESIGN,
+      },
       select: { id: true },
     });
 
@@ -274,7 +263,6 @@ export async function POST(req: Request) {
       "scan_viewer.html",
     );
 
-    // Normalize content (inject DOM translator) before saving
     const htmlText = scanBuf.toString("utf8");
     const normalized = normalizeExocadHtml(htmlText);
     const finalBuf = Buffer.from(normalized, "utf8");
@@ -288,10 +276,10 @@ export async function POST(req: Request) {
       data: {
         caseId: created.id,
         label: "scan_html",
-        kind: "OTHER" as any,
+        kind: FileKind.OTHER,
         url: publicUrl,
         sizeBytes: finalBuf.length,
-      } as any,
+      },
     });
 
     return NextResponse.json({ ok: true, id: created.id });

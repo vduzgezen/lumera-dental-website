@@ -4,15 +4,11 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import path from "node:path";
 import fs from "node:fs/promises";
+import { FileKind, ProductionStage } from "@prisma/client";
 
 type Params = {
   params: Promise<{ id: string }>;
 };
-
-// DentalCase model name may differ, so keep this helper
-function getCaseModel(p: any) {
-  return p.dentalCase ?? p.case ?? p.case_;
-}
 
 /**
  * Normalizes the slot label coming from the client ("scan",
@@ -35,30 +31,25 @@ function normalizeSlotLabel(raw: FormDataEntryValue | null): string {
 /**
  * Choose a file extension & FileKind enum based on the incoming
  * filename and slot.
- *
- * IMPORTANT:
- * - If the file is an HTML export from Exocad (.html / .htm), we KEEP
- *   the HTML extension so the viewer can open it in the browser.
- * - Only default to ".stl" for 3D slots with no extension.
  */
 function chooseExtAndKind(
   originalName: string,
   slot: string,
-): { ext: string; kind: "STL" | "PLY" | "OBJ" | "OTHER" } {
+): { ext: string; kind: FileKind } {
   const lower = originalName.toLowerCase();
 
   // Treat Exocad HTML exports as HTML, not STL
   if (lower.endsWith(".html")) {
-    return { ext: ".html", kind: "OTHER" };
+    return { ext: ".html", kind: FileKind.OTHER };
   }
   if (lower.endsWith(".htm")) {
-    return { ext: ".htm", kind: "OTHER" };
+    return { ext: ".htm", kind: FileKind.OTHER };
   }
 
   // 3D formats
-  if (lower.endsWith(".stl")) return { ext: ".stl", kind: "STL" };
-  if (lower.endsWith(".ply")) return { ext: ".ply", kind: "PLY" };
-  if (lower.endsWith(".obj")) return { ext: ".obj", kind: "OBJ" };
+  if (lower.endsWith(".stl")) return { ext: ".stl", kind: FileKind.STL };
+  if (lower.endsWith(".ply")) return { ext: ".ply", kind: FileKind.PLY };
+  if (lower.endsWith(".obj")) return { ext: ".obj", kind: FileKind.OBJ };
 
   // No extension: assume STL for 3D slots
   if (
@@ -66,24 +57,17 @@ function chooseExtAndKind(
     slot === "design_with_model" ||
     slot === "design_only"
   ) {
-    return { ext: ".stl", kind: "STL" };
+    return { ext: ".stl", kind: FileKind.STL };
   }
 
   // Everything else
-  return { ext: ".bin", kind: "OTHER" };
+  return { ext: ".bin", kind: FileKind.OTHER };
 }
 
 /**
  * Inject a tiny DOM-level translator for Exocad HTML viewers.
- *
- * We don't try to be clever about detection anymore:
- * - For any .html / .htm file uploaded into a case slot, we append this
- *   script once.
- * - At runtime (inside the iframe), it walks the DOM and replaces
- *   known Turkish labels with English equivalents.
  */
 function injectExocadTranslationScript(html: string): string {
-  // Avoid double-injecting if the script is already present.
   if (html.includes("window.__LUMERA_EXOCAD_TRANSLATE__")) {
     return html;
   }
@@ -191,8 +175,7 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: "No files uploaded." }, { status: 400 });
   }
 
-  const caseModel = getCaseModel(prisma as any);
-  const dentalCase = await caseModel.findUnique({
+  const dentalCase = await prisma.dentalCase.findUnique({
     where: { id },
     select: { id: true, stage: true },
   });
@@ -202,7 +185,10 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   // Business rule: scan HTML can only be replaced while in DESIGN stage
-  if (slotLabel === "scan" && dentalCase.stage !== "DESIGN") {
+  if (
+    slotLabel === "scan" &&
+    dentalCase.stage !== ProductionStage.DESIGN
+  ) {
     return NextResponse.json(
       {
         error:
@@ -254,10 +240,10 @@ export async function POST(req: Request, { params }: Params) {
       data: {
         caseId: id,
         label: slotLabel,
-        kind: kind as any, // FileKind enum (STL/PLY/OBJ/OTHER)
+        kind: kind,
         url: publicUrl,
         sizeBytes: buf.length,
-      } as any,
+      },
       select: {
         id: true,
         url: true,
