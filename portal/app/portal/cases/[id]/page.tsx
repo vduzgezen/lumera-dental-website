@@ -9,6 +9,7 @@ import CaseProcessBar from "@/components/CaseProcessBar";
 import HtmlViewerUploader from "@/components/HtmlViewerUploader";
 import CaseViewerTabs from "@/components/CaseViewerTabs";
 import { CaseFile, CaseStatus, ProductionStage } from "@prisma/client";
+import CopyableId from "@/components/CopyableId";
 
 export const dynamic = "force-dynamic";
 
@@ -116,14 +117,17 @@ export default async function CaseDetailPage({
   const scanHtmlUrl = scanHtmlFile?.url ?? null;
   const designHtmlUrl = designHtmlFile?.url ?? null;
 
-  // --- ACTIONS PANEL ---
-  const ActionsPanel = () => (
-    <div className="rounded-xl border border-white/10 bg-black/20 flex flex-col h-full overflow-hidden">
+  const ActionsPanel = ({ isSidebar = false }: { isSidebar?: boolean }) => (
+    <div 
+      className={`
+        rounded-xl border border-white/10 bg-black/20 flex flex-col overflow-hidden
+        ${isSidebar ? "h-full" : "h-full"}
+      `}
+    >
       <div className="border-b border-white/10 px-4 bg-white/5 h-14 flex items-center shrink-0">
         <h2 className="font-medium text-sm text-white">Status & Actions</h2>
       </div>
       
-      {/* Added custom-scrollbar class */}
       <div className="p-4 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
         <div>
           <CaseActions
@@ -162,10 +166,8 @@ export default async function CaseDetailPage({
     </div>
   );
 
-  // --- UPLOADS SECTION ---
   const UploadsSection = () => (
     <div className="space-y-4">
-      {/* Scan Slot */}
       <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-white">Scan</span>
@@ -186,7 +188,6 @@ export default async function CaseDetailPage({
         />
       </div>
 
-      {/* Design + Model Slot */}
       <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-white">Design + Model</span>
@@ -207,7 +208,6 @@ export default async function CaseDetailPage({
         />
       </div>
 
-      {/* Design Only Slot */}
       <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-white">Design Only (3D)</span>
@@ -230,27 +230,41 @@ export default async function CaseDetailPage({
   );
 
   return (
-    // FIX: 
-    // 1. h-screen: Locks to viewport.
-    // 2. p-6: Adds the margin you requested.
-    // 3. flex flex-col: Stacks Header and Content.
     <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
       
-      {/* Header Area */}
       <div className="flex-none space-y-4 mb-4">
+        {/* FIX: Pass status to CaseProcessBar */}
         <CaseProcessBar
           caseId={item.id}
           stage={item.stage as ProductionStage}
+          status={item.status}
           role={session.role}
         />
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{item.patientAlias}</h1>
-            <p className="text-white/70 text-sm mt-1">
-              Clinic: <span className="text-white">{item.clinic.name}</span> • 
-              Teeth: <span className="text-white">{item.toothCodes}</span> • 
-              Status: <span className="text-white font-medium">{item.status.replace(/_/g, " ")}</span>
-            </p>
+            
+            <div className="text-white/70 text-sm mt-1 flex flex-wrap items-center gap-x-3">
+              <span>Clinic: <span className="text-white">{item.clinic.name}</span></span>
+              <span>•</span>
+              
+              {isLabOrAdmin && item.doctorName && (
+                <>
+                  <span>Doctor: <span className="text-white">{item.doctorName}</span></span>
+                  <span>•</span>
+                </>
+              )}
+
+              <span>Teeth: <span className="text-white">{item.toothCodes}</span></span>
+              <span>•</span>
+              <span>Status: <span className="text-white font-medium">{item.status.replace(/_/g, " ")}</span></span>
+              <span>•</span>
+              
+              <div className="flex items-center gap-1.5">
+                <span>ID:</span>
+                <CopyableId id={item.id} />
+              </div>
+            </div>
           </div>
           <Link
             href="/portal/cases"
@@ -261,28 +275,19 @@ export default async function CaseDetailPage({
         </div>
       </div>
 
-      {/* MAIN LAYOUT GRID */}
-      {/* flex-1 min-h-0: Ensures grid takes exactly remaining height */}
       <div className="flex-1 min-h-0 grid gap-6 lg:grid-cols-3 items-stretch">
         
-        {/* === ADMIN VIEW === */}
         {isLabOrAdmin ? (
           <>
-            {/* Left Sidebar */}
             <div className="lg:col-span-1 flex flex-col gap-4 h-full min-h-0">
-              
-              {/* Uploads: Added custom-scrollbar and limited max-height */}
               <div className="flex-shrink-0 overflow-y-auto max-h-[45%] pr-2 custom-scrollbar">
                 <UploadsSection />
               </div>
-
-              {/* Actions: Stretches to fill rest of column */}
               <div className="flex-1 min-h-0">
-                <ActionsPanel />
+                <ActionsPanel isSidebar={true} />
               </div>
             </div>
 
-            {/* Right Main: Viewer */}
             <div className="lg:col-span-2 h-full min-h-0">
               <CaseViewerTabs
                 scan3DUrl={scan3DUrl}
@@ -294,9 +299,7 @@ export default async function CaseDetailPage({
             </div>
           </>
         ) : (
-          /* === DOCTOR VIEW === */
           <>
-            {/* Left Main: Viewer */}
             <div className="lg:col-span-2 h-full min-h-0">
               <CaseViewerTabs
                 scan3DUrl={scan3DUrl}
@@ -306,8 +309,6 @@ export default async function CaseDetailPage({
                 designHtmlUrl={designHtmlUrl}
               />
             </div>
-
-            {/* Right Sidebar: Actions */}
             <div className="lg:col-span-1 h-full min-h-0">
               <ActionsPanel />
             </div>

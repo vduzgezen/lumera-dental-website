@@ -14,19 +14,15 @@ const STAGE_LABEL: Record<Stage, string> = {
   SHIPPING: "Delivering",
 };
 
-const STAGE_HELP: Record<Stage, string> = {
-  DESIGN: "Case is in design (scans, adjustments, approvals).",
-  MILLING_GLAZING: "Case is being milled and glazed.",
-  SHIPPING: "Case is packaged and being delivered.",
-};
-
 export default function CaseProcessBar({
   caseId,
   stage: initialStage,
+  status, // Need status to enforce guard rails
   role,
 }: {
   caseId: string;
   stage: Stage;
+  status: string;
   role: Role;
 }) {
   const [stage, setStage] = useState<Stage>(initialStage);
@@ -36,78 +32,115 @@ export default function CaseProcessBar({
   const currentIndex = STAGE_ORDER.indexOf(stage);
   const canEdit = role === "admin" || role === "lab";
 
-  async function changeStage(next: Stage) {
-    if (!canEdit) return;
-    const nextIndex = STAGE_ORDER.indexOf(next);
-    if (nextIndex <= currentIndex) return; // only forward
+  // GUARD RAILS
+  const isApproved = status === "APPROVED" || status === "IN_MILLING" || status === "SHIPPED";
+  
+  // Logic for the "Advance" button
+  let nextStage: Stage | null = null;
+  let nextLabel = "";
+  let canAdvance = false;
+  let reason = "";
 
+  if (stage === "DESIGN") {
+    nextStage = "MILLING_GLAZING";
+    nextLabel = "Start Milling";
+    if (isApproved) {
+      canAdvance = true;
+    } else {
+      canAdvance = false;
+      reason = "Requires Design Approval";
+    }
+  } else if (stage === "MILLING_GLAZING") {
+    nextStage = "SHIPPING";
+    nextLabel = "Ship Case";
+    canAdvance = true; // Manual check by lab usually
+  }
+
+  async function advance() {
+    if (!nextStage || !canEdit || !canAdvance) return;
     setBusy(true);
     setErr(null);
     try {
       const res = await fetch(`/api/cases/${caseId}/stage`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stage: next }),
+        body: JSON.stringify({ stage: nextStage }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to update stage");
-      }
-      setStage(next);
+      if (!res.ok) throw new Error(data.error || "Failed");
+      
+      // Reload to reflect new status/stage sync
+      window.location.reload();
     } catch (e: any) {
-      setErr(e?.message || "Failed to update stage");
-    } finally {
+      setErr(e?.message);
       setBusy(false);
     }
   }
 
   return (
-    <div className="mb-4">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="bg-black/20 border-b border-white/10 p-4">
+      {/* Top Row: Title + Advance Button */}
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h2 className="text-sm font-semibold text-white/90">
-            Manufacturing Process
-          </h2>
-          <p className="text-xs text-white/60">
-            {STAGE_HELP[stage]}
-          </p>
+          <h2 className="text-sm font-semibold text-white/90">Manufacturing Process</h2>
+          <p className="text-xs text-white/50">Current: {STAGE_LABEL[stage]}</p>
         </div>
-        {busy && (
-          <span className="text-xs text-white/60">Updating…</span>
+
+        {/* Advance Button (Lab Only) */}
+        {canEdit && nextStage && (
+          <div className="flex flex-col items-end">
+            <button
+              onClick={advance}
+              disabled={!canAdvance || busy}
+              className={`
+                px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2
+                ${canAdvance 
+                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20" 
+                  : "bg-white/5 text-white/30 cursor-not-allowed border border-white/5"}
+              `}
+            >
+              {busy ? "Updating..." : (
+                <>
+                  {nextLabel} →
+                </>
+              )}
+            </button>
+            {!canAdvance && reason && (
+              <span className="text-[10px] text-orange-400 mt-1">{reason}</span>
+            )}
+          </div>
         )}
       </div>
 
-      <div className="relative flex items-center">
-        {/* Line */}
-        <div className="absolute left-4 right-4 h-px bg-white/10 top-1/2 -translate-y-1/2" />
-
-        {/* Steps */}
+      {/* Progress Circles */}
+      <div className="relative flex items-center mx-2">
+        <div className="absolute left-0 right-0 h-0.5 bg-white/10 top-3" />
+        
         <ol className="relative z-10 flex w-full justify-between">
           {STAGE_ORDER.map((s, idx) => {
-            const isActive = idx === currentIndex;
             const isDone = idx < currentIndex;
-            const clickable =
-              canEdit && idx > currentIndex && !busy;
-
+            const isCurrent = idx === currentIndex;
+            
             return (
-              <li key={s} className="flex flex-col items-center w-1/3">
-                <button
-                  type="button"
-                  disabled={!clickable}
-                  onClick={() => clickable && changeStage(s)}
-                  className={[
-                    "w-7 h-7 rounded-full border flex items-center justify-center text-xs",
-                    isDone
-                      ? "bg-emerald-400 border-emerald-300 text-black"
-                      : isActive
-                      ? "bg-white text-black border-white"
-                      : "bg-black border-white/30 text-white/60",
-                    clickable ? "hover:scale-105 transition-transform" : "",
-                  ].join(" ")}
+              <li key={s} className="flex flex-col items-center gap-2">
+                <div 
+                  className={`
+                    w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-colors
+                    ${isDone 
+                      ? "bg-blue-500 border-blue-500 text-white" 
+                      : isCurrent 
+                        ? "bg-black border-blue-500 text-blue-400" 
+                        : "bg-black border-white/20 text-white/30"}
+                  `}
                 >
                   {isDone ? "✓" : idx + 1}
-                </button>
-                <span className="mt-1 text-[11px] text-center text-white/70">
+                </div>
+                <span 
+                  className={`
+                    text-[10px] font-medium tracking-wide uppercase
+                    ${isCurrent ? "text-blue-300" : "text-white/40"}
+                  `}
+                >
                   {STAGE_LABEL[s]}
                 </span>
               </li>
@@ -116,17 +149,7 @@ export default function CaseProcessBar({
         </ol>
       </div>
 
-      {err && (
-        <p className="mt-2 text-xs text-red-400">
-          {err}
-        </p>
-      )}
-
-      {!canEdit && (
-        <p className="mt-1 text-[11px] text-white/50">
-          This timeline is managed by the lab.
-        </p>
-      )}
+      {err && <p className="mt-2 text-xs text-center text-red-400">{err}</p>}
     </div>
   );
 }
