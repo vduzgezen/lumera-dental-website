@@ -10,7 +10,7 @@ const STLViewer = dynamic(() => import("@/components/STLViewer"), {
 
 export default function Case3DPanel({
   url,
-  title,
+  title, // title is unused now (handled by parent tabs)
 }: {
   url?: string | null;
   title?: string;
@@ -18,24 +18,18 @@ export default function Case3DPanel({
   const hasModel = !!url;
   const source = useMemo(() => url ?? "", [url]);
 
-  return (
-    <div className="rounded-xl border border-white/10 p-4 h-full flex flex-col">
-      {title && (
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="font-medium">{title}</h2>
-        </div>
-      )}
+  if (!hasModel) {
+    return (
+      <div className="flex items-center justify-center h-full text-white/60 text-sm">
+        No 3D file available for this slot.
+      </div>
+    );
+  }
 
-      {!hasModel ? (
-        <p className="text-white/60 text-sm">
-          No 3D file available for this slot.
-        </p>
-      ) : (
-        <div className="flex-1 h-80 rounded-lg overflow-hidden bg-black/30">
-          {/* STLViewer is client-only; safe here */}
-          <STLViewer url={source} />
-        </div>
-      )}
+  return (
+    // FIX: No borders, no padding. Just full size content.
+    <div className="w-full h-full bg-black/30 rounded-lg overflow-hidden relative min-h-[400px]">
+      <STLViewer url={source} />
     </div>
   );
 }

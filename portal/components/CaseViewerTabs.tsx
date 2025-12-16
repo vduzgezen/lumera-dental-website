@@ -25,10 +25,8 @@ export default function CaseViewerTabs({
   const hasDesignViewer = !!designHtmlUrl || !!designWithModel3DUrl;
   const hasDesignOnlyViewer = !!designOnly3DUrl;
 
-  // 🔁 Remember last selected tab across refreshes/uploads
   useEffect(() => {
     if (typeof window === "undefined") return;
-
     const STORAGE_KEY = "lumera.caseViewerTab";
     const stored = window.localStorage.getItem(STORAGE_KEY) as TabKey | null;
 
@@ -37,21 +35,13 @@ export default function CaseViewerTabs({
       design_with_model: hasDesignViewer,
       design_only: hasDesignOnlyViewer,
     };
-
     const order: TabKey[] = ["scan", "design_with_model", "design_only"];
 
-    // If we have a stored tab and it's still valid for this case, use it.
     if (stored && available[stored]) {
-      if (stored !== tab) {
-        setTab(stored);
-      }
+      if (stored !== tab) setTab(stored);
       return;
     }
-
-    // If current tab is valid, keep it.
     if (available[tab]) return;
-
-    // Otherwise, pick the first available tab in priority order.
     for (const key of order) {
       if (available[key]) {
         setTab(key);
@@ -59,121 +49,81 @@ export default function CaseViewerTabs({
         return;
       }
     }
-    // If no viewers at all, leave default "scan".
   }, [hasScanViewer, hasDesignViewer, hasDesignOnlyViewer, tab]);
 
   function selectTab(key: TabKey) {
-    const available: Record<TabKey, boolean> = {
-      scan: hasScanViewer,
-      design_with_model: hasDesignViewer,
-      design_only: hasDesignOnlyViewer,
-    };
-    if (!available[key]) return;
-
     setTab(key);
     if (typeof window !== "undefined") {
       window.localStorage.setItem("lumera.caseViewerTab", key);
     }
   }
 
-  function renderContent() {
+  const tabBtn = (key: TabKey, label: string, active: boolean, disabled: boolean) => (
+    <button
+      type="button"
+      onClick={() => !disabled && selectTab(key)}
+      disabled={disabled}
+      className={`
+        px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center
+        ${
+          active
+            ? "border-white text-white"
+            : disabled
+            ? "border-transparent text-white/20 cursor-not-allowed"
+            : "border-transparent text-white/60 hover:text-white/80"
+        }
+      `}
+    >
+      {label}
+    </button>
+  );
+
+  const renderContent = () => {
     if (tab === "scan") {
       if (scanHtmlUrl) {
         return (
-          <div className="rounded-xl border border-white/10 p-4 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-medium">Scan Viewer (Exocad)</h2>
-            </div>
-            <div className="flex-1 h-80 rounded-lg overflow-hidden bg-black/30">
-              <iframe src={scanHtmlUrl} className="w-full h-full border-0" />
-            </div>
+          <div className="w-full h-full bg-black/30 rounded-lg overflow-hidden">
+             <iframe 
+               src={scanHtmlUrl} 
+               className="w-full h-full border-0 block" 
+               title="Exocad Scan Viewer"
+             />
           </div>
         );
       }
-      if (scan3DUrl) {
-        return <Case3DPanel url={scan3DUrl} />;
-      }
-      return (
-        <div className="rounded-xl border border-white/10 p-4 h-full flex items-center justify-center text-sm text-white/60">
-          No scan viewer or 3D file available.
-        </div>
-      );
+      return <Case3DPanel url={scan3DUrl} />;
     }
 
     if (tab === "design_with_model") {
       if (designHtmlUrl) {
         return (
-          <div className="rounded-xl border border-white/10 p-4 h-full flex flex-col">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="font-medium">Design + Model Viewer (Exocad)</h2>
-            </div>
-            <div className="flex-1 h-80 rounded-lg overflow-hidden bg-black/30">
-              <iframe src={designHtmlUrl} className="w-full h-full border-0" />
-            </div>
+          <div className="w-full h-full bg-black/30 rounded-lg overflow-hidden">
+             <iframe 
+               src={designHtmlUrl} 
+               className="w-full h-full border-0 block" 
+               title="Exocad Design Viewer"
+             />
           </div>
         );
       }
-      if (designWithModel3DUrl) {
-        return <Case3DPanel url={designWithModel3DUrl} />;
-      }
-      return (
-        <div className="rounded-xl border border-white/10 p-4 h-full flex items-center justify-center text-sm text-white/60">
-          No design + model viewer or 3D file available.
-        </div>
-      );
+      return <Case3DPanel url={designWithModel3DUrl} />;
     }
 
-    // design_only
-    if (designOnly3DUrl) {
-      return <Case3DPanel url={designOnly3DUrl} />;
-    }
-    return (
-      <div className="rounded-xl border border-white/10 p-4 h-full flex items-center justify-center text-sm text-white/60">
-        No design-only 3D file available.
-      </div>
-    );
-  }
-
-  const tabClass = (key: TabKey, enabled: boolean) =>
-    [
-      "px-3 py-1.5 text-xs sm:text-sm rounded-full",
-      enabled
-        ? tab === key
-          ? "bg-white text-black"
-          : "text-white/80 hover:bg-white/10"
-        : "text-white/30 cursor-not-allowed",
-    ].join(" ");
+    return <Case3DPanel url={designOnly3DUrl} />;
+  };
 
   return (
-    <div className="h-full flex flex-col gap-3">
-      <div className="inline-flex rounded-full bg-black/40 border border-white/10 p-1 self-start">
-        <button
-          type="button"
-          className={tabClass("scan", hasScanViewer)}
-          onClick={() => selectTab("scan")}
-          disabled={!hasScanViewer}
-        >
-          Scan
-        </button>
-        <button
-          type="button"
-          className={tabClass("design_with_model", hasDesignViewer)}
-          onClick={() => selectTab("design_with_model")}
-          disabled={!hasDesignViewer}
-        >
-          Design + Model
-        </button>
-        <button
-          type="button"
-          className={tabClass("design_only", hasDesignOnlyViewer)}
-          onClick={() => selectTab("design_only")}
-          disabled={!hasDesignOnlyViewer}
-        >
-          Design Only
-        </button>
+    <div className="rounded-xl border border-white/10 bg-black/20 flex flex-col h-full min-h-[75vh]">
+      {/* FIX: Added h-14 to force exact height alignment */}
+      <div className="flex items-center border-b border-white/10 px-2 bg-white/5 h-14">
+        {tabBtn("scan", "Scan", tab === "scan", !hasScanViewer)}
+        {tabBtn("design_with_model", "Design + Model", tab === "design_with_model", !hasDesignViewer)}
+        {tabBtn("design_only", "Design Only", tab === "design_only", !hasDesignOnlyViewer)}
       </div>
 
-      <div className="flex-1 min-h-[18rem]">{renderContent()}</div>
+      <div className="flex-1 p-2 relative">
+        {renderContent()}
+      </div>
     </div>
   );
 }
