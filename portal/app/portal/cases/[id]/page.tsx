@@ -74,7 +74,6 @@ export default async function CaseDetailPage({
 
   const isLabOrAdmin = session.role === "lab" || session.role === "admin";
 
-  // Latest files per slot
   let scanFile: CaseFile | null = null;
   let designWithModelFile: CaseFile | null = null;
   let designOnlyFile: CaseFile | null = null;
@@ -117,16 +116,15 @@ export default async function CaseDetailPage({
   const scanHtmlUrl = scanHtmlFile?.url ?? null;
   const designHtmlUrl = designHtmlFile?.url ?? null;
 
-  // --- COMPONENT: Actions & Timeline ---
-  // isSidebar: if true, we remove the internal scroll and let the parent handle it
-  const ActionsPanel = ({ isSidebar = false }: { isSidebar?: boolean }) => (
-    <div className={`rounded-xl border border-white/10 bg-black/20 flex flex-col ${isSidebar ? "min-h-0" : "h-full"}`}>
+  // --- ACTIONS PANEL ---
+  const ActionsPanel = () => (
+    <div className="rounded-xl border border-white/10 bg-black/20 flex flex-col h-full overflow-hidden">
       <div className="border-b border-white/10 px-4 bg-white/5 h-14 flex items-center shrink-0">
         <h2 className="font-medium text-sm text-white">Status & Actions</h2>
       </div>
       
-      {/* If it's a sidebar, we don't force overflow-y-auto here, we let the container grow */}
-      <div className={`p-4 space-y-6 ${isSidebar ? "" : "flex-1 overflow-y-auto"}`}>
+      {/* Added custom-scrollbar class */}
+      <div className="p-4 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
         <div>
           <CaseActions
             caseId={item.id}
@@ -164,7 +162,7 @@ export default async function CaseDetailPage({
     </div>
   );
 
-  // --- COMPONENT: Lab Uploads ---
+  // --- UPLOADS SECTION ---
   const UploadsSection = () => (
     <div className="space-y-4">
       {/* Scan Slot */}
@@ -232,9 +230,14 @@ export default async function CaseDetailPage({
   );
 
   return (
-    <section className="space-y-6 h-[calc(100vh-120px)] flex flex-col">
-      {/* Header */}
-      <div className="flex-none space-y-6">
+    // FIX: 
+    // 1. h-screen: Locks to viewport.
+    // 2. p-6: Adds the margin you requested.
+    // 3. flex flex-col: Stacks Header and Content.
+    <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
+      
+      {/* Header Area */}
+      <div className="flex-none space-y-4 mb-4">
         <CaseProcessBar
           caseId={item.id}
           stage={item.stage as ProductionStage}
@@ -258,16 +261,25 @@ export default async function CaseDetailPage({
         </div>
       </div>
 
-      {/* MAIN CONTENT GRID */}
-      <div className="flex-1 min-h-0 grid gap-4 lg:grid-cols-3 items-stretch">
+      {/* MAIN LAYOUT GRID */}
+      {/* flex-1 min-h-0: Ensures grid takes exactly remaining height */}
+      <div className="flex-1 min-h-0 grid gap-6 lg:grid-cols-3 items-stretch">
         
         {/* === ADMIN VIEW === */}
         {isLabOrAdmin ? (
           <>
-            {/* Left Sidebar: SCROLLABLE container for Uploads + Actions */}
-            <div className="lg:col-span-1 h-full overflow-y-auto pr-2 space-y-6">
-              <UploadsSection />
-              <ActionsPanel isSidebar={true} />
+            {/* Left Sidebar */}
+            <div className="lg:col-span-1 flex flex-col gap-4 h-full min-h-0">
+              
+              {/* Uploads: Added custom-scrollbar and limited max-height */}
+              <div className="flex-shrink-0 overflow-y-auto max-h-[45%] pr-2 custom-scrollbar">
+                <UploadsSection />
+              </div>
+
+              {/* Actions: Stretches to fill rest of column */}
+              <div className="flex-1 min-h-0">
+                <ActionsPanel />
+              </div>
             </div>
 
             {/* Right Main: Viewer */}
@@ -282,10 +294,10 @@ export default async function CaseDetailPage({
             </div>
           </>
         ) : (
-          /* === DOCTOR VIEW (Unchanged) === */
+          /* === DOCTOR VIEW === */
           <>
             {/* Left Main: Viewer */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 h-full min-h-0">
               <CaseViewerTabs
                 scan3DUrl={scan3DUrl}
                 designWithModel3DUrl={designWithModel3DUrl}
@@ -296,8 +308,8 @@ export default async function CaseDetailPage({
             </div>
 
             {/* Right Sidebar: Actions */}
-            <div className="lg:col-span-1">
-              <ActionsPanel isSidebar={false} />
+            <div className="lg:col-span-1 h-full min-h-0">
+              <ActionsPanel />
             </div>
           </>
         )}

@@ -113,15 +113,15 @@ export default function CaseViewerTabs({
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 flex flex-col h-full min-h-[75vh]">
-      {/* FIX: Added h-14 to force exact height alignment */}
-      <div className="flex items-center border-b border-white/10 px-2 bg-white/5 h-14">
+    // FIX: Removed min-h-[75vh], now just h-full to obey parent layout
+    <div className="rounded-xl border border-white/10 bg-black/20 flex flex-col h-full">
+      <div className="flex items-center border-b border-white/10 px-2 bg-white/5 h-14 shrink-0">
         {tabBtn("scan", "Scan", tab === "scan", !hasScanViewer)}
         {tabBtn("design_with_model", "Design + Model", tab === "design_with_model", !hasDesignViewer)}
         {tabBtn("design_only", "Design Only", tab === "design_only", !hasDesignOnlyViewer)}
       </div>
 
-      <div className="flex-1 p-2 relative">
+      <div className="flex-1 p-2 relative min-h-0">
         {renderContent()}
       </div>
     </div>
