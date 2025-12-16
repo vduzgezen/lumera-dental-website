@@ -117,15 +117,16 @@ export default async function CaseDetailPage({
   const scanHtmlUrl = scanHtmlFile?.url ?? null;
   const designHtmlUrl = designHtmlFile?.url ?? null;
 
-  // Reusable Actions Panel
-  const ActionsPanel = () => (
-    <div className="rounded-xl border border-white/10 bg-black/20 flex flex-col h-full">
-      {/* FIX: h-14 to match Tabs header exact height */}
-      <div className="border-b border-white/10 px-4 bg-white/5 h-14 flex items-center">
+  // --- COMPONENT: Actions & Timeline ---
+  // isSidebar: if true, we remove the internal scroll and let the parent handle it
+  const ActionsPanel = ({ isSidebar = false }: { isSidebar?: boolean }) => (
+    <div className={`rounded-xl border border-white/10 bg-black/20 flex flex-col ${isSidebar ? "min-h-0" : "h-full"}`}>
+      <div className="border-b border-white/10 px-4 bg-white/5 h-14 flex items-center shrink-0">
         <h2 className="font-medium text-sm text-white">Status & Actions</h2>
       </div>
       
-      <div className="p-4 space-y-6 flex-1 overflow-y-auto">
+      {/* If it's a sidebar, we don't force overflow-y-auto here, we let the container grow */}
+      <div className={`p-4 space-y-6 ${isSidebar ? "" : "flex-1 overflow-y-auto"}`}>
         <div>
           <CaseActions
             caseId={item.id}
@@ -163,8 +164,76 @@ export default async function CaseDetailPage({
     </div>
   );
 
+  // --- COMPONENT: Lab Uploads ---
+  const UploadsSection = () => (
+    <div className="space-y-4">
+      {/* Scan Slot */}
+      <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-white">Scan</span>
+          {scanHtmlFile && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-200 border border-blue-500/30">
+              Ready
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-white/50 truncate">
+          {scanHtmlFile ? baseNameFromUrl(scanHtmlFile.url) : "No scan viewer"}
+        </div>
+        <HtmlViewerUploader
+          caseId={item.id}
+          role={session.role}
+          label="scan_html"
+          description="Upload Scan Viewer"
+        />
+      </div>
+
+      {/* Design + Model Slot */}
+      <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-white">Design + Model</span>
+          {designHtmlFile && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-200 border border-blue-500/30">
+              Ready
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-white/50 truncate">
+          {designHtmlFile ? baseNameFromUrl(designHtmlFile.url) : "No design viewer"}
+        </div>
+        <HtmlViewerUploader
+          caseId={item.id}
+          role={session.role}
+          label="design_with_model_html"
+          description="Upload Design Viewer"
+        />
+      </div>
+
+      {/* Design Only Slot */}
+      <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium text-white">Design Only (3D)</span>
+          {designOnlyFile && (
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
+              Ready
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-white/50 truncate">
+          {designOnlyFile ? baseNameFromUrl(designOnlyFile.url) : "No 3D file"}
+        </div>
+        <FileUploader
+          caseId={item.id}
+          role={session.role}
+          slot="design_only"
+        />
+      </div>
+    </div>
+  );
+
   return (
     <section className="space-y-6 h-[calc(100vh-120px)] flex flex-col">
+      {/* Header */}
       <div className="flex-none space-y-6">
         <CaseProcessBar
           caseId={item.id}
@@ -189,52 +258,49 @@ export default async function CaseDetailPage({
         </div>
       </div>
 
+      {/* MAIN CONTENT GRID */}
       <div className="flex-1 min-h-0 grid gap-4 lg:grid-cols-3 items-stretch">
         
-        {/* LAB UPLOADS */}
-        {isLabOrAdmin && (
-          <div className="lg:col-span-1 space-y-4 overflow-y-auto pr-2">
-             <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white">Scan</span>
-                {scanHtmlFile && <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-200">Viewer Ready</span>}
-              </div>
-              <HtmlViewerUploader caseId={item.id} role={session.role} label="scan_html" description="Upload Scan Viewer" />
+        {/* === ADMIN VIEW === */}
+        {isLabOrAdmin ? (
+          <>
+            {/* Left Sidebar: SCROLLABLE container for Uploads + Actions */}
+            <div className="lg:col-span-1 h-full overflow-y-auto pr-2 space-y-6">
+              <UploadsSection />
+              <ActionsPanel isSidebar={true} />
             </div>
 
-            <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white">Design + Model</span>
-                {designHtmlFile && <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-200">Viewer Ready</span>}
-              </div>
-              <HtmlViewerUploader caseId={item.id} role={session.role} label="design_with_model_html" description="Upload Design Viewer" />
+            {/* Right Main: Viewer */}
+            <div className="lg:col-span-2 h-full min-h-0">
+              <CaseViewerTabs
+                scan3DUrl={scan3DUrl}
+                designWithModel3DUrl={designWithModel3DUrl}
+                designOnly3DUrl={designOnly3DUrl}
+                scanHtmlUrl={scanHtmlUrl}
+                designHtmlUrl={designHtmlUrl}
+              />
+            </div>
+          </>
+        ) : (
+          /* === DOCTOR VIEW (Unchanged) === */
+          <>
+            {/* Left Main: Viewer */}
+            <div className="lg:col-span-2">
+              <CaseViewerTabs
+                scan3DUrl={scan3DUrl}
+                designWithModel3DUrl={designWithModel3DUrl}
+                designOnly3DUrl={designOnly3DUrl}
+                scanHtmlUrl={scanHtmlUrl}
+                designHtmlUrl={designHtmlUrl}
+              />
             </div>
 
-            <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-white">Design Only (3D)</span>
-                {designOnlyFile && <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200">3D Ready</span>}
-              </div>
-              <FileUploader caseId={item.id} role={session.role} slot="design_only" />
+            {/* Right Sidebar: Actions */}
+            <div className="lg:col-span-1">
+              <ActionsPanel isSidebar={false} />
             </div>
-          </div>
+          </>
         )}
-
-        {/* VIEWER */}
-        <div className={isLabOrAdmin ? "lg:col-span-1" : "lg:col-span-2"}>
-          <CaseViewerTabs
-            scan3DUrl={scan3DUrl}
-            designWithModel3DUrl={designWithModel3DUrl}
-            designOnly3DUrl={designOnly3DUrl}
-            scanHtmlUrl={scanHtmlUrl}
-            designHtmlUrl={designHtmlUrl}
-          />
-        </div>
-
-        {/* ACTIONS */}
-        <div className="lg:col-span-1">
-          <ActionsPanel />
-        </div>
       </div>
     </section>
   );
