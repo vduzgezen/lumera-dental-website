@@ -8,7 +8,6 @@ import CaseListRow from "@/components/CaseListRow";
 
 export const dynamic = "force-dynamic";
 
-// Redefined here for server-side typing, passed to client component
 type CaseRow = {
   id: string;
   patientAlias: string;
@@ -55,6 +54,7 @@ export default async function CasesPage({
     if (aliasFilter && aliasFilter.trim()) {
       const q = aliasFilter.trim();
       where.OR = [
+        // FIX: Removed mode: 'insensitive' to satisfy TS
         { patientAlias: { contains: q } },
         { toothCodes: { contains: q } },
       ];
@@ -108,105 +108,91 @@ export default async function CasesPage({
 
   return (
     <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
-      
-      {/* Header & Filters */}
       <div className="flex-none space-y-4 mb-4">
         <header className="flex items-center justify-between">
           <h1 className="text-2xl font-semibold">Cases</h1>
           {canCreate && (
             <Link
               href="/portal/cases/new"
-              className="px-3 py-1.5 rounded-lg bg-white text-black text-sm hover:bg-gray-200 transition"
+              className="px-3 py-1.5 rounded-lg bg-white text-black text-sm hover:bg-gray-200 transition font-medium"
             >
               + New Case
             </Link>
           )}
         </header>
 
-        {/* Search Bar */}
-        <form className="flex flex-wrap gap-2 items-center">
+        <form className="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
           {canCreate && (
             <>
               <input
                 name="clinic"
-                placeholder="Clinic"
+                placeholder="Clinic Name"
                 defaultValue={clinicFilter ?? ""}
-                className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-sm text-white focus:border-white/30 outline-none"
+                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 lg:w-40 transition"
               />
               <input
                 name="doctor"
-                placeholder="Doctor"
+                placeholder="Doctor Name"
                 defaultValue={doctorFilter ?? ""}
-                className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-sm text-white focus:border-white/30 outline-none"
+                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 lg:w-40 transition"
               />
               <input
                 name="caseId"
                 placeholder="Case ID"
                 defaultValue={caseIdFilter ?? ""}
-                className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-sm text-white focus:border-white/30 outline-none"
+                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 transition font-mono"
               />
               <div className="flex items-center gap-1">
                 <input
                   type="date"
                   name="date"
                   defaultValue={dateFilter ?? ""}
-                  className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-sm text-white focus:border-white/30 outline-none"
+                  className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none transition [color-scheme:dark]"
                 />
               </div>
-              <button
-                type="submit"
-                className="bg-white text-black rounded-lg px-3 py-1 text-sm hover:bg-gray-200 transition"
-              >
-                Search
-              </button>
-              <Link
-                href="/portal/cases"
-                className="bg-transparent border border-white/20 text-white rounded-lg px-3 py-1 text-sm hover:bg-white/10 transition"
-              >
-                Clear
-              </Link>
             </>
           )}
 
           {isDoctor && (
-            <>
-              <input
-                name="alias"
-                placeholder="Search by alias or tooth"
-                defaultValue={aliasFilter ?? ""}
-                className="bg-black/30 border border-white/10 rounded-lg px-2 py-1 text-sm text-white flex-1 focus:border-white/30 outline-none"
-              />
-              <button
-                type="submit"
-                className="bg-white text-black rounded-lg px-3 py-1 text-sm hover:bg-gray-200 transition"
-              >
-                Search
-              </button>
-              <Link
-                href="/portal/cases"
-                className="bg-transparent border border-white/20 text-white rounded-lg px-3 py-1 text-sm hover:bg-white/10 transition"
-              >
-                Clear
-              </Link>
-            </>
+            <input
+              name="alias"
+              placeholder="Search patient alias or tooth #"
+              defaultValue={aliasFilter ?? ""}
+              className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white flex-1 min-w-[200px] focus:border-blue-500/50 outline-none transition"
+            />
+          )}
+
+          <button
+            type="submit"
+            className="bg-white text-black rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-gray-200 transition"
+          >
+            Search
+          </button>
+          
+          {(clinicFilter || doctorFilter || caseIdFilter || dateFilter || aliasFilter) && (
+            <Link
+              href="/portal/cases"
+              className="px-3 py-1.5 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition"
+            >
+              Clear
+            </Link>
           )}
         </form>
       </div>
 
-      {/* Table Container */}
-      <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col">
+      <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
         <div className="flex-1 overflow-y-auto custom-scrollbar">
           <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-black/40 text-white/80 sticky top-0 backdrop-blur-md z-10">
+            <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
               <tr>
-                <th className="p-3 font-medium border-b border-white/10">Case ID</th>
-                <th className="p-3 font-medium border-b border-white/10">Alias</th>
-                <th className="p-3 font-medium border-b border-white/10">Clinic</th>
-                <th className="p-3 font-medium border-b border-white/10">Doctor</th>
-                <th className="p-3 font-medium border-b border-white/10">Tooth</th>
-                <th className="p-3 font-medium border-b border-white/10">Status</th>
-                <th className="p-3 font-medium border-b border-white/10">Due</th>
-                <th className="p-3 font-medium border-b border-white/10">Updated</th>
+                <th className="p-4 font-medium">Case ID</th>
+                <th className="p-4 font-medium">Alias</th>
+                <th className="p-4 font-medium">Clinic</th>
+                <th className="p-4 font-medium">Doctor</th>
+                <th className="p-4 font-medium">Tooth</th>
+                <th className="p-4 font-medium">Status</th>
+                <th className="p-4 font-medium">Due Date</th>
+                <th className="p-4 font-medium">Last Update</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
@@ -215,7 +201,7 @@ export default async function CasesPage({
               ))}
               {rows.length === 0 && (
                 <tr>
-                  <td className="p-8 text-center text-white/40" colSpan={8}>
+                  <td className="p-12 text-center text-white/40" colSpan={8}>
                     No cases found.
                   </td>
                 </tr>
