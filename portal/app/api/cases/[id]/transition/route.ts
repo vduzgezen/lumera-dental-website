@@ -2,17 +2,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { CaseStatus, ProductionStage, Prisma } from "@prisma/client";
+import type { Prisma, CaseStatus, ProductionStage } from "@prisma/client";
 
+// FIX: 'APPROVED' now keeps the stage as 'DESIGN'.
+// This ensures the case waits in the Design bucket until the Lab clicks "Start Milling".
 function stageForStatus(to: CaseStatus): ProductionStage {
   switch (to) {
-    case CaseStatus.IN_MILLING:
-    case CaseStatus.APPROVED:
-      return ProductionStage.MILLING_GLAZING;
-    case CaseStatus.SHIPPED:
-      return ProductionStage.SHIPPING;
+    case "IN_MILLING":
+      return "MILLING_GLAZING";
+    case "SHIPPED":
+      return "SHIPPING";
+    case "APPROVED":
     default:
-      return ProductionStage.DESIGN;
+      return "DESIGN";
   }
 }
 
@@ -35,9 +37,7 @@ export async function POST(
 
   // Doctors: only APPROVED or CHANGES_REQUESTED on their own case
   if (session.role === "customer") {
-    // FIX: Cast the array to CaseStatus[] to allow checking any status against it
-    const allowedForDoctor = [CaseStatus.APPROVED, CaseStatus.CHANGES_REQUESTED] as CaseStatus[];
-    
+    const allowedForDoctor: CaseStatus[] = ["APPROVED", "CHANGES_REQUESTED"];
     if (!allowedForDoctor.includes(to)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -46,27 +46,32 @@ export async function POST(
     }
   }
 
+  // FIX: Guard rail - prevent re-approving if already approved/in production
+  if (to === "APPROVED") {
+    if (["APPROVED", "IN_MILLING", "SHIPPED"].includes(item.status)) {
+      return NextResponse.json({ error: "Case is already approved." }, { status: 400 });
+    }
+  }
+
   const newStage = stageForStatus(to);
   const at = new Date();
 
-  // Explicit type for transaction client
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.dentalCase.update({
       where: { id },
       data: {
         status: to,
         stage: newStage,
-        designedAt: to === CaseStatus.READY_FOR_REVIEW ? at : item.designedAt,
-        milledAt:
-          to === CaseStatus.IN_MILLING || to === CaseStatus.APPROVED ? at : item.milledAt,
-        shippedAt: to === CaseStatus.SHIPPED ? at : item.shippedAt,
+        designedAt: to === "READY_FOR_REVIEW" ? at : item.designedAt,
+        milledAt: to === "IN_MILLING" ? at : item.milledAt,
+        shippedAt: to === "SHIPPED" ? at : item.shippedAt,
       },
     });
 
     await tx.statusEvent.create({
       data: {
         caseId: id,
-        from: item.status, 
+        from: item.status,
         to,
         note: note ?? null,
         actorId: session.userId ?? undefined,
