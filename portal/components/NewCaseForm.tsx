@@ -3,13 +3,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import ToothSelector from "@/components/ToothSelector";
+import SearchableSelect from "@/components/SearchableSelect";
+import type { DoctorRow } from "@/app/portal/cases/new/page";
 
-type Doctor = {
-  id: string;
-  email: string;
-  name: string | null;
-  clinic: { id: string; name: string };
-};
+// --- HELPERS (Preserved from your original code) ---
 
 function addDays(d: Date, days: number) {
   const x = new Date(d);
@@ -25,157 +23,77 @@ function toISODate(d: Date) {
   return `${y}-${m}-${dd}`;
 }
 
-export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
+// Error handling logic (Preserved)
+function friendly(e: unknown): string {
+  const s = String((e as any)?.message || e || "");
+  if (/order date invalid/i.test(s)) return "Invalid date. Please use the date picker.";
+  if (/Doctor account not found/i.test(s)) return "The selected doctor account could not be found.";
+  if (/Doctor has no clinic linked/i.test(s)) return "The selected doctor isn’t linked to a clinic.";
+  if (/Scan viewer HTML is required/i.test(s)) return "Please upload a scan viewer HTML file.";
+  if (/Scan viewer must be an HTML/i.test(s)) return "Scan viewer must be an HTML (.html) file.";
+  if (/Scan viewer file is too large/i.test(s)) return "Scan viewer file is too large.";
+  return s || "Please correct the highlighted fields and try again.";
+}
+
+const PRODUCTS = ["ZIRCONIA", "MULTILAYER_ZIRCONIA", "EMAX", "INLAY_ONLAY"];
+
+// --- COMPONENT ---
+
+export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   const router = useRouter();
 
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | undefined>();
   const [ok, setOk] = useState<string | undefined>();
 
-  const [alias, setAlias] = useState("");
-  const [tooth, setTooth] = useState("");
-
-  // Doctor selection + typeahead
+  // --- FORM STATE ---
   const [doctorUserId, setDoctorUserId] = useState(doctors[0]?.id ?? "");
-  const selectedDoctor = useMemo(
-    () => doctors.find((d) => d.id === doctorUserId) ?? null,
-    [doctorUserId, doctors],
-  );
-
-  const [query, setQuery] = useState("");
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [highlightIndex, setHighlightIndex] = useState(0);
-
-  const filteredDoctors = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return doctors;
-    return doctors.filter((d) => {
-      const email = d.email.toLowerCase();
-      const name = (d.name ?? "").toLowerCase();
-      const clinic = d.clinic.name.toLowerCase();
-      return (
-        email.includes(q) ||
-        name.includes(q) ||
-        clinic.includes(q)
-      );
-    });
-  }, [query, doctors]);
-
-  function applyDoctor(doc: Doctor) {
-    setDoctorUserId(doc.id);
-    setQuery(doc.email); // show chosen email
-    setDropdownOpen(false);
-  }
-
-  function handleQueryChange(e: React.ChangeEvent<HTMLInputElement>) {
-    setQuery(e.target.value);
-    setDropdownOpen(true);
-    setHighlightIndex(0);
-  }
-
-  function handleQueryKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (!dropdownOpen || filteredDoctors.length === 0) return;
-
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setHighlightIndex((prev) =>
-        prev + 1 >= filteredDoctors.length ? filteredDoctors.length - 1 : prev + 1,
-      );
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setHighlightIndex((prev) => (prev - 1 < 0 ? 0 : prev - 1));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      const doc = filteredDoctors[highlightIndex];
-      if (doc) applyDoctor(doc);
-    } else if (e.key === "Escape") {
-      setDropdownOpen(false);
-    }
-  }
-
+  const [alias, setAlias] = useState("");
+  const [tooth, setTooth] = useState(""); // Managed by ToothSelector
+  
+  // Date Logic
   const today = useMemo(() => new Date(), []);
   const [orderDate, setOrderDate] = useState(toISODate(today));
-  const dueDate = useMemo(
-    () => toISODate(addDays(new Date(orderDate), 8)),
-    [orderDate],
-  );
+  
+  // Auto-calculate Due Date
+  const dueDate = useMemo(() => {
+    const d = new Date(orderDate);
+    if (isNaN(d.getTime())) return "";
+    return toISODate(addDays(d, 8));
+  }, [orderDate]);
 
-  const [product, setProduct] = useState<
-    "ZIRCONIA" | "MULTILAYER_ZIRCONIA" | "EMAX" | "INLAY_ONLAY"
-  >("ZIRCONIA");
+  // Rx Details
+  const [product, setProduct] = useState(PRODUCTS[0]);
   const [shade, setShade] = useState("");
   const [material, setMaterial] = useState("");
 
-  // Single required scan viewer HTML
+  // File
   const [scanHtml, setScanHtml] = useState<File | null>(null);
 
-  function friendly(e: unknown): string {
-    const s = String((e as any)?.message || e || "");
-
-    // Order date invalid
-    if (/order date invalid/i.test(s)) {
-      return "Invalid date. Please use the date picker (YYYY-MM-DD).";
-    }
-
-    // Doctor/clinic linkage issues
-    if (/Doctor account not found/i.test(s)) {
-      return "The selected doctor account could not be found.";
-    }
-    if (/Doctor has no clinic linked/i.test(s)) {
-      return "The selected doctor isn’t linked to a clinic.";
-    }
-
-    // Backend: scan viewer HTML missing
-    if (/Scan viewer HTML is required/i.test(s)) {
-      return "Please upload a scan viewer HTML file.";
-    }
-
-    // Backend: wrong type
-    if (/Scan viewer must be an HTML file/i.test(s)) {
-      return "Scan viewer must be an HTML (.html) file.";
-    }
-
-    // Backend: size too large
-    if (/Scan viewer file is too large/i.test(s)) {
-      return "Scan viewer file is too large.";
-    }
-
-    return s || "Please correct the highlighted fields and try again.";
-  }
-
-  async function submit(e: React.FormEvent<HTMLFormElement>) {
+  // --- SUBMISSION LOGIC (FormData - Preserved) ---
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(undefined);
     setOk(undefined);
 
-    if (!doctorUserId) {
-      return setErr("Please select a doctor account.");
-    }
-    if (!alias.trim()) {
-      return setErr("Alias is required.");
-    }
-    if (!tooth.trim()) {
-      return setErr("Tooth codes are required.");
-    }
-    if (!scanHtml) {
-      return setErr("Please upload a scan viewer HTML file.");
-    }
+    // Validation
+    if (!doctorUserId) return setErr("Please select a doctor account.");
+    if (!alias.trim()) return setErr("Alias is required.");
+    if (!tooth.trim()) return setErr("Tooth codes are required. Please select teeth.");
+    if (!scanHtml) return setErr("Please upload a scan viewer HTML file.");
 
     const parsed = new Date(orderDate);
-    if (isNaN(parsed.getTime())) {
-      return setErr("Invalid date.");
-    }
+    if (isNaN(parsed.getTime())) return setErr("Invalid order date.");
 
+    // Construct FormData matches backend route
     const fd = new FormData();
     fd.append("patientAlias", alias.trim());
     fd.append("doctorUserId", doctorUserId);
     fd.append("toothCodes", tooth.trim());
-    // API expects a string; it parses with new Date(orderDateRaw)
     fd.append("orderDate", new Date(orderDate).toISOString());
     fd.append("product", product);
     if (material) fd.append("material", material);
     if (shade) fd.append("shade", shade);
-    // IMPORTANT: this is now HTML, not STL/PLY/OBJ
     fd.append("scanHtml", scanHtml);
 
     setBusy(true);
@@ -183,246 +101,180 @@ export default function NewCaseForm({ doctors }: { doctors: Doctor[] }) {
       const r = await fetch("/api/cases/new", { method: "POST", body: fd });
       const j = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(j.error || "Create failed");
+      
       setOk("Case created. Redirecting…");
       router.push(`/portal/cases/${encodeURIComponent(j.id)}`);
     } catch (e: any) {
       setErr(friendly(e));
-    } finally {
       setBusy(false);
     }
   }
 
-  const doctorNameDisplay = selectedDoctor?.name ?? "";
-  const doctorEmailDisplay = selectedDoctor?.email ?? "";
-  const clinicNameDisplay = selectedDoctor?.clinic.name ?? "";
+  // Map doctors for SearchableSelect
+  const doctorOptions = useMemo(() => {
+    return doctors.map((d) => ({
+      id: d.id,
+      label: d.name ? `${d.name} (${d.email})` : d.email,
+      subLabel: d.clinic.name
+    }));
+  }, [doctors]);
 
   return (
-    <form onSubmit={submit} className="space-y-5 max-w-3xl">
-      {/* Doctor picker */}
-      <div className="rounded-xl border border-white/10 p-4 space-y-3">
-        <div className="text-sm text-white/70">
-          Doctor (search by email/name/clinic)
-        </div>
+    // Main Container: Matches dashboard aesthetics
+    <div className="flex-1 min-h-0 w-full max-w-5xl mx-auto overflow-y-auto custom-scrollbar pr-2 pb-20">
+      <form onSubmit={submit} className="space-y-6">
 
-        <div className="relative">
-          <input
-            className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            placeholder="Start typing doctor email…"
-            value={query}
-            onChange={handleQueryChange}
-            onFocus={() => setDropdownOpen(true)}
-            onBlur={() => {
-              setTimeout(() => setDropdownOpen(false), 120);
-            }}
-            onKeyDown={handleQueryKeyDown}
+        {/* 1. DOCTOR ASSIGNMENT */}
+        <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-4 shadow-lg">
+          <div className="flex items-center justify-between border-b border-white/5 pb-2">
+            <h2 className="text-lg font-medium text-white/90">Doctor Assignment</h2>
+            <span className="text-[10px] uppercase tracking-wider text-blue-400 font-bold bg-blue-500/10 px-2 py-1 rounded">Required</span>
+          </div>
+          
+          <SearchableSelect
+            label="Select Doctor"
+            placeholder="Search by name, email, or clinic..."
+            options={doctorOptions}
+            value={doctorUserId}
+            onChange={setDoctorUserId}
           />
-
-          {dropdownOpen && (
-            <div className="absolute z-20 mt-1 w-full max-h-64 overflow-y-auto rounded-lg border border-white/10 bg-black/90 shadow-xl">
-              {filteredDoctors.length === 0 ? (
-                <div className="px-3 py-2 text-sm text-white/60">
-                  No doctors match “{query.trim()}”.
-                </div>
-              ) : (
-                filteredDoctors.map((d, idx) => {
-                  const active = idx === highlightIndex;
-                  return (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onMouseDown={(e) => {
-                        e.preventDefault();
-                        applyDoctor(d);
-                      }}
-                      className={[
-                        "w-full text-left px-3 py-2 text-sm",
-                        active ? "bg-white/15" : "hover:bg-white/10",
-                      ].join(" ")}
-                    >
-                      <div className="font-medium text-white">
-                        {d.name || d.email}
-                      </div>
-                      <div className="text-xs text-white/70">{d.email}</div>
-                      <div className="text-xs text-white/50">
-                        {d.clinic.name}
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          )}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-white/70">
-          <div>
-            <div className="text-white/50">Doctor Name</div>
-            <div className="mt-0.5 text-white/90 truncate">
-              {doctorNameDisplay || "—"}
+        {/* 2. CASE INFORMATION */}
+        <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-6 shadow-lg">
+          <h2 className="text-lg font-medium text-white/90 border-b border-white/5 pb-2">
+            Case Information
+          </h2>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white/70">Patient Alias / ID</label>
+              <input
+                required
+                value={alias}
+                onChange={(e) => setAlias(e.target.value)}
+                placeholder="e.g. JD-0425"
+                className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition"
+              />
             </div>
-          </div>
-          <div>
-            <div className="text-white/50">Doctor Email</div>
-            <div className="mt-0.5 text-white/90 truncate">
-              {doctorEmailDisplay || "—"}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white/70">Date of Order</label>
+              <input
+                type="date"
+                required
+                value={orderDate}
+                onChange={(e) => setOrderDate(e.target.value)}
+                className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition [color-scheme:dark]"
+              />
             </div>
-          </div>
-          <div>
-            <div className="text-white/50">Clinic</div>
-            <div className="mt-0.5 text-white/90 truncate">
-              {clinicNameDisplay || "—"}
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white/70">Due Date (Auto +8 Days)</label>
+              <input
+                readOnly
+                disabled
+                value={dueDate}
+                className="w-full rounded-lg bg-white/5 border border-white/10 px-4 py-3 text-white/50 cursor-not-allowed"
+              />
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Patient + tooth */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <div className="text-sm text-white/70 mb-1">Patient Alias</div>
-          <input
-            className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            placeholder="e.g. JD-0425"
-            value={alias}
-            onChange={(e) => setAlias(e.target.value)}
-            required
-          />
+        {/* 3. PRESCRIPTION DETAILS */}
+        <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-6 shadow-lg">
+          <h2 className="text-lg font-medium text-white/90 border-b border-white/5 pb-2">
+            Prescription
+          </h2>
+          
+          <div className="grid gap-6 md:grid-cols-3">
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white/70">Product</label>
+              <select
+                value={product}
+                onChange={(e) => setProduct(e.target.value)}
+                className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition appearance-none"
+              >
+                {PRODUCTS.map(p => <option key={p} value={p} className="bg-gray-900">{p.replace(/_/g, " ")}</option>)}
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white/70">Shade (e.g. A2)</label>
+              <input
+                value={shade}
+                onChange={(e) => setShade(e.target.value)}
+                placeholder="A2"
+                className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-white/70">Material (Optional)</label>
+              <input
+                value={material}
+                onChange={(e) => setMaterial(e.target.value)}
+                placeholder="e.g. Zirconia"
+                className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition"
+              />
+            </div>
+          </div>
         </div>
-        <div>
-          <div className="text-sm text-white/70 mb-1">Tooth Codes</div>
-          <input
-            className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            placeholder="e.g. 19, 20"
-            value={tooth}
-            onChange={(e) => setTooth(e.target.value)}
-            required
-          />
-        </div>
-      </div>
 
-      {/* Dates */}
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div>
-          <div className="text-sm text-white/70 mb-1">Date of Order</div>
-          <input
-            type="date"
-            className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            value={orderDate}
-            onChange={(e) => setOrderDate(e.target.value)}
-            required
-          />
+        {/* 4. FILE UPLOAD (Exocad HTML) */}
+        <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-4 shadow-lg">
+          <h2 className="text-lg font-medium text-white/90 border-b border-white/5 pb-2">
+             Scan Viewer File
+          </h2>
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-white/70">Upload HTML (Max 200MB) *</label>
+            <div className="relative group">
+              <input
+                type="file"
+                accept=".html,.htm,text/html"
+                onChange={(e) => setScanHtml(e.target.files?.[0] || null)}
+                className="
+                  w-full text-sm text-white/60
+                  file:mr-4 file:py-2.5 file:px-4
+                  file:rounded-lg file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-600 file:text-white
+                  hover:file:bg-blue-500 file:transition-colors
+                  cursor-pointer bg-black/40 rounded-lg border border-white/10 p-2
+                "
+              />
+            </div>
+            {scanHtml && (
+               <p className="text-xs text-green-400 mt-1">
+                 Selected: {scanHtml.name} ({(scanHtml.size / (1024 * 1024)).toFixed(2)} MB)
+               </p>
+            )}
+            {!scanHtml && (
+               <p className="text-[10px] text-white/40">Required: Exocad HTML export file.</p>
+            )}
+          </div>
         </div>
-        <div>
-          <div className="text-sm text-white/70 mb-1">Due Date (auto)</div>
-          <input
-            className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            value={dueDate}
-            readOnly
-            disabled
-          />
-        </div>
-      </div>
 
-      {/* Product + material */}
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div>
-          <div className="text-sm text-white/70 mb-1">Product</div>
-          <select
-            className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            value={product}
-            onChange={(e) => setProduct(e.target.value as any)}
+        {/* 5. ODONTOGRAM */}
+        <div className="space-y-2">
+           <h2 className="text-lg font-medium text-white/90 px-1">Select Teeth *</h2>
+           <ToothSelector value={tooth} onChange={setTooth} />
+        </div>
+
+        {/* STATUS & SUBMIT */}
+        <div className="flex flex-col items-end gap-3 pt-6 border-t border-white/10">
+          {err && <p className="text-red-400 text-sm font-medium bg-red-500/10 px-3 py-1 rounded">{err}</p>}
+          {ok && <p className="text-emerald-400 text-sm font-medium bg-emerald-500/10 px-3 py-1 rounded">{ok}</p>}
+          
+          <button
+            type="submit"
+            disabled={busy}
+            className="px-8 py-3 rounded-lg bg-white text-black font-bold hover:bg-gray-200 transition disabled:opacity-50 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
           >
-            <option value="ZIRCONIA">Zirconia Crown</option>
-            <option value="MULTILAYER_ZIRCONIA">
-              Multilayer Zirconia Crown
-            </option>
-            <option value="EMAX">Emax Crown</option>
-            <option value="INLAY_ONLAY">Inlay/Onlay</option>
-          </select>
+            {busy ? "Creating Case..." : "Create Case"}
+          </button>
         </div>
-        <div>
-          <div className="text-sm text-white/70 mb-1">Shade</div>
-          <input
-            className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            placeholder="e.g. A2"
-            value={shade}
-            onChange={(e) => setShade(e.target.value)}
-          />
-        </div>
-        <div>
-          <div className="text-sm text-white/70 mb-1">
-            Material (optional)
-          </div>
-          <input
-            className="w-full rounded-lg p-2 bg-black/40 border border-white/10 text-white"
-            placeholder="e.g. Zirconia"
-            value={material}
-            onChange={(e) => setMaterial(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Scan viewer HTML upload */}
-      <div className="space-y-3">
-        <div>
-          <div className="text-sm text-white/70 mb-1">
-            Upload Scan Viewer (Exocad HTML)
-          </div>
-          <label className="flex items-center justify-between gap-3 rounded-lg p-3 bg-black/40 border border-white/10 cursor-pointer">
-            <div className="flex-1 min-w-0 text-white/80">
-              {scanHtml ? (
-                <>
-                  <div
-                    className="font-medium text-xs truncate"
-                    title={scanHtml.name}
-                  >
-                    {scanHtml.name}
-                  </div>
-                  <div className="text-[10px] text-white/60">
-                    {(scanHtml.size / (1024 * 1024)).toFixed(2)} MB
-                  </div>
-                </>
-              ) : (
-                <div className="text-xs text-white/60 truncate">
-                  Choose scan viewer HTML…
-                </div>
-              )}
-            </div>
-            <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs">
-              Browse
-            </div>
-            <input
-              type="file"
-              accept=".html,.htm,text/html"
-              onChange={(e) => {
-                const f = e.target.files?.[0] ?? null;
-                setScanHtml(f);
-              }}
-              className="hidden"
-            />
-          </label>
-        </div>
-      </div>
-
-      {/* Errors / status */}
-      {err && (
-        <div className="text-sm text-red-400">
-          {err}
-        </div>
-      )}
-      {ok && (
-        <div className="text-sm text-emerald-400">
-          {ok}
-        </div>
-      )}
-
-      <button
-        type="submit"
-        disabled={busy}
-        className="px-4 py-2 rounded-lg bg-white text-black text-sm disabled:opacity-60"
-      >
-        {busy ? "Creating…" : "Create Case"}
-      </button>
-    </form>
+      </form>
+    </div>
   );
 }
