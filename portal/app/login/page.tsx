@@ -3,6 +3,9 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+// Removed unused Logo import if you aren't using it, 
+// OR keep it if you plan to use it. I will use a standard text header for safety.
 
 export default function LoginPage() {
   const router = useRouter();
@@ -26,76 +29,109 @@ export default function LoginPage() {
 
       if (!res.ok) {
         let message = "Invalid credentials";
-
         try {
           const data = await res.json();
           if (data && typeof data.error === "string") {
             message = data.error;
           }
         } catch {
-          // ignore JSON parse errors, fall back to generic message
+          // ignore JSON parse errors
         }
-
         setError(message);
+        setLoading(false);
         return;
       }
 
-      // ✅ IMPORTANT: redirect to the actual cases route
       router.push("/portal/cases");
     } catch (err) {
       console.error(err);
       setError("Unable to reach server. Please try again.");
-    } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="min-h-screen bg-black text-white flex items-center justify-center p-6">
-      <form
-        onSubmit={onSubmit}
-        className="w-full max-w-sm space-y-4 border border-white/15 rounded-2xl p-6 bg-white/5 backdrop-blur"
-      >
-        <h1 className="text-xl font-semibold">Sign in</h1>
+    <main className="min-h-screen bg-midnight flex items-center justify-center p-6 relative overflow-hidden">
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-accent/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/4" />
+      </div>
 
-        <div className="space-y-2">
-          <label className="text-sm text-white/70 block">
-            Email
-            <input
-              type="email"
-              autoComplete="email"
-              className="mt-1 w-full rounded-lg p-2 bg-black/40 border border-white/20 text-sm focus:outline-none focus:ring focus:ring-white/40"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
-            />
-          </label>
+      <div className="w-full max-w-sm relative z-10">
+        <div className="flex justify-center mb-8">
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="w-8 h-8 rounded bg-gradient-to-br from-accent to-accent2 shadow-[0_0_20px_rgba(121,231,224,0.3)] relative overflow-hidden">
+              <div className="absolute inset-0 bg-white/20 mix-blend-overlay" />
+            </div>
+            <span className="text-2xl font-light tracking-wide text-white">Lumera</span>
+          </Link>
         </div>
 
-        <div className="space-y-2">
-          <label className="text-sm text-white/70 block">
-            Password
-            <input
-              type="password"
-              autoComplete="current-password"
-              className="mt-1 w-full rounded-lg p-2 bg-black/40 border border-white/20 text-sm focus:outline-none focus:ring focus:ring-white/40"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="••••••••"
-            />
-          </label>
-        </div>
-
-        {error && <p className="text-sm text-red-300">{error}</p>}
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg py-2 text-sm font-medium bg-white text-black disabled:opacity-60 disabled:cursor-not-allowed"
+        <form
+          onSubmit={onSubmit}
+          className="w-full space-y-6 border border-white/10 rounded-2xl p-8 bg-white/5 backdrop-blur-xl shadow-2xl"
         >
-          {loading ? "Signing in..." : "Continue"}
-        </button>
-      </form>
+          <div className="text-center space-y-1">
+            <h1 className="text-xl font-medium text-white">Welcome back</h1>
+            <p className="text-sm text-white/40">Enter your credentials</p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="text-xs font-medium text-white/60 uppercase tracking-wider block mb-2">
+                Email
+              </label>
+              <input
+                type="email"
+                required
+                className="w-full rounded-lg px-4 py-3 bg-black/20 border border-white/10 text-white focus:outline-none focus:border-accent/50 transition-all"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-white/60 uppercase tracking-wider block mb-2">
+                Password
+              </label>
+              <input
+                type="password"
+                required
+                className="w-full rounded-lg px-4 py-3 bg-black/20 border border-white/10 text-white focus:outline-none focus:border-accent/50 transition-all"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {error && (
+            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-200 text-sm text-center">
+              {error}
+            </div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg py-3 text-sm font-bold bg-accent text-midnight hover:bg-white transition-colors disabled:opacity-50"
+          >
+            {loading ? "Signing in..." : "Sign In"}
+          </button>
+        </form>
+
+        <div className="mt-8 text-center space-y-4">
+          <div className="text-sm text-white/40">
+            {/* FIX: Escaped apostrophe here */}
+            Don&apos;t have an account?{" "}
+            <Link href="/signup" className="text-accent hover:text-white transition-colors">
+              Sign Up
+            </Link>
+          </div>
+          
+          <Link href="/" className="block text-sm text-white/30 hover:text-white transition-colors">
+            ← Back to website
+          </Link>
+        </div>
+      </div>
     </main>
   );
 }

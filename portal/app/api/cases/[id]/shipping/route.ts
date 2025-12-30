@@ -1,37 +1,42 @@
-// app/api/cases/[id]/shipping/route.ts
+// portal/app/api/cases/[id]/shipping/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.role === "customer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+export async function POST(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> } // <--- FIXED TYPE
+) {
+  try {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const { carrier, tracking, eta } = await req.json();
+    const { id } = await params; // <--- AWAIT PARAMS
+    const json = await request.json();
+    const { carrier, tracking, eta } = json;
 
-  const g: any = prisma as any;
-  const CaseModel = g.dentalCase ?? g.case ?? g.case_;
+    const updatedCase = await prisma.dentalCase.update({
+      where: { id },
+      data: {
+        shippingCarrier: carrier,
+        trackingNumber: tracking,
+        shippingEta: eta ? new Date(eta) : null,
+        shippedAt: new Date(), // Auto-set shipped timestamp
+        status: "SHIPPED",     // Auto-update status
+        stage: "SHIPPING"      // Auto-update stage
+      },
+    });
 
-  const data: any = {};
-  if (carrier !== undefined) data.shippingCarrier = String(carrier).slice(0, 100);
-  if (tracking !== undefined) data.trackingNumber = String(tracking).slice(0, 100);
-  if (eta !== undefined) {
-    if (eta === null || eta === "") data.shippingEta = null;
-    else {
-      const d = new Date(eta);
-      if (isNaN(d.getTime())) return NextResponse.json({ error: "Invalid ETA" }, { status: 400 });
-      data.shippingEta = d;
-    }
+    return NextResponse.json({ 
+      ok: true, 
+      shipping: { 
+        carrier: updatedCase.shippingCarrier, 
+        tracking: updatedCase.trackingNumber, 
+        eta: updatedCase.shippingEta 
+      } 
+    });
+  } catch (error) {
+    console.error("Shipping update error:", error);
+    return NextResponse.json({ error: "Failed to update shipping" }, { status: 500 });
   }
-
-  const updated = await CaseModel.update({ where: { id: params.id }, data });
-  return NextResponse.json({
-    ok: true,
-    shipping: {
-      carrier: updated.shippingCarrier,
-      tracking: updated.trackingNumber,
-      eta: updated.shippingEta,
-    },
-  });
 }

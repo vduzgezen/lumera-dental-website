@@ -4,7 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-import * as BufferGeometryUtils from "three/examples/jsm/utils/BufferGeometryUtils.js";
+// We import dynamically inside useEffect to avoid SSR issues with Three.js examples
 
 export default function STLViewer({ url }: { url: string }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -35,6 +35,7 @@ export default function STLViewer({ url }: { url: string }) {
     // Max pixel ratio 2 is good balance of quality vs performance
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     
+    // Clear previous canvas
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
@@ -68,6 +69,7 @@ export default function STLViewer({ url }: { url: string }) {
     let raf = 0;
 
     const init = async () => {
+      // Dynamic imports to prevent server-side crashes
       const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls.js");
       const { STLLoader } = await import("three/examples/jsm/loaders/STLLoader.js");
       const { PLYLoader } = await import("three/examples/jsm/loaders/PLYLoader.js");
@@ -104,6 +106,7 @@ export default function STLViewer({ url }: { url: string }) {
       const processGeometry = (geometry: THREE.BufferGeometry) => {
         geometry.deleteAttribute('normal'); 
         geometry.deleteAttribute('uv'); 
+        // Merge vertices to smooth the mesh
         let smoothGeometry = mergeVertices(geometry, 1e-4);
         smoothGeometry.computeVertexNormals();
         return smoothGeometry;
@@ -151,6 +154,7 @@ export default function STLViewer({ url }: { url: string }) {
               obj.traverse((child) => {
                 if ((child as THREE.Mesh).isMesh) {
                   const mesh = child as THREE.Mesh;
+                  // Clone to avoid shared geometry issues
                   const processed = processGeometry(mesh.geometry.clone());
                   mesh.geometry = processed;
                   mesh.material = new THREE.MeshStandardMaterial({
@@ -167,7 +171,14 @@ export default function STLViewer({ url }: { url: string }) {
             (err) => !cancelled && handleError(err)
           );
         } else {
-          throw new Error(`Unsupported file format: ${cleanUrl}`);
+          // Default fallback to STL if extension is unknown but likely 3D
+          // Or just throw error
+           new STLLoader().load(
+            url,
+            (geo) => !cancelled && addMesh(geo),
+            undefined,
+            (err) => !cancelled && handleError(err)
+          );
         }
       } catch (err) {
         handleError(err);

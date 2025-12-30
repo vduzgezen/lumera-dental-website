@@ -1,4 +1,4 @@
-// prisma/schema.prisma
+// portal/prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -9,6 +9,8 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// --- ENUMS ------------------------------------------------------------------
+
 enum Role {
   customer
   lab
@@ -18,11 +20,13 @@ enum Role {
 enum CaseStatus {
   NEW
   IN_DESIGN
+  ON_HOLD            // Waiting for doctor reply
   READY_FOR_REVIEW
   CHANGES_REQUESTED
   APPROVED
   IN_MILLING
   SHIPPED
+  CANCELED           // Case abandoned
 }
 
 enum FileKind {
@@ -37,6 +41,7 @@ enum ProductionStage {
   DESIGN
   MILLING_GLAZING
   SHIPPING
+  COMPLETED          // Done and billed
 }
 
 enum ProductKind {
@@ -46,47 +51,127 @@ enum ProductKind {
   INLAY_ONLAY
 }
 
+enum PaymentStatus {
+  UNPAID
+  PARTIAL
+  PAID
+  OVERDUE
+}
+
+enum PaymentMethod {
+  CREDIT_CARD
+  ACH
+  CHECK
+  OTHER
+}
+
+// --- CORE MODELS ------------------------------------------------------------
+
 model Clinic {
-  id    String       @id @default(cuid())
-  name  String
-  users User[]
-  cases DentalCase[]
+  id        String   @id @default(cuid())
+  name      String
+  
+  // LOGISTICS
+  street    String?  
+  city      String?
+  state     String?
+  zipCode   String?
+  phone     String?  // Clinic main line
+  
+  // BILLING & FINANCIALS (The Bank Model)
+  billingCycleDay Int     @default(1) // Day of month to generate bill (e.g., 1st)
+  paymentTerms    Int     @default(30) // Days to pay (e.g., Net30)
+  taxId           String? // EIN for business
+  
+  // BANKING REFERENCE (For ACH)
+  bankName        String?
+  bankLast4       String? // Security: Never store full account # in plain text
+  routingNumber   String? 
+  
+  // RELATIONS
+  users     User[]
+  cases     DentalCase[]
+  invoices  Invoice[]
+  payments  Payment[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String? // NEW: display name for doctors
-  role      Role
-  clinicId  String?
-  clinic    Clinic?  @relation(fields: [clinicId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id             String   @id @default(cuid())
+  email          String   @unique
+  password       String   // Hashed (bcrypt)
+  name           String?  
+  phoneNumber    String?  // Direct mobile for texts
+  preferenceNote String?  // e.g., "Dr. Smith likes tight contacts"
 
-  doctorCases DentalCase[] @relation("DoctorCases")
+  role           Role
+  clinicId       String?
+  clinic         Clinic?  @relation(fields: [clinicId], references: [id])
+
+  // RELATION 1: OWNERSHIP (The Doctor)
+  doctorCases    DentalCase[] @relation("DoctorCases")
+
+  // RELATION 2: ASSIGNMENT (The Lab Tech)
+  workingCases   DentalCase[] @relation("WorkingCases")
+
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 model DentalCase {
-  id       String @id @default(cuid())
-  clinicId String
-  clinic   Clinic @relation(fields: [clinicId], references: [id])
-
+  id           String @id @default(cuid())
+  clinicId     String
+  clinic       Clinic @relation(fields: [clinicId], references: [id])
+  
+  // OWNER (The Doctor)
   doctorUserId String?
   doctorUser   User?   @relation("DoctorCases", fields: [doctorUserId], references: [id])
 
+  // WORKER (The Lab Tech)
+  assigneeId   String?
+  assigneeUser User?   @relation("WorkingCases", fields: [assigneeId], references: [id])
+
   patientAlias String
-  doctorName   String? // snapshot from User.name for display
+  doctorName   String?
   toothCodes   String
 
-  orderDate DateTime    @default(now())
-  product   ProductKind @default(ZIRCONIA)
+  orderDate    DateTime    @default(now())
+  product      ProductKind @default(ZIRCONIA)
 
-  material String?
-  shade    String?
-  dueDate  DateTime?
+  // DETAILS
+  material     String?
+  shade        String?
+  
+  // FINANCIALS (Per Case)
+  cost         Decimal     @default(60.00) // Base price
+  isRush       Boolean     @default(false) // +$20 fee?
+  currency     String      @default("USD")
+  invoiced     Boolean     @default(false) // Has this been added to a monthly bill?
+  
+  invoiceId    String?
+  invoice      Invoice?    @relation(fields: [invoiceId], references: [id])
 
-  status   CaseStatus    @default(IN_DESIGN)
+  // LOGISTICS
+  dueDate      DateTime?
+  status       CaseStatus      @default(IN_DESIGN)
+  stage        ProductionStage @default(DESIGN)
+  
+  designedAt   DateTime?
+  milledAt     DateTime?
+  shippedAt    DateTime?
+  
+  shippingCarrier String?
+  trackingNumber  String?
+  shippingEta     DateTime?
+
+  // REVIEW
+  needsReview       Boolean   @default(false)
+  reviewQuestion    String?
+  reviewRequestedAt DateTime?
+  reviewDeadline    DateTime?
+
   files    CaseFile[]
   events   StatusEvent[]
   comments CaseComment[]
@@ -94,32 +179,59 @@ model DentalCase {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  stage      ProductionStage @default(DESIGN)
-  designedAt DateTime?
-  milledAt   DateTime?
-  shippedAt  DateTime?
-
-  needsReview       Boolean   @default(false)
-  reviewQuestion    String?
-  reviewRequestedAt DateTime?
-  reviewDeadline    DateTime?
-
-  shippingCarrier String?
-  trackingNumber  String?
-  shippingEta     DateTime?
-
   @@map("Case")
 }
+
+// --- BILLING MODELS ---------------------------------------------------------
+
+model Invoice {
+  id          String        @id @default(cuid())
+  clinicId    String
+  clinic      Clinic        @relation(fields: [clinicId], references: [id])
+  
+  amount      Decimal       // Total of all cases
+  status      PaymentStatus @default(UNPAID)
+  dueDate     DateTime      // Calculated from Terms
+  
+  periodStart DateTime      // Bill for cases from this date...
+  periodEnd   DateTime      // ...to this date
+  
+  pdfUrl      String?       // Link to generated PDF invoice
+  
+  cases       DentalCase[]  // Which cases are in this bill?
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  clinicId    String
+  clinic      Clinic        @relation(fields: [clinicId], references: [id])
+  
+  amount      Decimal
+  method      PaymentMethod
+  referenceId String?       // Stripe Charge ID or Check Number
+  
+  postedAt    DateTime      @default(now())
+}
+
+// --- SUPPORTING MODELS ------------------------------------------------------
 
 model CaseFile {
   id        String     @id @default(cuid())
   caseId    String
   case      DentalCase @relation(fields: [caseId], references: [id])
-  label     String? // 'scan' | 'design_with_model' | 'design_only'
+  
+  label     String?
   kind      FileKind
   url       String
   sizeBytes Int?
   createdAt DateTime   @default(now())
+
+  // NEW: Link to a comment
+  commentId String?
+  comment   CaseComment? @relation(fields: [commentId], references: [id])
 }
 
 model StatusEvent {
@@ -140,4 +252,7 @@ model CaseComment {
   authorId  String
   body      String
   createdAt DateTime   @default(now())
+
+  // NEW: List of attached files
+  attachments CaseFile[]
 }
