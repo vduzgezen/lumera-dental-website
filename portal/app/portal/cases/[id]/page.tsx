@@ -8,6 +8,7 @@ import FileUploader from "@/components/FileUploader";
 import CaseProcessBar from "@/components/CaseProcessBar";
 import HtmlViewerUploader from "@/components/HtmlViewerUploader";
 import CaseViewerTabs from "@/components/CaseViewerTabs";
+import CommentsPanel from "@/components/CommentsPanel"; 
 import { CaseFile, CaseStatus, ProductionStage } from "@prisma/client";
 import CopyableId from "@/components/CopyableId";
 
@@ -58,12 +59,18 @@ export default async function CaseDetailPage({
   const session = await getSession();
   if (!session) return notFound();
 
+  // 1. Fetch Case with Comments & Attachments
+  // FIX: Added 'comments' include so the Doctor can actually see them
   const item = await prisma.dentalCase.findUnique({
     where: { id },
     include: {
       clinic: true,
       files: { orderBy: { createdAt: "asc" } },
       events: { orderBy: { at: "asc" } },
+      comments: { 
+        include: { attachments: true },
+        orderBy: { createdAt: "desc" } 
+      }
     },
   });
 
@@ -72,6 +79,31 @@ export default async function CaseDetailPage({
   if (session.role === "customer" && session.clinicId !== item.clinicId) {
     return notFound();
   }
+
+  // 2. Fetch Author Names for Comments
+  const authorIds = Array.from(new Set(item.comments.map(c => c.authorId)));
+  const authors = await prisma.user.findMany({
+    where: { id: { in: authorIds } },
+    select: { id: true, name: true, role: true, email: true }
+  });
+  const authorMap = new Map(authors.map(u => [u.id, u]));
+
+  // 3. Prepare Comments Data for UI
+  const uiComments = item.comments.map(c => {
+    const author = authorMap.get(c.authorId);
+    return {
+      id: c.id,
+      body: c.body,
+      at: c.createdAt,
+      author: author?.name || author?.email || "Unknown",
+      role: author?.role || "user",
+      attachments: c.attachments.map(a => ({
+        id: a.id,
+        url: a.url,
+        kind: a.kind
+      }))
+    };
+  });
 
   const isLabOrAdmin = session.role === "lab" || session.role === "admin";
 
@@ -85,45 +117,21 @@ export default async function CaseDetailPage({
     const lbl = String(f.label ?? "").toLowerCase();
     const slot = normalizeSlot(lbl);
 
-    if (slot === "scan") {
-      scanFile = f;
-      continue;
-    }
-    if (slot === "design_with_model") {
-      designWithModelFile = f;
-      continue;
-    }
-    if (slot === "design_only") {
-      designOnlyFile = f;
-      continue;
-    }
-    if (lbl === "scan_html") {
-      scanHtmlFile = f;
-      continue;
-    }
-    if (lbl === "design_with_model_html") {
-      designHtmlFile = f;
-      continue;
-    }
+    if (slot === "scan") { scanFile = f; continue; }
+    if (slot === "design_with_model") { designWithModelFile = f; continue; }
+    if (slot === "design_only") { designOnlyFile = f; continue; }
+    if (lbl === "scan_html") { scanHtmlFile = f; continue; }
+    if (lbl === "design_with_model_html") { designHtmlFile = f; continue; }
   }
 
   const scan3DUrl = is3DUrl(scanFile?.url) ? scanFile!.url : null;
-  const designWithModel3DUrl = is3DUrl(designWithModelFile?.url)
-    ? designWithModelFile!.url
-    : null;
-  const designOnly3DUrl = is3DUrl(designOnlyFile?.url)
-    ? designOnlyFile!.url
-    : null;
+  const designWithModel3DUrl = is3DUrl(designWithModelFile?.url) ? designWithModelFile!.url : null;
+  const designOnly3DUrl = is3DUrl(designOnlyFile?.url) ? designOnlyFile!.url : null;
   const scanHtmlUrl = scanHtmlFile?.url ?? null;
   const designHtmlUrl = designHtmlFile?.url ?? null;
 
   const ActionsPanel = ({ isSidebar = false }: { isSidebar?: boolean }) => (
-    <div 
-      className={`
-        rounded-xl border border-white/10 bg-black/20 flex flex-col overflow-hidden
-        ${isSidebar ? "h-full" : "h-full"}
-      `}
-    >
+    <div className={`rounded-xl border border-white/10 bg-black/20 flex flex-col overflow-hidden h-full`}>
       <div className="border-b border-white/10 px-4 bg-white/5 h-14 flex items-center shrink-0">
         <h2 className="font-medium text-sm text-white">Status & Actions</h2>
       </div>
@@ -134,6 +142,15 @@ export default async function CaseDetailPage({
             caseId={item.id}
             role={session.role}
             currentStatus={item.status as CaseStatus}
+          />
+        </div>
+
+        {/* Comments & Red Pen Panel */}
+        <div className="pt-4 border-t border-white/10">
+          <CommentsPanel 
+            caseId={item.id}
+            comments={uiComments}
+            canPost={true} 
           />
         </div>
 
@@ -166,74 +183,63 @@ export default async function CaseDetailPage({
     </div>
   );
 
+  // FIX: Collapsible Menu for Uploads to save space
   const UploadsSection = () => (
-    <div className="space-y-4">
-      <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-white">Scan</span>
-          {scanHtmlFile && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-200 border border-blue-500/30">
-              Ready
-            </span>
-          )}
+    <details className="group rounded-xl border border-white/10 bg-black/20 overflow-hidden">
+      <summary className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 transition-colors select-none">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-white">📂 Manage Files</span>
+          <span className="text-[10px] text-white/40 group-open:hidden">(Click to Expand)</span>
         </div>
-        <div className="text-xs text-white/50 truncate">
-          {scanHtmlFile ? baseNameFromUrl(scanHtmlFile.url) : "No scan viewer"}
+        <svg 
+          className="w-4 h-4 text-white/40 transform group-open:rotate-180 transition-transform" 
+          fill="none" viewBox="0 0 24 24" stroke="currentColor"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </summary>
+      
+      <div className="p-3 space-y-3 border-t border-white/10">
+        {/* Scan */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-white/80">Scan</span>
+            {scanHtmlFile && <span className="text-[10px] text-blue-300">✓ Ready</span>}
+          </div>
+          <div className="bg-black/40 p-2 rounded border border-white/5">
+            <HtmlViewerUploader caseId={item.id} role={session.role} label="scan_html" description="" />
+          </div>
         </div>
-        <HtmlViewerUploader
-          caseId={item.id}
-          role={session.role}
-          label="scan_html"
-          description="Upload Scan Viewer"
-        />
-      </div>
 
-      <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-white">Design + Model</span>
-          {designHtmlFile && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-200 border border-blue-500/30">
-              Ready
-            </span>
-          )}
+        {/* Design + Model */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-white/80">Design + Model</span>
+            {designHtmlFile && <span className="text-[10px] text-blue-300">✓ Ready</span>}
+          </div>
+          <div className="bg-black/40 p-2 rounded border border-white/5">
+             <HtmlViewerUploader caseId={item.id} role={session.role} label="design_with_model_html" description="" />
+          </div>
         </div>
-        <div className="text-xs text-white/50 truncate">
-          {designHtmlFile ? baseNameFromUrl(designHtmlFile.url) : "No design viewer"}
-        </div>
-        <HtmlViewerUploader
-          caseId={item.id}
-          role={session.role}
-          label="design_with_model_html"
-          description="Upload Design Viewer"
-        />
-      </div>
 
-      <div className="rounded-xl border border-white/10 p-4 space-y-3 bg-black/20">
-        <div className="flex items-center justify-between">
-          <span className="text-sm font-medium text-white">Design Only (3D)</span>
-          {designOnlyFile && (
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-200 border border-emerald-500/30">
-              Ready
-            </span>
-          )}
+        {/* Design Only */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-white/80">Design Only (3D)</span>
+            {designOnlyFile && <span className="text-[10px] text-emerald-300">✓ Ready</span>}
+          </div>
+          <div className="bg-black/40 p-2 rounded border border-white/5">
+             <FileUploader caseId={item.id} role={session.role} slot="design_only" />
+          </div>
         </div>
-        <div className="text-xs text-white/50 truncate">
-          {designOnlyFile ? baseNameFromUrl(designOnlyFile.url) : "No 3D file"}
-        </div>
-        <FileUploader
-          caseId={item.id}
-          role={session.role}
-          slot="design_only"
-        />
       </div>
-    </div>
+    </details>
   );
 
   return (
     <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
       
       <div className="flex-none space-y-4 mb-4">
-        {/* FIX: Pass status to CaseProcessBar */}
         <CaseProcessBar
           caseId={item.id}
           stage={item.stage as ProductionStage}
@@ -243,52 +249,46 @@ export default async function CaseDetailPage({
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{item.patientAlias}</h1>
-            
             <div className="text-white/70 text-sm mt-1 flex flex-wrap items-center gap-x-3">
               <span>Clinic: <span className="text-white">{item.clinic.name}</span></span>
               <span>•</span>
-              
               {isLabOrAdmin && item.doctorName && (
-                <>
-                  <span>Doctor: <span className="text-white">{item.doctorName}</span></span>
-                  <span>•</span>
-                </>
+                <><span>Doctor: <span className="text-white">{item.doctorName}</span></span><span>•</span></>
               )}
-
               <span>Teeth: <span className="text-white">{item.toothCodes}</span></span>
               <span>•</span>
               <span>Status: <span className="text-white font-medium">{item.status.replace(/_/g, " ")}</span></span>
               <span>•</span>
-              
               <div className="flex items-center gap-1.5">
-                <span>ID:</span>
-                <CopyableId id={item.id} />
+                <span>ID:</span><CopyableId id={item.id} />
               </div>
             </div>
           </div>
-          <Link
-            href="/portal/cases"
-            className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm"
-          >
+          <Link href="/portal/cases" className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm">
             ← Back to Cases
           </Link>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 grid gap-6 lg:grid-cols-3 items-stretch">
+      {/* FIX: 30/70 SPLIT LAYOUT */}
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6">
         
         {isLabOrAdmin ? (
           <>
-            <div className="lg:col-span-1 flex flex-col gap-4 h-full min-h-0">
-              <div className="flex-shrink-0 overflow-y-auto max-h-[45%] pr-2 custom-scrollbar">
+            {/* LEFT COLUMN (30%): Uploads & Actions */}
+            <div className="flex-none w-full lg:w-[30%] flex flex-col gap-4 h-full min-h-0">
+              {/* Top Left: Collapsible Uploads */}
+              <div className="flex-shrink-0">
                 <UploadsSection />
               </div>
+              {/* Bottom Left: Actions & Chat */}
               <div className="flex-1 min-h-0">
                 <ActionsPanel isSidebar={true} />
               </div>
             </div>
 
-            <div className="lg:col-span-2 h-full min-h-0">
+            {/* RIGHT COLUMN (70%): Viewers (The Priority) */}
+            <div className="flex-1 h-full min-h-0">
               <CaseViewerTabs
                 scan3DUrl={scan3DUrl}
                 designWithModel3DUrl={designWithModel3DUrl}
@@ -300,7 +300,8 @@ export default async function CaseDetailPage({
           </>
         ) : (
           <>
-            <div className="lg:col-span-2 h-full min-h-0">
+            {/* DOCTOR VIEW: Viewer Main (Left) + Actions Side (Right) */}
+            <div className="flex-1 h-full min-h-0">
               <CaseViewerTabs
                 scan3DUrl={scan3DUrl}
                 designWithModel3DUrl={designWithModel3DUrl}
@@ -309,7 +310,7 @@ export default async function CaseDetailPage({
                 designHtmlUrl={designHtmlUrl}
               />
             </div>
-            <div className="lg:col-span-1 h-full min-h-0">
+            <div className="flex-none w-full lg:w-[30%] h-full min-h-0">
               <ActionsPanel />
             </div>
           </>

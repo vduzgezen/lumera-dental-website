@@ -3,21 +3,24 @@
 
 import { useState } from "react";
 
-type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING";
+// FIX: Added "COMPLETED" to match Prisma's ProductionStage enum
+type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
 type Role = "admin" | "lab" | "customer";
 
-const STAGE_ORDER: Stage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING"];
+// FIX: Added COMPLETED to visualization order
+const STAGE_ORDER: Stage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED"];
 
 const STAGE_LABEL: Record<Stage, string> = {
   DESIGN: "Designing",
   MILLING_GLAZING: "Milling & Glazing",
   SHIPPING: "Delivering",
+  COMPLETED: "Completed",
 };
 
 export default function CaseProcessBar({
   caseId,
-  stage: initialStage,
-  status, // Need status to enforce guard rails
+  stage, // Use prop directly (no need for local state if we reload)
+  status,
   role,
 }: {
   caseId: string;
@@ -25,7 +28,6 @@ export default function CaseProcessBar({
   status: string;
   role: Role;
 }) {
-  const [stage, setStage] = useState<Stage>(initialStage);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -53,7 +55,12 @@ export default function CaseProcessBar({
   } else if (stage === "MILLING_GLAZING") {
     nextStage = "SHIPPING";
     nextLabel = "Ship Case";
-    canAdvance = true; // Manual check by lab usually
+    canAdvance = true; 
+  } else if (stage === "SHIPPING") {
+    // FIX: Added logic to finish the case
+    nextStage = "COMPLETED";
+    nextLabel = "Complete Case";
+    canAdvance = true;
   }
 
   async function advance() {
@@ -61,8 +68,9 @@ export default function CaseProcessBar({
     setBusy(true);
     setErr(null);
     try {
+      // FIX: Changed PATCH to POST to match your API route definition
       const res = await fetch(`/api/cases/${caseId}/stage`, {
-        method: "PATCH",
+        method: "POST", 
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ stage: nextStage }),
       });
@@ -118,7 +126,7 @@ export default function CaseProcessBar({
         
         <ol className="relative z-10 flex w-full justify-between">
           {STAGE_ORDER.map((s, idx) => {
-            const isDone = idx < currentIndex;
+            const isDone = idx < currentIndex || stage === "COMPLETED"; // Ensure completed marks all as done
             const isCurrent = idx === currentIndex;
             
             return (

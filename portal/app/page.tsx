@@ -1,103 +1,172 @@
+// portal/app/page.tsx
+"use client";
+
+import { useEffect, useRef } from "react";
+import Link from "next/link";
 import Image from "next/image";
+import PublicNavbar from "@/components/PublicNavbar";
+import PublicFooter from "@/components/PublicFooter";
 
-export default function Home() {
+export default function HomePage() {
+  // Reveal Animation Logic
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((e) => {
+          if (e.isIntersecting) {
+            e.target.classList.add("in");
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+    document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+  // Card Tilt Logic
+  const cardRef = useRef<HTMLDivElement>(null);
+  const handleMove = (e: React.MouseEvent) => {
+    if (!cardRef.current) return;
+    const r = cardRef.current.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5;
+    const y = (e.clientY - r.top) / r.height - 0.5;
+    cardRef.current.style.transform = `rotateY(${x * 8}deg) rotateX(${-y * 8}deg)`;
+  };
+  const handleLeave = () => {
+    if (cardRef.current) cardRef.current.style.transform = "rotateY(0) rotateX(0)";
+  };
+
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="min-h-screen flex flex-col bg-midnight text-porcelain selection:bg-accent selection:text-midnight">
+      <PublicNavbar />
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+      {/* HERO SECTION */}
+      <section className="relative pt-24 pb-20 md:pt-32 md:pb-32 overflow-hidden">
+        {/* Background Gradients */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-accent/10 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3" />
+          <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-blue-500/10 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/4" />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+        <div className="container mx-auto px-6 relative z-10 grid lg:grid-cols-2 gap-12 items-center">
+          {/* Text Content */}
+          <div className="space-y-8">
+            <h1 className="text-5xl md:text-7xl font-semibold tracking-tight reveal">
+              The Crown
+            </h1>
+            <p className="text-xl md:text-2xl text-white/60 max-w-lg leading-relaxed reveal">
+              One product. $60 all-in. Zirconia perfected — no menus, no upsells, no confusion.
+            </p>
+            <div className="flex flex-wrap gap-4 reveal">
+              <Link
+                href="/contact"
+                className="px-8 py-4 rounded-full bg-white text-midnight font-bold hover:bg-gray-100 transition shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+              >
+                Send a Case
+              </Link>
+              <Link
+                href="/work"
+                className="px-8 py-4 rounded-full border border-white/20 hover:bg-white/5 transition font-medium backdrop-blur-md"
+              >
+                See the Craft
+              </Link>
+            </div>
+            <div className="flex items-center gap-3 text-sm text-white/40 reveal">
+              <div className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.6)]" />
+              <span>Made in USA • Delivery in 7 business days</span>
+            </div>
+          </div>
+
+          {/* 3D Card */}
+          <div className="perspective-1000 flex justify-center lg:justify-end reveal">
+            <div
+              ref={cardRef}
+              onMouseMove={handleMove}
+              onMouseLeave={handleLeave}
+              className="relative w-full max-w-md aspect-[4/5] rounded-[32px] border border-white/10 bg-white/5 backdrop-blur-xl shadow-2xl overflow-hidden transition-transform duration-100 ease-out"
+              style={{ transformStyle: "preserve-3d" }}
+            >
+              {/* Card Glow */}
+              <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none" />
+              
+              <div className="relative p-8 h-full flex flex-col justify-between z-10">
+                <div className="flex justify-between items-start">
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-xs font-medium">Zirconia</span>
+                    <span className="px-3 py-1 rounded-full border border-white/10 bg-white/5 text-xs font-medium">USA</span>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-white">$60</div>
+                    <div className="text-xs text-white/50">all-in</div>
+                  </div>
+                </div>
+
+                {/* Animated GIF - REQUIRES Images/CrownLoop.gif in public folder */}
+                <div className="flex-1 flex items-center justify-center my-4">
+                  <div className="relative w-64 h-64">
+                    <Image 
+                      src="/Images/CrownLoop.gif" 
+                      alt="Crown" 
+                      fill
+                      className="object-contain drop-shadow-[0_20px_50px_rgba(121,231,224,0.15)]"
+                      unoptimized
+                    />
+                  </div>
+                </div>
+
+                {/* Specs */}
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="p-3 rounded-xl border border-white/10 bg-white/5 flex justify-between items-center">
+                    <span className="text-white/50">Strength</span>
+                    <span className="font-semibold">1200 MPa</span>
+                  </div>
+                  <div className="p-3 rounded-xl border border-white/10 bg-white/5 flex justify-between items-center">
+                    <span className="text-white/50">Translucency</span>
+                    <span className="font-semibold">43%</span>
+                  </div>
+                  <div className="p-3 rounded-xl border border-white/10 bg-white/5 flex justify-between items-center">
+                    <span className="text-white/50">Margin</span>
+                    <span className="font-semibold">0.2 mm</span>
+                  </div>
+                  <div className="p-3 rounded-xl border border-white/10 bg-white/5 flex justify-between items-center">
+                    <span className="text-white/50">Material</span>
+                    <span className="font-semibold">3Y</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* QUALITY SECTION */}
+      <section className="py-24 border-t border-white/5 relative">
+        <div className="container mx-auto px-6">
+          <div className="max-w-2xl mb-16">
+            <h2 className="text-4xl font-semibold mb-6 reveal">Quality without complexity</h2>
+            <p className="text-xl text-white/60 leading-relaxed reveal">
+              We focus on one thing—zirconia crowns—so every step is tuned for excellence. 
+              Our globally distributed design team keeps work moving overnight; US manufacturing ensures consistent quality.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              { title: "Microscopic fit", desc: "Margins verified under magnification; designed for a consistent passive fit to reduce chairside adjustment." },
+              { title: "Global design, local quality", desc: "Overnight responsiveness from our global design team; Made in USA production for precision." },
+              { title: "Always responsive", desc: "A highly responsive team with clear communication at every step." }
+            ].map((card, i) => (
+              <div key={i} className="p-8 rounded-3xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition reveal">
+                <h3 className="text-xl font-medium mb-4">{card.title}</h3>
+                <p className="text-white/50 leading-relaxed">{card.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <PublicFooter />
+    </main>
   );
 }

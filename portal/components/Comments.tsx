@@ -1,6 +1,7 @@
+// components/Comments.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export default function Comments({ caseId }: { caseId: string }) {
   const [items, setItems] = useState<any[]>([]);
@@ -9,7 +10,8 @@ export default function Comments({ caseId }: { caseId: string }) {
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
-  async function load() {
+  // FIX: Wrap in useCallback to satisfy linter
+  const load = useCallback(async () => {
     setLoading(true);
     setError(undefined);
     try {
@@ -22,7 +24,7 @@ export default function Comments({ caseId }: { caseId: string }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [caseId]);
 
   async function post() {
     if (!body.trim()) return;
@@ -45,7 +47,10 @@ export default function Comments({ caseId }: { caseId: string }) {
     }
   }
 
-  useEffect(() => { load(); /* eslint-disable-next-line */ }, [caseId]);
+  // FIX: Add 'load' to dependencies
+  useEffect(() => {
+    load();
+  }, [load]);
 
   return (
     <div className="space-y-3">

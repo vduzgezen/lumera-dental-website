@@ -21,23 +21,20 @@ export default function CasePreviewSwitcher({
   designWithModelUrl?: string | null;
   designOnlyUrl?: string | null;
 }) {
-  const slotUrls: Record<SlotKey, string | null | undefined> = {
+  // FIX: Memoize slotUrls to prevent re-creation on every render
+  const slotUrls = useMemo(() => ({
     scan: scanUrl,
     design_with_model: designWithModelUrl,
     design_only: designOnlyUrl,
-  };
+  }), [scanUrl, designWithModelUrl, designOnlyUrl]);
 
   const [selected, setSelected] = useState<SlotKey>("scan");
 
   // 🔁 Remember the last selected slot across refreshes / uploads
   useEffect(() => {
-    // Only runs in the browser
     if (typeof window === "undefined") return;
 
-    const stored = window.localStorage.getItem(
-      "lumera.casePreviewSlot",
-    ) as SlotKey | null;
-
+    const stored = window.localStorage.getItem("lumera.casePreviewSlot") as SlotKey | null;
     const order: SlotKey[] = ["design_with_model", "design_only", "scan"];
 
     // If we have a stored value and that slot actually has a file, use it.
@@ -54,10 +51,8 @@ export default function CasePreviewSwitcher({
       }
     }
 
-    // Fallback
     setSelected("scan");
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanUrl, designWithModelUrl, designOnlyUrl]);
+  }, [slotUrls]); // Safe dependency now that slotUrls is memoized
 
   const activeUrl = useMemo(
     () => slotUrls[selected] ?? null,
@@ -98,7 +93,7 @@ export default function CasePreviewSwitcher({
                   enabled
                     ? selected === key
                       ? "bg-white text-black"
-                      : "text-white/80 hover:bg.white/10"
+                      : "text-white/80 hover:bg-white/10"
                     : "text-white/30 cursor-not-allowed",
                 ].join(" ")}
               >
@@ -110,10 +105,8 @@ export default function CasePreviewSwitcher({
       </div>
 
       <div className="flex-1 min-h-[16rem]">
-        <Case3DPanel
-          url={activeUrl ?? null}
-          title={activeUrl ? undefined : "3D Preview"}
-        />
+        {/* FIX: Removed 'title' prop which caused the build error */}
+        <Case3DPanel url={activeUrl ?? null} />
       </div>
     </div>
   );
