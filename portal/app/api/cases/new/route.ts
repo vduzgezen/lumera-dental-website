@@ -4,7 +4,13 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { ProductKind, FileKind, CaseStatus, ProductionStage } from "@prisma/client";
+import { 
+  calculateCaseCost, 
+  countUnits, 
+  ProductKind, 
+  BillingType, 
+  PriceTier 
+} from "@/lib/pricing";
 
 const MAX_SCAN_VIEWER_BYTES = 200 * 1024 * 1024; // 200MB
 
@@ -102,7 +108,6 @@ function normalizeExocadHtml(html: string): string {
 })();
 </script>
 `;
-
   if (html.includes("</body>")) {
     return html.replace("</body>", script + "\n</body>");
   }
@@ -131,9 +136,12 @@ export async function POST(req: Request) {
     const product = form.get("product");
     const material = form.get("material");
     const shade = form.get("shade");
-
-    // Scan viewer HTML: prefer explicit field, fall back to "scan" for compatibility
     const scanViewerRaw = form.get("scanHtml") ?? form.get("scan");
+    
+    const billingTypeRaw = form.get("billingType");
+    const billingType = (billingTypeRaw === "WARRANTY") 
+      ? BillingType.WARRANTY 
+      : BillingType.BILLABLE;
 
     if (typeof alias !== "string" || !alias.trim()) {
       return NextResponse.json(
@@ -182,6 +190,7 @@ export async function POST(req: Request) {
     }
     const dueDate = addDays(orderDate, 8);
 
+    // Fetch Doctor AND Clinic Price Tier
     const doctor = await prisma.user.findUnique({
       where: { id: doctorUserId },
       select: {
@@ -190,7 +199,13 @@ export async function POST(req: Request) {
         role: true,
         email: true,
         clinicId: true,
-        clinic: { select: { id: true, name: true } },
+        clinic: { 
+          select: { 
+            id: true, 
+            name: true,
+            priceTier: true // Cleaned syntax here
+          } 
+        },
       },
     });
 
@@ -226,7 +241,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // DIRECT FIX: Use prisma.dentalCase.create and proper Enum casting
+    // --- BILLING CALCULATION ---
+    const unitCount = countUnits(toothCodes.trim());
+    
+    // Default to STANDARD if missing or invalid
+    const tier = doctor.clinic.priceTier || PriceTier.STANDARD;
+
+    const cost = calculateCaseCost(
+      tier,
+      product, 
+      unitCount,
+      billingType
+    );
+
+    // Create Case with Billing Data
     const created = await prisma.dentalCase.create({
       data: {
         clinicId: doctor.clinic.id,
@@ -236,15 +264,22 @@ export async function POST(req: Request) {
         toothCodes: toothCodes.trim(),
         orderDate,
         dueDate,
-        product: product as ProductKind, // Enforce Enum
+        product: product, 
         material:
           typeof material === "string" && material.trim()
             ? material.trim()
             : null,
         shade:
           typeof shade === "string" && shade.trim() ? shade.trim() : null,
-        status: CaseStatus.IN_DESIGN,
-        stage: ProductionStage.DESIGN,
+        
+        status: "IN_DESIGN", 
+        stage: "DESIGN",     
+        
+        // NEW BILLING FIELDS
+        units: unitCount,
+        cost: cost,
+        billingType: billingType,
+        invoiced: false,
       },
       select: { id: true },
     });
@@ -262,7 +297,6 @@ export async function POST(req: Request) {
       originalName,
       "scan_viewer.html",
     );
-
     const htmlText = scanBuf.toString("utf8");
     const normalized = normalizeExocadHtml(htmlText);
     const finalBuf = Buffer.from(normalized, "utf8");
@@ -276,12 +310,11 @@ export async function POST(req: Request) {
       data: {
         caseId: created.id,
         label: "scan_html",
-        kind: FileKind.OTHER,
+        kind: "OTHER", 
         url: publicUrl,
         sizeBytes: finalBuf.length,
       },
     });
-
     return NextResponse.json({ ok: true, id: created.id });
   } catch (err) {
     console.error("Create case error:", err);
