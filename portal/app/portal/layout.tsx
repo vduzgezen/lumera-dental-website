@@ -15,7 +15,7 @@ export default function PortalLayout({
   const router = useRouter();
   const [isSigningOut, setIsSigningOut] = useState(false);
   
-  // FIX: Default to TRUE so it starts closed
+  // Default to TRUE so it starts closed
   const [isCollapsed, setIsCollapsed] = useState(true);
 
   async function handleSignOut() {
@@ -53,7 +53,8 @@ export default function PortalLayout({
   };
 
   return (
-    <div className="flex min-h-screen bg-midnight text-white transition-all">
+    // FIX: Changed min-h-screen to h-screen + overflow-hidden to lock the page
+    <div className="flex h-screen w-full bg-midnight text-white overflow-hidden transition-all">
       {/* SIDEBAR */}
       <aside 
         className={`${
@@ -71,7 +72,7 @@ export default function PortalLayout({
           className="absolute -right-3 top-8 bg-midnight border border-white/10 rounded-full p-1 text-white/40 hover:text-white shadow-lg z-50 transition-colors"
         >
           {isCollapsed ? (
-             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
           ) : (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
           )}
@@ -84,7 +85,6 @@ export default function PortalLayout({
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
           )}
           
-          {/* NEW: BILLING LINK */}
           {navItem(
             "/portal/billing", 
             "Billing", 
@@ -121,10 +121,9 @@ export default function PortalLayout({
       </aside>
 
       {/* MAIN CONTENT AREA */}
-      <main className={`flex-1 p-8 transition-all duration-300 ease-in-out ${isCollapsed ? "ml-20" : "ml-64"}`}>
-        <div className="max-w-7xl mx-auto">
-          {children}
-        </div>
+      {/* FIX: Removed p-8 and max-w-7xl to remove double scrollbars */}
+      <main className={`flex-1 h-full transition-all duration-300 ease-in-out ${isCollapsed ? "ml-20" : "ml-64"}`}>
+        {children}
       </main>
     </div>
   );

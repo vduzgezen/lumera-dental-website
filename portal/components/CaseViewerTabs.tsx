@@ -3,16 +3,26 @@
 
 import { useEffect, useState } from "react";
 import Case3DPanel from "@/components/Case3DPanel";
+import CaseActions from "@/components/CaseActions";
 
 type TabKey = "scan" | "design_with_model" | "design_only";
 
+// FIX: Removed NEW and READY_FOR_REVIEW
+type CaseStatus = "IN_DESIGN" | "CHANGES_REQUESTED" | "APPROVED" | "IN_MILLING" | "SHIPPED" | "COMPLETED";
+
 export default function CaseViewerTabs({
+  caseId,
+  role,
+  status,
   scan3DUrl,
   designWithModel3DUrl,
   designOnly3DUrl,
   scanHtmlUrl,
   designHtmlUrl,
 }: {
+  caseId: string;
+  role: "customer" | "lab" | "admin";
+  status: string;
   scan3DUrl: string | null;
   designWithModel3DUrl: string | null;
   designOnly3DUrl: string | null;
@@ -20,7 +30,6 @@ export default function CaseViewerTabs({
   designHtmlUrl: string | null;
 }) {
   const [tab, setTab] = useState<TabKey>("scan");
-
   const hasScanViewer = !!scanHtmlUrl || !!scan3DUrl;
   const hasDesignViewer = !!designHtmlUrl || !!designWithModel3DUrl;
   const hasDesignOnlyViewer = !!designOnly3DUrl;
@@ -113,15 +122,22 @@ export default function CaseViewerTabs({
   };
 
   return (
-    // FIX: Removed min-h-[75vh], now just h-full to obey parent layout
-    <div className="rounded-xl border border-white/10 bg-black/20 flex flex-col h-full">
+    <div className="rounded-xl border border-white/10 bg-black/20 flex flex-col h-full overflow-hidden shadow-2xl">
       <div className="flex items-center border-b border-white/10 px-2 bg-white/5 h-14 shrink-0">
         {tabBtn("scan", "Scan", tab === "scan", !hasScanViewer)}
         {tabBtn("design_with_model", "Design + Model", tab === "design_with_model", !hasDesignViewer)}
         {tabBtn("design_only", "Design Only", tab === "design_only", !hasDesignOnlyViewer)}
+        
+        <div className="ml-auto pr-2">
+          <CaseActions 
+            caseId={caseId} 
+            role={role} 
+            currentStatus={status as CaseStatus} 
+          />
+        </div>
       </div>
 
-      <div className="flex-1 p-2 relative min-h-0">
+      <div className="flex-1 p-2 relative min-h-0 bg-[#0a1020]">
         {renderContent()}
       </div>
     </div>

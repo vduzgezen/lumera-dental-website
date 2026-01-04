@@ -7,11 +7,18 @@ type Params = {
   params: Promise<{ id: string }>;
 };
 
-type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING";
+// FIX: Removed NEW and READY_FOR_REVIEW, added COMPLETED
+type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
+const STAGE_ORDER: Stage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED"];
 
-const STAGE_ORDER: Stage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING"];
+const STAGE_READABLE: Record<Stage, string> = {
+  DESIGN: "Designing",
+  MILLING_GLAZING: "Milling",
+  SHIPPING: "Shipping",
+  COMPLETED: "Completed"
+};
 
-export async function PATCH(req: Request, { params }: Params) {
+export async function POST(req: Request, { params }: Params) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -43,7 +50,6 @@ export async function PATCH(req: Request, { params }: Params) {
     );
   }
 
-  // DIRECT FIX: Use prisma.dentalCase directly
   const existing = await prisma.dentalCase.findUnique({
     where: { id },
     select: {
@@ -81,9 +87,8 @@ export async function PATCH(req: Request, { params }: Params) {
     );
   }
 
-  // Enforce business rules on transitions
   let nextStatus = currentStatus;
-
+  
   if (currentStage === "DESIGN" && targetStage === "MILLING_GLAZING") {
     if (currentStatus !== "APPROVED") {
       return NextResponse.json(
@@ -95,13 +100,20 @@ export async function PATCH(req: Request, { params }: Params) {
       );
     }
     nextStatus = "IN_MILLING";
-  } else if (
+  } 
+  else if (
     currentStage === "MILLING_GLAZING" &&
     targetStage === "SHIPPING"
   ) {
-    // When shipping, mark as shipped
     nextStatus = "SHIPPED";
-  } else if (currentStage === "DESIGN" && targetStage === "SHIPPING") {
+  } 
+  else if (
+    currentStage === "SHIPPING" &&
+    targetStage === "COMPLETED"
+  ) {
+    nextStatus = "COMPLETED";
+  }
+  else if (currentStage === "DESIGN" && targetStage === "SHIPPING") {
     return NextResponse.json(
       {
         error:
@@ -111,14 +123,26 @@ export async function PATCH(req: Request, { params }: Params) {
     );
   }
 
-  const updated = await prisma.dentalCase.update({
-    where: { id },
-    data: {
-      stage: targetStage,
-      status: nextStatus as any,
-    },
-    select: { id: true, stage: true, status: true },
-  });
+  const [updated] = await prisma.$transaction([
+    prisma.dentalCase.update({
+      where: { id },
+      data: {
+        stage: targetStage,
+        status: nextStatus as any,
+      },
+      select: { id: true, stage: true, status: true },
+    }),
+    prisma.statusEvent.create({
+      data: {
+        caseId: id,
+        from: currentStatus,
+        to: nextStatus,
+        // FIX: Set note to null so History tab is clean
+        note: null, 
+        actorId: session.userId,
+      }
+    })
+  ]);
 
   return NextResponse.json({ ok: true, stage: updated.stage, status: updated.status });
 }

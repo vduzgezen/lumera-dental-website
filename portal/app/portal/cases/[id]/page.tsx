@@ -9,10 +9,22 @@ import CaseProcessBar from "@/components/CaseProcessBar";
 import HtmlViewerUploader from "@/components/HtmlViewerUploader";
 import CaseViewerTabs from "@/components/CaseViewerTabs";
 import CommentsPanel from "@/components/CommentsPanel"; 
-import { CaseFile, CaseStatus, ProductionStage } from "@prisma/client";
+import { CaseFile } from "@prisma/client";
 import CopyableId from "@/components/CopyableId";
+import CaseDetailSidebar from "@/components/CaseDetailSidebar";
 
 export const dynamic = "force-dynamic";
+
+// FIX: Removed NEW and READY_FOR_REVIEW
+type CaseStatus = 
+  | "IN_DESIGN" 
+  | "CHANGES_REQUESTED" 
+  | "APPROVED" 
+  | "IN_MILLING" 
+  | "SHIPPED"
+  | "COMPLETED";
+
+type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
 
 type Params = Promise<{ id: string }>;
 
@@ -39,17 +51,6 @@ function is3DUrl(url: string | null | undefined): boolean {
   return u.endsWith(".stl") || u.endsWith(".ply") || u.endsWith(".obj");
 }
 
-function baseNameFromUrl(url?: string | null): string {
-  if (!url) return "";
-  const parts = url.split("/");
-  const last = parts[parts.length - 1] || "";
-  try {
-    return decodeURIComponent(last);
-  } catch {
-    return last;
-  }
-}
-
 export default async function CaseDetailPage({
   params,
 }: {
@@ -59,8 +60,6 @@ export default async function CaseDetailPage({
   const session = await getSession();
   if (!session) return notFound();
 
-  // 1. Fetch Case with Comments & Attachments
-  // FIX: Added 'comments' include so the Doctor can actually see them
   const item = await prisma.dentalCase.findUnique({
     where: { id },
     include: {
@@ -80,7 +79,6 @@ export default async function CaseDetailPage({
     return notFound();
   }
 
-  // 2. Fetch Author Names for Comments
   const authorIds = Array.from(new Set(item.comments.map(c => c.authorId)));
   const authors = await prisma.user.findMany({
     where: { id: { in: authorIds } },
@@ -88,7 +86,12 @@ export default async function CaseDetailPage({
   });
   const authorMap = new Map(authors.map(u => [u.id, u]));
 
-  // 3. Prepare Comments Data for UI
+  const currentUser = await prisma.user.findUnique({
+    where: { id: session.userId },
+    select: { name: true, email: true }
+  });
+  const currentUserName = currentUser?.name || currentUser?.email || "Unknown";
+
   const uiComments = item.comments.map(c => {
     const author = authorMap.get(c.authorId);
     return {
@@ -116,7 +119,7 @@ export default async function CaseDetailPage({
   for (const f of item.files) {
     const lbl = String(f.label ?? "").toLowerCase();
     const slot = normalizeSlot(lbl);
-
+    
     if (slot === "scan") { scanFile = f; continue; }
     if (slot === "design_with_model") { designWithModelFile = f; continue; }
     if (slot === "design_only") { designOnlyFile = f; continue; }
@@ -130,115 +133,13 @@ export default async function CaseDetailPage({
   const scanHtmlUrl = scanHtmlFile?.url ?? null;
   const designHtmlUrl = designHtmlFile?.url ?? null;
 
-  const ActionsPanel = ({ isSidebar = false }: { isSidebar?: boolean }) => (
-    <div className={`rounded-xl border border-white/10 bg-black/20 flex flex-col overflow-hidden h-full`}>
-      <div className="border-b border-white/10 px-4 bg-white/5 h-14 flex items-center shrink-0">
-        <h2 className="font-medium text-sm text-white">Status & Actions</h2>
-      </div>
-      
-      <div className="p-4 space-y-6 flex-1 overflow-y-auto custom-scrollbar">
-        <div>
-          <CaseActions
-            caseId={item.id}
-            role={session.role}
-            currentStatus={item.status as CaseStatus}
-          />
-        </div>
-
-        {/* Comments & Red Pen Panel */}
-        <div className="pt-4 border-t border-white/10">
-          <CommentsPanel 
-            caseId={item.id}
-            comments={uiComments}
-            canPost={true} 
-          />
-        </div>
-
-        <div className="pt-4 border-t border-white/10">
-          <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4">
-            History
-          </h3>
-          {item.events.length === 0 ? (
-            <p className="text-white/60 text-sm">No events yet.</p>
-          ) : (
-            <div className="relative border-l border-white/10 ml-1 space-y-6">
-              {item.events.map((ev) => (
-                <div key={ev.id} className="ml-4 relative">
-                  <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-blue-500 border border-black" />
-                  <p className="text-sm font-medium text-white">
-                    {ev.to.replace(/_/g, " ")}
-                  </p>
-                  <p className="text-xs text-white/50">{fmtDate(ev.at)}</p>
-                  {ev.note && (
-                    <div className="mt-2 text-sm text-white/80 bg-white/5 p-2 rounded border border-white/5">
-                      {ev.note}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  // FIX: Collapsible Menu for Uploads to save space
-  const UploadsSection = () => (
-    <details className="group rounded-xl border border-white/10 bg-black/20 overflow-hidden">
-      <summary className="flex items-center justify-between p-3 cursor-pointer hover:bg-white/5 transition-colors select-none">
-        <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-white">📂 Manage Files</span>
-          <span className="text-[10px] text-white/40 group-open:hidden">(Click to Expand)</span>
-        </div>
-        <svg 
-          className="w-4 h-4 text-white/40 transform group-open:rotate-180 transition-transform" 
-          fill="none" viewBox="0 0 24 24" stroke="currentColor"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </summary>
-      
-      <div className="p-3 space-y-3 border-t border-white/10">
-        {/* Scan */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-white/80">Scan</span>
-            {scanHtmlFile && <span className="text-[10px] text-blue-300">✓ Ready</span>}
-          </div>
-          <div className="bg-black/40 p-2 rounded border border-white/5">
-            <HtmlViewerUploader caseId={item.id} role={session.role} label="scan_html" description="" />
-          </div>
-        </div>
-
-        {/* Design + Model */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-white/80">Design + Model</span>
-            {designHtmlFile && <span className="text-[10px] text-blue-300">✓ Ready</span>}
-          </div>
-          <div className="bg-black/40 p-2 rounded border border-white/5">
-             <HtmlViewerUploader caseId={item.id} role={session.role} label="design_with_model_html" description="" />
-          </div>
-        </div>
-
-        {/* Design Only */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-white/80">Design Only (3D)</span>
-            {designOnlyFile && <span className="text-[10px] text-emerald-300">✓ Ready</span>}
-          </div>
-          <div className="bg-black/40 p-2 rounded border border-white/5">
-             <FileUploader caseId={item.id} role={session.role} slot="design_only" />
-          </div>
-        </div>
-      </div>
-    </details>
-  );
+  const statusColor = 
+    item.status === "CHANGES_REQUESTED" ? "text-red-400" :
+    item.status === "COMPLETED" ? "text-emerald-400" :
+    "text-white";
 
   return (
     <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
-      
       <div className="flex-none space-y-4 mb-4">
         <CaseProcessBar
           caseId={item.id}
@@ -257,7 +158,7 @@ export default async function CaseDetailPage({
               )}
               <span>Teeth: <span className="text-white">{item.toothCodes}</span></span>
               <span>•</span>
-              <span>Status: <span className="text-white font-medium">{item.status.replace(/_/g, " ")}</span></span>
+              <span>Status: <span className={`${statusColor} font-medium`}>{item.status.replace(/_/g, " ")}</span></span>
               <span>•</span>
               <div className="flex items-center gap-1.5">
                 <span>ID:</span><CopyableId id={item.id} />
@@ -270,51 +171,32 @@ export default async function CaseDetailPage({
         </div>
       </div>
 
-      {/* FIX: 30/70 SPLIT LAYOUT */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6">
-        
-        {isLabOrAdmin ? (
-          <>
-            {/* LEFT COLUMN (30%): Uploads & Actions */}
-            <div className="flex-none w-full lg:w-[30%] flex flex-col gap-4 h-full min-h-0">
-              {/* Top Left: Collapsible Uploads */}
-              <div className="flex-shrink-0">
-                <UploadsSection />
-              </div>
-              {/* Bottom Left: Actions & Chat */}
-              <div className="flex-1 min-h-0">
-                <ActionsPanel isSidebar={true} />
-              </div>
-            </div>
+        <div className="flex-none w-full lg:w-[30%] h-full min-h-0">
+          <CaseDetailSidebar 
+            caseId={item.id}
+            role={session.role}
+            status={item.status}
+            files={item.files}
+            comments={uiComments}
+            events={item.events}
+            isLabOrAdmin={isLabOrAdmin}
+            currentUserName={currentUserName}
+          />
+        </div>
 
-            {/* RIGHT COLUMN (70%): Viewers (The Priority) */}
-            <div className="flex-1 h-full min-h-0">
-              <CaseViewerTabs
-                scan3DUrl={scan3DUrl}
-                designWithModel3DUrl={designWithModel3DUrl}
-                designOnly3DUrl={designOnly3DUrl}
-                scanHtmlUrl={scanHtmlUrl}
-                designHtmlUrl={designHtmlUrl}
-              />
-            </div>
-          </>
-        ) : (
-          <>
-            {/* DOCTOR VIEW: Viewer Main (Left) + Actions Side (Right) */}
-            <div className="flex-1 h-full min-h-0">
-              <CaseViewerTabs
-                scan3DUrl={scan3DUrl}
-                designWithModel3DUrl={designWithModel3DUrl}
-                designOnly3DUrl={designOnly3DUrl}
-                scanHtmlUrl={scanHtmlUrl}
-                designHtmlUrl={designHtmlUrl}
-              />
-            </div>
-            <div className="flex-none w-full lg:w-[30%] h-full min-h-0">
-              <ActionsPanel />
-            </div>
-          </>
-        )}
+        <div className="flex-1 h-full min-h-0">
+          <CaseViewerTabs
+            caseId={item.id}
+            role={session.role}
+            status={item.status}
+            scan3DUrl={scan3DUrl}
+            designWithModel3DUrl={designWithModel3DUrl}
+            designOnly3DUrl={designOnly3DUrl}
+            scanHtmlUrl={scanHtmlUrl}
+            designHtmlUrl={designHtmlUrl}
+          />
+        </div>
       </div>
     </section>
   );
