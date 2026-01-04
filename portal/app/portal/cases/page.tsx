@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import CaseListRow from "@/components/CaseListRow";
+import StatusFilter from "@/components/StatusFilter";
 
 export const dynamic = "force-dynamic";
 
@@ -36,6 +37,14 @@ export default async function CasesPage({
     return undefined;
   };
 
+  // Helper to get array of values (for status checklist)
+  const getParamArray = (key: string): string[] => {
+    const value = sp[key];
+    if (Array.isArray(value)) return value;
+    if (typeof value === "string") return [value];
+    return [];
+  };
+
   const role = session.role;
   const canCreate = role === "lab" || role === "admin";
   const isDoctor = role === "customer";
@@ -45,8 +54,16 @@ export default async function CasesPage({
   const caseIdFilter = getParam("caseId");
   const dateFilter = getParam("date");
   const aliasFilter = getParam("alias");
+  
+  // New: Status Array
+  const statusFilter = getParamArray("status");
 
   const where: Prisma.DentalCaseWhereInput = {};
+
+  // Apply Status Filter (if any selected)
+  if (statusFilter.length > 0) {
+    where.status = { in: statusFilter };
+  }
 
   if (isDoctor) {
     where.doctorUserId = session.userId ?? "__none__";
@@ -54,7 +71,6 @@ export default async function CasesPage({
     if (aliasFilter && aliasFilter.trim()) {
       const q = aliasFilter.trim();
       where.OR = [
-        // FIX: Removed mode: 'insensitive' to satisfy TS
         { patientAlias: { contains: q } },
         { toothCodes: { contains: q } },
       ];
@@ -122,6 +138,9 @@ export default async function CasesPage({
         </header>
 
         <form className="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
+          {/* New Status Filter (Available to everyone) */}
+          <StatusFilter selected={statusFilter} />
+
           {canCreate && (
             <>
               <input
@@ -169,7 +188,7 @@ export default async function CasesPage({
             Search
           </button>
           
-          {(clinicFilter || doctorFilter || caseIdFilter || dateFilter || aliasFilter) && (
+          {(clinicFilter || doctorFilter || caseIdFilter || dateFilter || aliasFilter || statusFilter.length > 0) && (
             <Link
               href="/portal/cases"
               className="px-3 py-1.5 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition"

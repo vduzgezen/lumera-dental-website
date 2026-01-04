@@ -1,8 +1,7 @@
-// components/CaseListRow.tsx
+// portal/components/CaseListRow.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import CopyableId from "@/components/CopyableId";
 
 type CaseRowData = {
@@ -25,29 +24,39 @@ export default function CaseListRow({ data }: { data: CaseRowData }) {
   const router = useRouter();
 
   const handleRowClick = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest("a, button")) return;
+    if ((e.target as HTMLElement).closest("button, a")) return;
     router.push(`/portal/cases/${data.id}`);
   };
 
   const getStatusColor = (s: string) => {
     const status = s.toUpperCase();
-    
-    // DELIVERING -> BLUE
+
+    // 1. CHANGES REQUESTED -> RED
+    if (status === "CHANGES_REQUESTED") {
+      return "bg-red-500/10 text-red-400 border-red-500/20";
+    }
+
+    // 2. COMPLETED -> EMERALD (Deep Green)
+    if (status === "COMPLETED") {
+      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+    }
+
+    // 3. DELIVERING -> BLUE
     if (status === "SHIPPED") {
       return "bg-blue-500/10 text-blue-400 border-blue-500/20";
     }
 
-    // PRODUCTION -> PURPLE
+    // 4. PRODUCTION -> PURPLE
     if (status === "IN_MILLING") {
       return "bg-purple-500/10 text-purple-400 border-purple-500/20";
     }
 
-    // APPROVED -> GREEN (New Guard Rail Visual)
+    // 5. APPROVED -> LIME (Distinct Yellow-Green)
     if (status === "APPROVED") {
-      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+      return "bg-lime-500/10 text-lime-300 border-lime-500/20";
     }
 
-    // DESIGNING (Everything else) -> ORANGE
+    // 6. DESIGNING -> ORANGE
     return "bg-orange-500/10 text-orange-400 border-orange-500/20";
   };
 
@@ -59,13 +68,8 @@ export default function CaseListRow({ data }: { data: CaseRowData }) {
       <td className="p-3">
         <CopyableId id={data.id} truncate />
       </td>
-      <td className="p-3 font-medium">
-        <Link 
-          href={`/portal/cases/${data.id}`} 
-          className="hover:underline hover:text-blue-300"
-        >
-          {data.patientAlias}
-        </Link>
+      <td className="p-3 font-medium text-white">
+        {data.patientAlias}
       </td>
       <td className="p-3 text-white/70">{data.clinic.name}</td>
       <td className="p-3 text-white/70">{data.doctorName ?? "—"}</td>

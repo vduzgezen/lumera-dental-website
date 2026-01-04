@@ -19,7 +19,6 @@ type Comment = {
   attachments?: Attachment[];
 };
 
-// FIX: Robust URL helper
 function fixUrl(url: string) {
   if (!url) return "";
   let clean = url.replace(/^public\//, "");
@@ -31,10 +30,14 @@ export default function CommentsPanel({
   caseId,
   comments: initialComments,
   canPost,
+  currentUserName,
+  currentUserRole, // FIX: New Prop to know OUR role immediately
 }: {
   caseId: string;
   comments: Comment[];
   canPost: boolean;
+  currentUserName: string;
+  currentUserRole: string;
 }) {
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [body, setBody] = useState("");
@@ -60,17 +63,16 @@ export default function CommentsPanel({
           attachmentFileId: attachmentId 
         }),
       });
-      
+
       if (!res.ok) throw new Error("Failed to post");
 
       const newComment = await res.json();
-      
       const mapped: Comment = {
         id: newComment.id,
         body: newComment.body,
         at: new Date(newComment.createdAt),
-        author: "Me", 
-        role: "user",
+        author: currentUserName,
+        role: currentUserRole, // FIX: Use actual role, not hardcoded "user"
         attachments: newComment.attachments?.map((a: any) => ({
           id: a.id,
           url: a.url,
@@ -97,8 +99,7 @@ export default function CommentsPanel({
 
   async function onAnnotationSave(blob: Blob) {
     setAnnotatingFile(null); 
-    setPosting(true); 
-
+    setPosting(true);
     try {
       const file = new File([blob], "annotation.png", { type: "image/png" });
       const fd = new FormData();
@@ -109,18 +110,25 @@ export default function CommentsPanel({
         method: "POST",
         body: fd,
       });
-      
       if (!upRes.ok) throw new Error("Failed to upload annotation");
       const upData = await upRes.json();
       
       await handlePost(upData.id);
-
     } catch (e) {
       console.error(e);
       alert("Failed to upload annotation");
       setPosting(false);
     }
   }
+
+  // Helper for color logic
+  const getRoleStyles = (role: string) => {
+    // FIX: Admin & Lab -> Red, Everyone else -> Blue
+    if (role === "admin" || role === "lab") {
+      return "bg-red-500/20 text-red-300 border border-red-500/30";
+    }
+    return "bg-blue-500/20 text-blue-300 border border-blue-500/30";
+  };
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -137,9 +145,7 @@ export default function CommentsPanel({
               <div 
                 className={`
                   w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-                  ${c.role === "lab" ? "bg-purple-500/20 text-purple-300 border border-purple-500/30" 
-                  : c.role === "admin" ? "bg-red-500/20 text-red-300 border border-red-500/30"
-                  : "bg-blue-500/20 text-blue-300 border border-blue-500/30"}
+                  ${getRoleStyles(c.role)}
                 `}
               >
                 {c.author.substring(0, 2).toUpperCase()}
@@ -160,7 +166,6 @@ export default function CommentsPanel({
                   {c.body}
                 </div>
 
-                {/* --- FIX: Display Attachments with Safe URL --- */}
                 {c.attachments && c.attachments.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {c.attachments.map((att) => {
