@@ -47,73 +47,6 @@ function sanitizeHtmlFileName(original: string, fallbackBase: string): string {
   return cleanedBase + ext;
 }
 
-/**
- * Normalize Exocad HTML text
- */
-function normalizeExocadHtml(html: string): string {
-  const script = `
-<script>
-(function() {
-  var MAP = {
-    "Antagonistler": "Antagonists",
-    "Çene taramaları": "Jaw scans",
-    "Çene taramaları": "Jaw scans",
-    "Cene taramalari": "Jaw scans",
-    "Çene taraması": "Jaw scan",
-    "Tam anatomik": "Full anatomy",
-    "Alt tasarım": "Lower design",
-    "Alt tasarim": "Lower design",
-    "Minimum kalınlık": "Minimum thickness",
-    "Minimum kalinlik": "Minimum thickness",
-    "Bütün çene": "Whole jaw",
-    "Butun cene": "Whole jaw",
-    "Dolgu boslugu": "Filling gap"
-  };
-
-  function translateNode(node) {
-    if (!node) return;
-    if (node.nodeType === 3) { // text
-      var text = node.nodeValue || "";
-      var changed = false;
-      for (var key in MAP) {
-        if (!Object.prototype.hasOwnProperty.call(MAP, key)) continue;
-        if (text.indexOf(key) !== -1) {
-          text = text.split(key).join(MAP[key]);
-          changed = true;
-        }
-      }
-      if (changed) {
-        node.nodeValue = text;
-      }
-      return;
-    }
-    if (node.nodeType === 1 && node.childNodes && node.childNodes.length) {
-      for (var i = 0; i < node.childNodes.length; i++) {
-        translateNode(node.childNodes[i]);
-      }
-    }
-  }
-
-  function run() {
-    try {
-      translateNode(document.body);
-    } catch (e) {
-      console.error("Exocad translation script error:", e);
-    }
-  }
-
-  window.addEventListener("load", function() {
-    setTimeout(run, 500);
-  });
-})();
-</script>
-`;
-  if (html.includes("</body>")) {
-    return html.replace("</body>", script + "\n</body>");
-  }
-  return html + script;
-}
-
 export async function POST(req: Request) {
   try {
     const session = await getSession();
@@ -208,7 +141,6 @@ export async function POST(req: Request) {
         },
       },
     });
-
     if (!doctor || doctor.role !== "customer") {
       return NextResponse.json(
         { error: "Doctor account not found." },
@@ -243,10 +175,8 @@ export async function POST(req: Request) {
 
     // --- BILLING CALCULATION ---
     const unitCount = countUnits(toothCodes.trim());
-    
     // Default to STANDARD if missing or invalid
     const tier = doctor.clinic.priceTier || PriceTier.STANDARD;
-
     const cost = calculateCaseCost(
       tier,
       product, 
@@ -273,7 +203,7 @@ export async function POST(req: Request) {
           typeof shade === "string" && shade.trim() ? shade.trim() : null,
         
         status: "IN_DESIGN", 
-        stage: "DESIGN",     
+        stage: "DESIGN",    
         
         // NEW BILLING FIELDS
         units: unitCount,
@@ -297,12 +227,10 @@ export async function POST(req: Request) {
       originalName,
       "scan_viewer.html",
     );
-    const htmlText = scanBuf.toString("utf8");
-    const normalized = normalizeExocadHtml(htmlText);
-    const finalBuf = Buffer.from(normalized, "utf8");
-
+    
+    // UPDATED: Write buffer directly, no translation injection
     const fullPath = path.join(uploadsRoot, safeName);
-    await fs.writeFile(fullPath, finalBuf);
+    await fs.writeFile(fullPath, scanBuf);
 
     const publicUrl = `/uploads/${created.id}/${safeName}`;
 
@@ -312,9 +240,10 @@ export async function POST(req: Request) {
         label: "scan_html",
         kind: "OTHER", 
         url: publicUrl,
-        sizeBytes: finalBuf.length,
+        sizeBytes: scanBuf.length, // UPDATED: Use original buffer length
       },
     });
+
     return NextResponse.json({ ok: true, id: created.id });
   } catch (err) {
     console.error("Create case error:", err);

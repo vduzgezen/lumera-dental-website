@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import bcrypt from "bcryptjs";
+import crypto from "node:crypto";
 
 export async function POST(req: Request) {
   try {
@@ -17,13 +18,16 @@ export async function POST(req: Request) {
     const body = await req.json().catch(() => ({}));
     const email = String(body.email || "").trim().toLowerCase();
     const name = String(body.name || "").trim();
-    const password = String(body.password || "");
+    // No password from body. We generate a random one.
     const clinicId = String(body.clinicId || "");
     const newClinicName = String(body.newClinicName || "").trim();
+    const phoneNumber = String(body.phoneNumber || "").trim();
+    const preferenceNote = String(body.preferenceNote || "").trim();
+    const role = body.role || "customer";
 
-    if (!email || !password || (!clinicId && !newClinicName)) {
+    if (!email) {
       return NextResponse.json(
-        { error: "Please provide email, password, and either an existing clinic or a new clinic name." },
+        { error: "Please provide an email." },
         { status: 400 }
       );
     }
@@ -35,30 +39,35 @@ export async function POST(req: Request) {
     }
 
     // resolve clinic
-    let resolvedClinicId = clinicId;
-    if (!resolvedClinicId) {
+    let resolvedClinicId: string | null = clinicId || null;
+    if (!resolvedClinicId && newClinicName) {
       const createdClinic = await prisma.clinic.create({ data: { name: newClinicName } });
       resolvedClinicId = createdClinic.id;
-    } else {
+    } else if (resolvedClinicId) {
       const ok = await prisma.clinic.findUnique({ where: { id: resolvedClinicId } });
       if (!ok) return NextResponse.json({ error: "Selected clinic not found." }, { status: 400 });
     }
 
-    const pw = await bcrypt.hash(password, 10);
+    // Generate a secure random password since the user will set it via email flow later.
+    // For now, this effectively locks the account until a reset flow exists, or admin acts.
+    const tempPassword = crypto.randomBytes(16).toString("hex");
+    const pw = await bcrypt.hash(tempPassword, 10);
+
     const user = await prisma.user.create({
       data: {
         email,
         password: pw,
         name: name || null,
-        role: "customer",
+        role,
         clinicId: resolvedClinicId,
+        phoneNumber: phoneNumber || null,
+        preferenceNote: preferenceNote || null,
       },
       select: { id: true, email: true, name: true, clinicId: true },
     });
-
     return NextResponse.json({ ok: true, user });
   } catch (e: any) {
-    console.error("Create doctor error:", e);
-    return NextResponse.json({ error: "Internal error while creating doctor." }, { status: 500 });
+    console.error("Create user error:", e);
+    return NextResponse.json({ error: "Internal error while creating user." }, { status: 500 });
   }
 }

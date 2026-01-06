@@ -1,6 +1,6 @@
 // portal/app/portal/admin/users/new/page.tsx
 import { prisma } from "@/lib/prisma";
-import NewUserForm from "@/components/NewUserForm";
+import NewUserForm from "@/components/UserForm";
 
 export default async function NewUserPage() {
   // 1. Fetch data on the Server
