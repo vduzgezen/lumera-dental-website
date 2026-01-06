@@ -1,0 +1,30 @@
+// portal/app/portal/admin/AdminTabs.tsx
+"use client";
+
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+export function AdminTabs() {
+  const pathname = usePathname();
+  
+  const Tab = ({ href, label }: { href: string; label: string }) => {
+    const active = pathname.startsWith(href);
+    return (
+      <Link
+        href={href}
+        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+          active ? "bg-white text-black" : "text-white/60 hover:bg-white/10 hover:text-white"
+        }`}
+      >
+        {label}
+      </Link>
+    );
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <Tab href="/portal/admin/users" label="Users" />
+      <Tab href="/portal/admin/clinics" label="Clinics" />
+    </div>
+  );
+}

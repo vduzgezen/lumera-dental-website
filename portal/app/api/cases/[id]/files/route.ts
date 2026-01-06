@@ -5,9 +5,6 @@ import { getSession } from "@/lib/auth";
 import path from "node:path";
 import fs from "node:fs/promises";
 
-// FIX: Remove broken imports from @prisma/client
-// import { FileKind, ProductionStage } from "@prisma/client";
-
 // FIX: Define FileKind locally since it's a String in schema
 const FileKind = {
   STL: "STL",
@@ -50,7 +47,6 @@ function chooseExtAndKind(
   slot: string,
 ): { ext: string; kind: FileKindType } {
   const lower = originalName.toLowerCase();
-  
   // Treat Exocad HTML exports as HTML
   if (lower.endsWith(".html")) return { ext: ".html", kind: FileKind.OTHER };
   if (lower.endsWith(".htm")) return { ext: ".htm", kind: FileKind.OTHER };
@@ -59,12 +55,10 @@ function chooseExtAndKind(
   if (lower.endsWith(".stl")) return { ext: ".stl", kind: FileKind.STL };
   if (lower.endsWith(".ply")) return { ext: ".ply", kind: FileKind.PLY };
   if (lower.endsWith(".obj")) return { ext: ".obj", kind: FileKind.OBJ };
-  
   // Images
   if (lower.endsWith(".png")) return { ext: ".png", kind: FileKind.OTHER };
   if (lower.endsWith(".jpg")) return { ext: ".jpg", kind: FileKind.OTHER };
   if (lower.endsWith(".jpeg")) return { ext: ".jpeg", kind: FileKind.OTHER };
-
   // No extension: assume STL for standard 3D slots
   if (
     slot === "scan" ||
@@ -78,51 +72,6 @@ function chooseExtAndKind(
   return { ext: ".bin", kind: FileKind.OTHER };
 }
 
-function injectExocadTranslationScript(html: string): string {
-  if (html.includes("window.__LUMERA_EXOCAD_TRANSLATE__")) {
-    return html;
-  }
-  
-  const script = `
-<script>
-(function() {
-  if (window.__LUMERA_EXOCAD_TRANSLATE__) return;
-  window.__LUMERA_EXOCAD_TRANSLATE__ = true;
-  var MAP = {
-    "Antagonistler": "Antagonists", "Çene taramaları": "Jaw scans", "C\u0327ene taramaları": "Jaw scans",
-    "Cene taramalari": "Jaw scans", "Tam anatomik": "Full contour", "Alt tasarım": "Reduced design",
-    "Alt tasarim": "Reduced design", "Minimum kalınlık": "Minimum thickness", "Minimum kalinlik": "Minimum thickness",
-    "Bütün çene": "Full arch", "Butun cene": "Full arch", "Dolgu boslugu": "Cement gap", "Dolgu boşluğu": "Cement gap"
-  };
-  function translateNode(node) {
-    if (!node || !node.childNodes) return;
-    for (var i = 0; i < node.childNodes.length; i++) {
-      var child = node.childNodes[i];
-      if (!child) continue;
-      if (child.nodeType === 3) {
-        var text = child.nodeValue || "";
-        var replaced = text;
-        for (var key in MAP) {
-          if (!Object.prototype.hasOwnProperty.call(MAP, key)) continue;
-          if (replaced.indexOf(key) !== -1) replaced = replaced.split(key).join(MAP[key]);
-        }
-        if (replaced !== text) child.nodeValue = replaced;
-      } else { translateNode(child); }
-    }
-  }
-  function run() { try { translateNode(document.body);
-  } catch (e) { console.error("Exocad translation failed", e); } }
-  if (document.readyState === "loading") { document.addEventListener("DOMContentLoaded", run);
-  } else { run(); }
-  window.addEventListener("load", function() { setTimeout(run, 1000); });
-})();
-</script>`;
-  if (html.includes("</body>")) {
-    return html.replace("</body>", script + "</body>");
-  }
-  return html + script;
-}
-
 export async function POST(req: Request, props: { params: Params }) {
   try {
     const session = await getSession();
@@ -134,7 +83,7 @@ export async function POST(req: Request, props: { params: Params }) {
 
     const form = await req.formData();
     const slotLabel = normalizeSlotLabel(form.get("label"));
-    
+
     // --- PERMISSIONS LOGIC ---
     if (session.role === "customer") {
         // 1. Verify ownership
@@ -146,9 +95,9 @@ export async function POST(req: Request, props: { params: Params }) {
         }
         
         // 2. Limit what they can upload
-        // "photo" is used for annotations. "scan" is for raw files.
+        // "photo" is used for annotations.
+        // "scan" is for raw files.
         const allowed = ["scan", "photo", "other"];
-        
         // Note: The annotation tool typically sends label="Photo", which normalizeSlotLabel converts to "other" if not scan/design.
         if (!allowed.includes(slotLabel) && slotLabel !== "other") { 
             // If they try to upload to "design_with_model", block it.
@@ -187,7 +136,6 @@ export async function POST(req: Request, props: { params: Params }) {
 
     const uploadsRoot = path.join(process.cwd(), "public", "uploads", id);
     await fs.mkdir(uploadsRoot, { recursive: true });
-
     const created: any[] = [];
 
     // Only delete old files for the strict slots (Scan/Design).
@@ -205,12 +153,11 @@ export async function POST(req: Request, props: { params: Params }) {
 
     for (const file of incomingFiles) {
       const arrayBuffer = await file.arrayBuffer();
-      let buf = Buffer.from(arrayBuffer);
+      const buf = Buffer.from(arrayBuffer);
 
       const originalName = (file.name || "file").replace(/\s+/g, "_");
 
       const { ext, kind } = chooseExtAndKind(originalName, slotLabel);
-      
       const hasExt = originalName.toLowerCase().endsWith(ext);
       const base = hasExt
         ? originalName.slice(0, originalName.length - ext.length)
@@ -223,13 +170,8 @@ export async function POST(req: Request, props: { params: Params }) {
       
       const safeName = `${base}${uniqueSuffix}${ext}`;
       const fullPath = path.join(uploadsRoot, safeName);
-
-      if (ext === ".html" || ext === ".htm") {
-        const text = buf.toString("utf8");
-        const normalized = injectExocadTranslationScript(text);
-        buf = Buffer.from(normalized, "utf8");
-      }
-
+      
+      // UPDATED: Removed HTML injection logic. We write the file exactly as uploaded.
       await fs.writeFile(fullPath, buf);
 
       const publicUrl = `/uploads/${id}/${safeName}`;
