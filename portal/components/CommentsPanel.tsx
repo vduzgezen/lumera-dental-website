@@ -1,4 +1,3 @@
-// portal/components/CommentsPanel.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -31,7 +30,7 @@ export default function CommentsPanel({
   comments: initialComments,
   canPost,
   currentUserName,
-  currentUserRole, // FIX: New Prop to know OUR role immediately
+  currentUserRole,
 }: {
   caseId: string;
   comments: Comment[];
@@ -72,7 +71,7 @@ export default function CommentsPanel({
         body: newComment.body,
         at: new Date(newComment.createdAt),
         author: currentUserName,
-        role: currentUserRole, // FIX: Use actual role, not hardcoded "user"
+        role: currentUserRole,
         attachments: newComment.attachments?.map((a: any) => ({
           id: a.id,
           url: a.url,
@@ -123,12 +122,38 @@ export default function CommentsPanel({
 
   // Helper for color logic
   const getRoleStyles = (role: string) => {
-    // FIX: Admin & Lab -> Red, Everyone else -> Blue
     if (role === "admin" || role === "lab") {
       return "bg-red-500/20 text-red-300 border border-red-500/30";
     }
     return "bg-blue-500/20 text-blue-300 border border-blue-500/30";
   };
+
+  // --- NEW: Spacing & Inline Image Fix ---
+  function renderBody(text: string) {
+    // Regex: Matches URLs ending in image extensions
+    const regex = /((?:https?:\/\/[^\s]+|(?:\/uploads\/)[^\s]+)\.(?:png|jpg|jpeg|gif|webp))/gi;
+    const parts = text.split(regex);
+
+    return parts.map((part, i) => {
+      if (part.match(regex)) {
+        const safeSrc = fixUrl(part);
+        return (
+          <div key={i} className="my-2"> {/* Controlled spacing wrapper */}
+             {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={safeSrc}
+              alt="Inline Content"
+              className="block max-w-full rounded-lg border border-white/10 cursor-zoom-in"
+              onClick={() => setZoomImg(safeSrc)}
+            />
+          </div>
+        );
+      }
+      if (!part) return null;
+      return <span key={i}>{part}</span>;
+    });
+  }
+  // ---------------------------------------
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -162,10 +187,12 @@ export default function CommentsPanel({
                   </span>
                 </div>
                 
+                {/* MODIFIED: Use renderBody instead of direct output */}
                 <div className="mt-1 text-sm text-white/80 whitespace-pre-wrap leading-relaxed">
-                  {c.body}
+                  {renderBody(c.body)}
                 </div>
 
+                {/* Explicit Attachments (Red Pen uploads usually go here) */}
                 {c.attachments && c.attachments.length > 0 && (
                   <div className="mt-3 flex flex-wrap gap-2">
                     {c.attachments.map((att) => {

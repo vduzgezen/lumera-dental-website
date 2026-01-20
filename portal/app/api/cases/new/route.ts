@@ -69,6 +69,8 @@ export async function POST(req: Request) {
     const product = form.get("product");
     const material = form.get("material");
     const shade = form.get("shade");
+    // NEW: Capture preferences
+    const designPreferences = form.get("designPreferences"); 
     const scanViewerRaw = form.get("scanHtml") ?? form.get("scan");
     
     const billingTypeRaw = form.get("billingType");
@@ -136,11 +138,12 @@ export async function POST(req: Request) {
           select: { 
             id: true, 
             name: true,
-            priceTier: true // Cleaned syntax here
+            priceTier: true 
           } 
         },
       },
     });
+
     if (!doctor || doctor.role !== "customer") {
       return NextResponse.json(
         { error: "Doctor account not found." },
@@ -184,7 +187,7 @@ export async function POST(req: Request) {
       billingType
     );
 
-    // Create Case with Billing Data
+    // Create Case with Billing Data AND Preferences
     const created = await prisma.dentalCase.create({
       data: {
         clinicId: doctor.clinic.id,
@@ -202,10 +205,13 @@ export async function POST(req: Request) {
         shade:
           typeof shade === "string" && shade.trim() ? shade.trim() : null,
         
+        // NEW: Save the preferences
+        designPreferences: typeof designPreferences === "string" ? designPreferences.trim() : null,
+
         status: "IN_DESIGN", 
         stage: "DESIGN",    
         
-        // NEW BILLING FIELDS
+        // BILLING FIELDS
         units: unitCount,
         cost: cost,
         billingType: billingType,
@@ -227,8 +233,7 @@ export async function POST(req: Request) {
       originalName,
       "scan_viewer.html",
     );
-    
-    // UPDATED: Write buffer directly, no translation injection
+    // Write buffer directly
     const fullPath = path.join(uploadsRoot, safeName);
     await fs.writeFile(fullPath, scanBuf);
 
@@ -240,7 +245,7 @@ export async function POST(req: Request) {
         label: "scan_html",
         kind: "OTHER", 
         url: publicUrl,
-        sizeBytes: scanBuf.length, // UPDATED: Use original buffer length
+        sizeBytes: scanBuf.length, 
       },
     });
 

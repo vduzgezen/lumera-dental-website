@@ -8,14 +8,13 @@ import FileUploader from "@/components/FileUploader";
 import CaseProcessBar from "@/components/CaseProcessBar";
 import HtmlViewerUploader from "@/components/HtmlViewerUploader";
 import CaseViewerTabs from "@/components/CaseViewerTabs";
-import CommentsPanel from "@/components/CommentsPanel"; 
+import CommentsPanel from "@/components/CommentsPanel";
 import { CaseFile } from "@prisma/client";
 import CopyableId from "@/components/CopyableId";
 import CaseDetailSidebar from "@/components/CaseDetailSidebar";
 
 export const dynamic = "force-dynamic";
 
-// FIX: Removed NEW and READY_FOR_REVIEW
 type CaseStatus = 
   | "IN_DESIGN" 
   | "CHANGES_REQUESTED" 
@@ -119,7 +118,6 @@ export default async function CaseDetailPage({
   for (const f of item.files) {
     const lbl = String(f.label ?? "").toLowerCase();
     const slot = normalizeSlot(lbl);
-    
     if (slot === "scan") { scanFile = f; continue; }
     if (slot === "design_with_model") { designWithModelFile = f; continue; }
     if (slot === "design_only") { designOnlyFile = f; continue; }
@@ -148,7 +146,7 @@ export default async function CaseDetailPage({
           role={session.role}
         />
         <div className="flex items-center justify-between">
-          <div>
+           <div>
             <h1 className="text-2xl font-semibold">{item.patientAlias}</h1>
             <div className="text-white/70 text-sm mt-1 flex flex-wrap items-center gap-x-3">
               <span>Clinic: <span className="text-white">{item.clinic.name}</span></span>
@@ -161,7 +159,7 @@ export default async function CaseDetailPage({
               <span>Status: <span className={`${statusColor} font-medium`}>{item.status.replace(/_/g, " ")}</span></span>
               <span>•</span>
               <div className="flex items-center gap-1.5">
-                <span>ID:</span><CopyableId id={item.id} />
+                 <span>ID:</span><CopyableId id={item.id} />
               </div>
             </div>
           </div>
@@ -169,6 +167,7 @@ export default async function CaseDetailPage({
             ← Back to Cases
           </Link>
         </div>
+        {/* REMOVED: Top Banner for Preferences */}
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6">
@@ -182,6 +181,7 @@ export default async function CaseDetailPage({
             events={item.events}
             isLabOrAdmin={isLabOrAdmin}
             currentUserName={currentUserName}
+            designPreferences={item.designPreferences}
           />
         </div>
 

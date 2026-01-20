@@ -16,25 +16,21 @@ model Clinic {
   name      String
   
   // LOGISTICS
-  street    String?
-  city      String?
-  state     String?
-  zipCode   String?
+  addressId String?
+  address   Address? @relation(fields: [addressId], references: [id])
   phone     String?
   
   // BILLING & FINANCIALS
   billingCycleDay Int     @default(1) 
   paymentTerms    Int     @default(30) 
   taxId           String?
-  
-  // Enums replaced with String
-  priceTier       String  @default("STANDARD") // STANDARD, IN_HOUSE
+  priceTier       String  @default("STANDARD") 
 
   // BANKING REFERENCE
   bankName        String?
   bankLast4       String? 
   routingNumber   String?
-
+  
   // RELATIONS
   users     User[]
   cases     DentalCase[]
@@ -48,20 +44,66 @@ model Clinic {
 model User {
   id             String   @id @default(cuid())
   email          String   @unique
-  password       String   // Hashed (bcrypt)
+  password       String   // Hashed
   name           String?
   phoneNumber    String?  
   preferenceNote String? 
 
   role           String   // customer, lab, admin
+  
+  // NEW: Token for setting up password after approval
+  invitationToken String? @unique 
+
+  // NEW: Default preferences for this doctor
+  defaultDesignPreferences String?
+  
   clinicId       String?
   clinic         Clinic?  @relation(fields: [clinicId], references: [id])
+
+  addressId      String?
+  address        Address? @relation(fields: [addressId], references: [id])
 
   doctorCases    DentalCase[] @relation("DoctorCases")
   workingCases   DentalCase[] @relation("WorkingCases")
 
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+}
+
+// NEW: Pending Sign-ups
+model RegistrationRequest {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  clinicName String
+  
+  // Address Fields
+  street    String?
+  city      String?
+  state     String?
+  zipCode   String?
+
+  status    String   @default("PENDING") // PENDING, APPROVED, REJECTED, PROCESSED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// SHARED ADDRESS MODEL
+model Address {
+  id        String   @id @default(cuid())
+  
+  street    String?
+  city      String?
+  state     String?
+  zipCode   String?
+  country   String?  @default("USA")
+
+  users     User[]
+  clinics   Clinic[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model DentalCase {
@@ -80,13 +122,15 @@ model DentalCase {
   toothCodes   String
 
   orderDate     DateTime    @default(now())
-  product       String      @default("ZIRCONIA") // ZIRCONIA, MULTILAYER_ZIRCONIA, EMAX...
+  product       String      @default("ZIRCONIA") 
 
   material      String?
   shade         String?
 
-  // FINANCIALS
-  billingType   String      @default("BILLABLE") // BILLABLE, WARRANTY
+  // NEW: Preferences specific to this case
+  designPreferences String?
+  
+  billingType   String      @default("BILLABLE") 
   units         Int         @default(1)
   cost          Decimal     @default(0.00)
   isRush        Boolean     @default(false) 
@@ -96,10 +140,9 @@ model DentalCase {
   invoiceId     String?
   invoice       Invoice?    @relation(fields: [invoiceId], references: [id])
 
-  // LOGISTICS
   dueDate       DateTime?
-  status        String      @default("IN_DESIGN") // IN_DESIGN, APPROVED, SHIPPED...
-  stage         String      @default("DESIGN")    // DESIGN, MILLING_GLAZING, SHIPPING
+  status        String      @default("IN_DESIGN") 
+  stage         String      @default("DESIGN")    
   
   designedAt    DateTime?
   milledAt      DateTime?
@@ -109,7 +152,6 @@ model DentalCase {
   trackingNumber  String?
   shippingEta     DateTime?
 
-  // REVIEW
   needsReview       Boolean   @default(false)
   reviewQuestion    String?
   reviewRequestedAt DateTime?
@@ -125,22 +167,19 @@ model DentalCase {
   @@map("Case")
 }
 
-// --- BILLING MODELS ---------------------------------------------------------
-
 model Invoice {
   id          String        @id @default(cuid())
   clinicId    String
   clinic      Clinic        @relation(fields: [clinicId], references: [id])
   
   amount      Decimal
-  status      String        @default("UNPAID") // UNPAID, PAID...
+  status      String        @default("UNPAID")
   dueDate     DateTime      
   
   periodStart DateTime      
   periodEnd   DateTime      
   
   pdfUrl      String?
-
   cases       DentalCase[]  
   
   createdAt   DateTime      @default(now())
@@ -153,13 +192,10 @@ model Payment {
   clinic      Clinic        @relation(fields: [clinicId], references: [id])
   
   amount      Decimal
-  method      String        // CREDIT_CARD, ACH...
-  referenceId String?       
-  
+  method      String        
+  referenceId String?
   postedAt    DateTime      @default(now())
 }
-
-// --- SUPPORTING MODELS ------------------------------------------------------
 
 model CaseFile {
   id        String     @id @default(cuid())
@@ -167,7 +203,7 @@ model CaseFile {
   case      DentalCase @relation(fields: [caseId], references: [id])
   
   label     String?
-  kind      String     // STL, PLY, PHOTO...
+  kind      String     
   url       String
   sizeBytes Int?
   createdAt DateTime   @default(now())

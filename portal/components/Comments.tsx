@@ -1,7 +1,21 @@
-// components/Comments.tsx
+// portal/components/Comments.tsx
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
+
+// Helper to detect if a line is an image URL
+function extractImage(body: string) {
+  const imgRegex = /(https?:\/\/[^\s]+|\/uploads\/[^\s]+)\.(jpg|jpeg|png|gif|webp)/i;
+  const match = body.match(imgRegex);
+  
+  if (match) {
+    return {
+      imageUrl: match[0],
+      text: body.replace(match[0], "").trim(),
+    };
+  }
+  return { imageUrl: null, text: body };
+}
 
 export default function Comments({ caseId }: { caseId: string }) {
   const [items, setItems] = useState<any[]>([]);
@@ -10,8 +24,7 @@ export default function Comments({ caseId }: { caseId: string }) {
   const [posting, setPosting] = useState(false);
   const [error, setError] = useState<string | undefined>();
 
-  // FIX: Wrap in useCallback to satisfy linter
-  const load = useCallback(async () => {
+  async function load() {
     setLoading(true);
     setError(undefined);
     try {
@@ -24,7 +37,7 @@ export default function Comments({ caseId }: { caseId: string }) {
     } finally {
       setLoading(false);
     }
-  }, [caseId]);
+  }
 
   async function post() {
     if (!body.trim()) return;
@@ -47,44 +60,57 @@ export default function Comments({ caseId }: { caseId: string }) {
     }
   }
 
-  // FIX: Add 'load' to dependencies
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [caseId]);
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {loading ? (
         <p className="text-white/60 text-sm">Loading comments…</p>
       ) : error ? (
         <p className="text-red-400 text-sm">{error}</p>
       ) : (
-        <div className="space-y-2">
-          {items.length === 0 && <p className="text-white/60">No comments yet.</p>}
-          {items.map((c) => (
-            <div key={c.id} className="rounded-lg border border-white/10 p-3">
-              <div className="text-xs text-white/50">
-                {new Date(c.createdAt).toLocaleString()}
+        <div className="space-y-3">
+          {items.length === 0 && <p className="text-white/60 text-sm">No comments yet.</p>}
+          {items.map((c) => {
+            const { imageUrl, text } = extractImage(c.body);
+            return (
+              <div key={c.id} className="rounded-lg border border-white/10 p-3 bg-white/5">
+                <div className="text-[10px] uppercase tracking-wide text-white/40 mb-2">
+                  {new Date(c.createdAt).toLocaleString()}
+                </div>
+                
+                {imageUrl && (
+                  <div className="mb-2 rounded overflow-hidden border border-white/10 bg-black/50">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img 
+                      src={imageUrl} 
+                      alt="Attachment" 
+                      className="max-w-full h-auto object-contain max-h-60"
+                    />
+                  </div>
+                )}
+                
+                {text && <div className="whitespace-pre-wrap text-sm text-white/90">{text}</div>}
               </div>
-              <div className="whitespace-pre-wrap">{c.body}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-start pt-2 border-t border-white/10">
         <input
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Write a comment…"
-          className="flex-1 rounded-lg p-2 bg-black/40 border border-white/10 text-white"
+          className="flex-1 rounded-lg p-2 bg-black/40 border border-white/10 text-white text-sm focus:border-white/30 outline-none transition"
+          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && post()}
         />
         <button
           onClick={post}
           disabled={posting || !body.trim()}
-          className="rounded-lg px-3 py-2 bg-white text-black disabled:opacity-60"
+          className="rounded-lg px-3 py-2 bg-white text-black text-sm font-medium disabled:opacity-50 hover:bg-white/90 transition"
         >
-          {posting ? "Posting…" : "Submit"}
+          {posting ? "..." : "Post"}
         </button>
       </div>
     </div>

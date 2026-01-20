@@ -11,12 +11,14 @@ export type DoctorRow = {
   id: string;
   email: string;
   name: string | null;
-  clinic: { id: string; name: string }; // We enforce this is NOT null
+  preferenceNote: string | null;          // <--- FETCH
+  defaultDesignPreferences: string | null; // <--- FETCH
+  clinic: { id: string; name: string };
 };
 
 export default async function NewCasePage() {
   const session = await getSession();
-  
+
   if (!session || (session.role !== "lab" && session.role !== "admin")) {
     return notFound();
   }
@@ -29,6 +31,8 @@ export default async function NewCasePage() {
       id: true,
       email: true,
       name: true,
+      preferenceNote: true,          // <--- ADDED
+      defaultDesignPreferences: true, // <--- ADDED
       clinic: { select: { id: true, name: true } },
     },
     orderBy: [{ clinicId: "asc" }, { email: "asc" }],

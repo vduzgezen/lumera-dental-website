@@ -2,15 +2,25 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import AddressPicker, { AddressData } from "@/components/AddressPicker";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function ClinicForm({ initialData, onClose }: { initialData?: any, onClose: () => void }) {
   const router = useRouter();
+  
   const [form, setForm] = useState(initialData || {
-    name: "", street: "", city: "", state: "", zipCode: "", phone: "",
+    name: "", phone: "",
     taxId: "", bankName: "", routingNumber: "", bankLast4: "",
     billingCycleDay: 1, paymentTerms: 30, priceTier: "STANDARD"
   });
+
+  const [address, setAddress] = useState<AddressData>({
+    id: initialData?.address?.id || null,
+    street: initialData?.address?.street || "",
+    city: initialData?.address?.city || "",
+    state: initialData?.address?.state || "",
+    zipCode: initialData?.address?.zipCode || ""
+  });
+
   const [busy, setBusy] = useState(false);
 
   async function save(e: React.FormEvent) {
@@ -18,11 +28,15 @@ export default function ClinicForm({ initialData, onClose }: { initialData?: any
     setBusy(true);
     const url = initialData ? `/api/clinics/${initialData.id}` : "/api/clinics";
     const method = initialData ? "PUT" : "POST";
+    
+    const payload = { ...form, address };
+
     const res = await fetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form)
+      body: JSON.stringify(payload)
     });
+
     if (res.ok) {
       router.refresh();
       onClose();
@@ -31,6 +45,9 @@ export default function ClinicForm({ initialData, onClose }: { initialData?: any
       setBusy(false);
     }
   }
+
+  // Helper to update form fields
+  const set = (field: string, val: any) => setForm((prev: any) => ({ ...prev, [field]: val }));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -43,56 +60,42 @@ export default function ClinicForm({ initialData, onClose }: { initialData?: any
             <h3 className="text-xs font-bold text-accent uppercase tracking-wider">Details</h3>
             <div className="grid grid-cols-2 gap-4">
               <input placeholder="Clinic Name *" required className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
+                value={form.name} onChange={e => set("name", e.target.value)} />
               <input placeholder="Phone" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                value={form.phone || ""} onChange={e => setForm({...form, phone: e.target.value})} />
+                value={form.phone || ""} onChange={e => set("phone", e.target.value)} />
             </div>
           </div>
 
-          {/* 2. Address */}
-          <div className="space-y-4">
-            <h3 className="text-xs font-bold text-accent uppercase tracking-wider">Address</h3>
-            <div className="grid grid-cols-1 gap-4">
-              <input placeholder="Street" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                 value={form.street || ""} onChange={e => setForm({...form, street: e.target.value})} />
-              <div className="grid grid-cols-3 gap-4">
-                <input placeholder="City" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                  value={form.city || ""} onChange={e => setForm({...form, city: e.target.value})} />
-                <input placeholder="State" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                  value={form.state || ""} onChange={e => setForm({...form, state: e.target.value})} />
-                <input placeholder="Zip" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                  value={form.zipCode || ""} onChange={e => setForm({...form, zipCode: e.target.value})} />
-              </div>
-            </div>
-          </div>
+          {/* 2. Address (New Picker) */}
+          <AddressPicker value={address} onChange={setAddress} />
 
           {/* 3. Financials */}
-          <div className="space-y-4">
+          <div className="space-y-4 pt-2 border-t border-white/5">
             <h3 className="text-xs font-bold text-accent uppercase tracking-wider">Billing & Financials</h3>
             <div className="grid grid-cols-3 gap-4">
                <select className="p-2 bg-white/5 border border-white/10 rounded text-white"
-                  value={form.priceTier} onChange={e => setForm({...form, priceTier: e.target.value})}>
+                  value={form.priceTier} onChange={e => set("priceTier", e.target.value)}>
                   <option value="STANDARD">Standard</option>
                   <option value="IN_HOUSE">In-House</option>
                </select>
                <input type="number" placeholder="Cycle Day (1-28)" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                 value={form.billingCycleDay} onChange={e => setForm({...form, billingCycleDay: e.target.value})} />
+                 value={form.billingCycleDay} onChange={e => set("billingCycleDay", e.target.value)} />
                <input type="number" placeholder="Net Terms (e.g. 30)" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                 value={form.paymentTerms} onChange={e => setForm({...form, paymentTerms: e.target.value})} />
+                 value={form.paymentTerms} onChange={e => set("paymentTerms", e.target.value)} />
             </div>
             
             {/* Banking */}
             <div className="grid grid-cols-2 gap-4">
                <input placeholder="Bank Name" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                 value={form.bankName || ""} onChange={e => setForm({...form, bankName: e.target.value})} />
+                 value={form.bankName || ""} onChange={e => set("bankName", e.target.value)} />
                <input placeholder="Tax ID" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                 value={form.taxId || ""} onChange={e => setForm({...form, taxId: e.target.value})} />
+                 value={form.taxId || ""} onChange={e => set("taxId", e.target.value)} />
             </div>
             <div className="grid grid-cols-2 gap-4">
                <input placeholder="Routing Number" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                 value={form.routingNumber || ""} onChange={e => setForm({...form, routingNumber: e.target.value})} />
+                 value={form.routingNumber || ""} onChange={e => set("routingNumber", e.target.value)} />
                <input placeholder="Account Last 4" className="p-2 bg-white/5 border border-white/10 rounded text-white" 
-                 value={form.bankLast4 || ""} onChange={e => setForm({...form, bankLast4: e.target.value})} />
+                 value={form.bankLast4 || ""} onChange={e => set("bankLast4", e.target.value)} />
             </div>
           </div>
 

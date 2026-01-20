@@ -46,8 +46,9 @@ export default async function BillingPage({
 
   // --- 2. BUILD QUERY ---
   const where: Prisma.DentalCaseWhereInput = {};
-
+  
   if (session.role === "customer") {
+    // Safety check: Ensure they are linked to a clinic context (even if filtering by user)
     if (!session.clinicId) {
       return (
         <div className="p-8 text-white/50">
@@ -55,7 +56,8 @@ export default async function BillingPage({
         </div>
       );
     }
-    where.clinicId = session.clinicId;
+    // FIX: Restrict strictly to the logged-in doctor's cases, not the whole clinic
+    where.doctorUserId = session.userId;
   }
 
   // Date Range

@@ -1,4 +1,4 @@
-// portal/app/portal/admin/AdminTabs.tsx
+// portal/components/AdminTabs.tsx
 "use client";
 
 import Link from "next/link";
@@ -25,6 +25,8 @@ export function AdminTabs() {
     <div className="flex items-center gap-2">
       <Tab href="/portal/admin/users" label="Users" />
       <Tab href="/portal/admin/clinics" label="Clinics" />
+      <Tab href="/portal/admin/addresses" label="Addresses" />
+      <Tab href="/portal/admin/requests" label="Requests" />
     </div>
   );
 }
