@@ -4,12 +4,9 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-// Removed unused Logo import if you aren't using it, 
-// OR keep it if you plan to use it. I will use a standard text header for safety.
 
 export default function LoginPage() {
   const router = useRouter();
-
   const [email, setEmail] = useState("admin@lumera.test");
   const [password, setPassword] = useState("password123");
   const [error, setError] = useState<string | null>(null);
@@ -19,14 +16,12 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
-
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
-
       if (!res.ok) {
         let message = "Invalid credentials";
         try {
@@ -34,14 +29,11 @@ export default function LoginPage() {
           if (data && typeof data.error === "string") {
             message = data.error;
           }
-        } catch {
-          // ignore JSON parse errors
-        }
+        } catch { /* ignore */ }
         setError(message);
         setLoading(false);
         return;
       }
-
       router.push("/portal/cases");
     } catch (err) {
       console.error(err);
@@ -67,10 +59,7 @@ export default function LoginPage() {
           </Link>
         </div>
 
-        <form
-          onSubmit={onSubmit}
-          className="w-full space-y-6 border border-white/10 rounded-2xl p-8 bg-white/5 backdrop-blur-xl shadow-2xl"
-        >
+        <form onSubmit={onSubmit} className="w-full space-y-6 border border-white/10 rounded-2xl p-8 bg-white/5 backdrop-blur-xl shadow-2xl">
           <div className="text-center space-y-1">
             <h1 className="text-xl font-medium text-white">Welcome back</h1>
             <p className="text-sm text-white/40">Enter your credentials</p>
@@ -78,28 +67,12 @@ export default function LoginPage() {
 
           <div className="space-y-4">
             <div>
-              <label className="text-xs font-medium text-white/60 uppercase tracking-wider block mb-2">
-                Email
-              </label>
-              <input
-                type="email"
-                required
-                className="w-full rounded-lg px-4 py-3 bg-black/20 border border-white/10 text-white focus:outline-none focus:border-accent/50 transition-all"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
+              <label className="text-xs font-medium text-white/60 uppercase tracking-wider block mb-2">Email</label>
+              <input type="email" required className="w-full rounded-lg px-4 py-3 bg-black/20 border border-white/10 text-white focus:outline-none focus:border-accent/50 transition-all" value={email} onChange={(e) => setEmail(e.target.value)} />
             </div>
             <div>
-              <label className="text-xs font-medium text-white/60 uppercase tracking-wider block mb-2">
-                Password
-              </label>
-              <input
-                type="password"
-                required
-                className="w-full rounded-lg px-4 py-3 bg-black/20 border border-white/10 text-white focus:outline-none focus:border-accent/50 transition-all"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <label className="text-xs font-medium text-white/60 uppercase tracking-wider block mb-2">Password</label>
+              <input type="password" required className="w-full rounded-lg px-4 py-3 bg-black/20 border border-white/10 text-white focus:outline-none focus:border-accent/50 transition-all" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
           </div>
 
@@ -109,24 +82,18 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full rounded-lg py-3 text-sm font-bold bg-accent text-midnight hover:bg-white transition-colors disabled:opacity-50"
-          >
+          <button type="submit" disabled={loading} className="w-full rounded-lg py-3 text-sm font-bold bg-accent text-midnight hover:bg-white transition-colors disabled:opacity-50">
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>
 
         <div className="mt-8 text-center space-y-4">
-          <div className="text-sm text-white/40">
-            {/* FIX: Escaped apostrophe here */}
-            Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-accent hover:text-white transition-colors">
-              Sign Up
+          <p className="text-sm text-white/40">
+            Don't have an account?{" "}
+            <Link href="/signup" className="text-accent hover:text-white transition-colors font-medium">
+              Request Access
             </Link>
-          </div>
-          
+          </p>
           <Link href="/" className="block text-sm text-white/30 hover:text-white transition-colors">
             ← Back to website
           </Link>

@@ -1,17 +1,29 @@
 //portal/app/portal/admin/users/UserListClient.tsx
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import UserForm from "@/components/UserForm";
 import { AdminTabs } from "@/components/AdminTabs";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function UserListClient({ users, clinics }: { users: any[], clinics: any[] }) {
+  const router = useRouter();
   const [editingUser, setEditingUser] = useState<any | null>(null);
   const [isCreating, setIsCreating] = useState(false);
 
+  async function handleDelete(id: string) {
+    if (!confirm("Are you sure you want to delete this user?")) return;
+    const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+    if (res.ok) {
+        router.refresh();
+    } else {
+        const j = await res.json();
+        alert(j.error || "Failed to delete");
+    }
+  }
+
   return (
     <div className="flex flex-col h-full space-y-4">
-      {/* 1. COMPRESSED HEADER */}
       <div className="flex-none flex items-center justify-between">
          <div className="flex items-center gap-4">
             <h1 className="text-xl font-semibold text-white hidden sm:block">Admin</h1>
@@ -26,7 +38,6 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
         </button>
       </div>
 
-      {/* 2. CONSISTENT LIST STYLING */}
       <div className="flex-1 overflow-auto custom-scrollbar rounded-xl border border-white/10 bg-black/20 shadow-2xl">
         <table className="w-full text-left text-sm min-w-[600px]">
           <thead className="bg-black/40 text-white/50 sticky top-0 backdrop-blur-md z-10">
@@ -40,7 +51,7 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
           </thead>
           <tbody className="divide-y divide-white/5">
             {users.map((u) => (
-              <tr key={u.id} className="hover:bg-white/5 transition-colors">
+              <tr key={u.id} className="hover:bg-white/5 transition-colors group">
                 <td className="p-4 font-medium text-white">{u.name || "—"}</td>
                 <td className="p-4 text-white/60">{u.email}</td>
                 <td className="p-4">
@@ -54,12 +65,20 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
                 </td>
                 <td className="p-4 text-white/60">{u.clinic?.name || "—"}</td>
                 <td className="p-4 text-right">
-                  <button 
-                    onClick={() => setEditingUser(u)} 
-                    className="text-accent hover:text-white transition-colors"
-                  >
-                    Edit
-                  </button>
+                  <div className="flex justify-end gap-3 opacity-60 group-hover:opacity-100 transition-opacity">
+                    <button 
+                        onClick={() => setEditingUser(u)} 
+                        className="text-accent hover:text-white transition-colors"
+                    >
+                        Edit
+                    </button>
+                    <button 
+                        onClick={() => handleDelete(u.id)} 
+                        className="text-red-400 hover:text-red-300 transition-colors"
+                    >
+                        Delete
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

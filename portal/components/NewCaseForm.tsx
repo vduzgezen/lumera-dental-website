@@ -1,4 +1,4 @@
-// components/NewCaseForm.tsx
+// portal/components/NewCaseForm.tsx
 "use client";
 
 import { useMemo, useState } from "react";
@@ -7,7 +7,7 @@ import ToothSelector from "@/components/ToothSelector";
 import SearchableSelect from "@/components/SearchableSelect";
 import type { DoctorRow } from "@/app/portal/cases/new/page";
 
-// --- HELPERS (Preserved from your original code) ---
+// --- HELPERS ---
 
 function addDays(d: Date, days: number) {
   const x = new Date(d);
@@ -23,16 +23,16 @@ function toISODate(d: Date) {
   return `${y}-${m}-${dd}`;
 }
 
-// Error handling logic (Preserved)
 function friendly(e: unknown): string {
   const s = String((e as any)?.message || e || "");
   if (/order date invalid/i.test(s)) return "Invalid date. Please use the date picker.";
-  if (/Doctor account not found/i.test(s)) return "The selected doctor account could not be found.";
-  if (/Doctor has no clinic linked/i.test(s)) return "The selected doctor isn’t linked to a clinic.";
-  if (/Scan viewer HTML is required/i.test(s)) return "Please upload a scan viewer HTML file.";
-  if (/Scan viewer must be an HTML/i.test(s)) return "Scan viewer must be an HTML (.html) file.";
-  if (/Scan viewer file is too large/i.test(s)) return "Scan viewer file is too large.";
   return s || "Please correct the highlighted fields and try again.";
+}
+
+// Helper to coalesce preferences
+function getPref(d?: DoctorRow) {
+  if (!d) return "";
+  return d.preferenceNote || d.defaultDesignPreferences || "";
 }
 
 const PRODUCTS = ["ZIRCONIA", "MULTILAYER_ZIRCONIA", "EMAX", "INLAY_ONLAY"];
@@ -41,7 +41,6 @@ const PRODUCTS = ["ZIRCONIA", "MULTILAYER_ZIRCONIA", "EMAX", "INLAY_ONLAY"];
 
 export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   const router = useRouter();
-
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | undefined>();
   const [ok, setOk] = useState<string | undefined>();
@@ -49,13 +48,12 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   // --- FORM STATE ---
   const [doctorUserId, setDoctorUserId] = useState(doctors[0]?.id ?? "");
   const [alias, setAlias] = useState("");
-  const [tooth, setTooth] = useState(""); // Managed by ToothSelector
+  const [tooth, setTooth] = useState(""); 
   
   // Date Logic
   const today = useMemo(() => new Date(), []);
   const [orderDate, setOrderDate] = useState(toISODate(today));
   
-  // Auto-calculate Due Date
   const dueDate = useMemo(() => {
     const d = new Date(orderDate);
     if (isNaN(d.getTime())) return "";
@@ -66,26 +64,35 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   const [product, setProduct] = useState(PRODUCTS[0]);
   const [shade, setShade] = useState("");
   const [material, setMaterial] = useState("");
+  
+  // Initialize with the first doctor's preference note (checking both fields)
+  const [designPreferences, setDesignPreferences] = useState(getPref(doctors[0])); 
 
   // File
   const [scanHtml, setScanHtml] = useState<File | null>(null);
 
-  // --- SUBMISSION LOGIC (FormData - Preserved) ---
+  // --- HANDLERS ---
+  
+  function handleDoctorChange(newId: string) {
+    setDoctorUserId(newId);
+    // Find the doctor and update preferences to their default
+    const doc = doctors.find((d) => d.id === newId);
+    if (doc) {
+        setDesignPreferences(getPref(doc));
+    }
+  }
+
+  // --- SUBMISSION ---
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(undefined);
     setOk(undefined);
 
-    // Validation
     if (!doctorUserId) return setErr("Please select a doctor account.");
     if (!alias.trim()) return setErr("Alias is required.");
-    if (!tooth.trim()) return setErr("Tooth codes are required. Please select teeth.");
+    if (!tooth.trim()) return setErr("Tooth codes are required.");
     if (!scanHtml) return setErr("Please upload a scan viewer HTML file.");
 
-    const parsed = new Date(orderDate);
-    if (isNaN(parsed.getTime())) return setErr("Invalid order date.");
-
-    // Construct FormData matches backend route
     const fd = new FormData();
     fd.append("patientAlias", alias.trim());
     fd.append("doctorUserId", doctorUserId);
@@ -94,9 +101,11 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     fd.append("product", product);
     if (material) fd.append("material", material);
     if (shade) fd.append("shade", shade);
+    if (designPreferences) fd.append("designPreferences", designPreferences); 
     fd.append("scanHtml", scanHtml);
 
     setBusy(true);
+
     try {
       const r = await fetch("/api/cases/new", { method: "POST", body: fd });
       const j = await r.json().catch(() => ({}));
@@ -110,7 +119,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     }
   }
 
-  // Map doctors for SearchableSelect
   const doctorOptions = useMemo(() => {
     return doctors.map((d) => ({
       id: d.id,
@@ -120,7 +128,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   }, [doctors]);
 
   return (
-    // Main Container: Matches dashboard aesthetics
     <div className="flex-1 min-h-0 w-full max-w-5xl mx-auto overflow-y-auto custom-scrollbar pr-2 pb-20">
       <form onSubmit={submit} className="space-y-6">
 
@@ -130,13 +137,12 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
             <h2 className="text-lg font-medium text-white/90">Doctor Assignment</h2>
             <span className="text-[10px] uppercase tracking-wider text-blue-400 font-bold bg-blue-500/10 px-2 py-1 rounded">Required</span>
           </div>
-          
           <SearchableSelect
             label="Select Doctor"
             placeholder="Search by name, email, or clinic..."
             options={doctorOptions}
             value={doctorUserId}
-            onChange={setDoctorUserId}
+            onChange={handleDoctorChange} // Use wrapper handler
           />
         </div>
 
@@ -145,7 +151,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
           <h2 className="text-lg font-medium text-white/90 border-b border-white/5 pb-2">
             Case Information
           </h2>
-
           <div className="grid gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium text-white/70">Patient Alias / ID</label>
@@ -157,7 +162,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
                 className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition"
               />
             </div>
-
             <div className="space-y-2">
               <label className="text-sm font-medium text-white/70">Date of Order</label>
               <input
@@ -168,7 +172,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
                 className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition [color-scheme:dark]"
               />
             </div>
-
             <div className="space-y-2">
               <label className="text-sm font-medium text-white/70">Due Date (Auto +8 Days)</label>
               <input
@@ -195,7 +198,7 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
                 onChange={(e) => setProduct(e.target.value)}
                 className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition appearance-none"
               >
-                {PRODUCTS.map(p => <option key={p} value={p} className="bg-gray-900">{p.replace(/_/g, " ")}</option>)}
+                 {PRODUCTS.map(p => <option key={p} value={p} className="bg-gray-900">{p.replace(/_/g, " ")}</option>)}
               </select>
             </div>
             
@@ -219,9 +222,23 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
               />
             </div>
           </div>
+
+          {/* NEW: Designer Preferences */}
+          <div className="space-y-2">
+            <div className="flex justify-between items-center">
+                <label className="text-sm font-medium text-white/70">Designer Preferences</label>
+                <span className="text-[10px] text-white/40">Auto-filled from doctor profile</span>
+            </div>
+            <textarea
+              value={designPreferences}
+              onChange={(e) => setDesignPreferences(e.target.value)}
+              placeholder="E.g. Contacts heavy, light occlusion, open embrasures..."
+              className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition h-24 resize-none"
+            />
+          </div>
         </div>
 
-        {/* 4. FILE UPLOAD (Exocad HTML) */}
+        {/* 4. FILE UPLOAD */}
         <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-4 shadow-lg">
           <h2 className="text-lg font-medium text-white/90 border-b border-white/5 pb-2">
              Scan Viewer File
@@ -241,7 +258,7 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
                   file:bg-blue-600 file:text-white
                   hover:file:bg-blue-500 file:transition-colors
                   cursor-pointer bg-black/40 rounded-lg border border-white/10 p-2
-                "
+               "
               />
             </div>
             {scanHtml && (

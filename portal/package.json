@@ -15,11 +15,13 @@
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "resend": "^6.6.0",
     "three": "^0.171.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
+    "@types/bcryptjs": "^2.4.6",
     "@types/estree": "^1.0.8",
     "@types/json-schema": "^7.0.15",
     "@types/jsonwebtoken": "^9.0.10",

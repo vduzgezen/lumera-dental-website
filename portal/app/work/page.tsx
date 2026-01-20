@@ -4,7 +4,7 @@ import PublicFooter from "@/components/PublicFooter";
 import Link from "next/link";
 
 export default function WorkPage() {
-  // Placeholder data for when you have images. 
+  // Placeholder data for when you have images.
   // Replace 'bg-white/5' with <Image src="..." /> later.
   const galleryItems = [
     { id: 1, title: "Full Arch Zirconia", category: "Restoration", colSpan: "col-span-1 md:col-span-2 row-span-2" },
@@ -15,10 +15,12 @@ export default function WorkPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-midnight text-white font-sans selection:bg-accent/30">
+    // FIX: Removed 'font-sans' to match HomePage (Arial default) and prevent Navbar jump
+    // FIX: Changed structure to 'main' with 'flex flex-col' for consistent sticky footer behavior
+    <main className="min-h-screen flex flex-col bg-midnight text-porcelain selection:bg-accent/30">
       <PublicNavbar />
 
-      <main>
+      <div className="flex-1">
         {/* HERO SECTION */}
         <section className="relative pt-32 pb-20 px-6 overflow-hidden">
           {/* Ambient Background */}
@@ -81,9 +83,9 @@ export default function WorkPage() {
             </Link>
           </div>
         </section>
-      </main>
+      </div>
 
       <PublicFooter />
-    </div>
+    </main>
   );
 }

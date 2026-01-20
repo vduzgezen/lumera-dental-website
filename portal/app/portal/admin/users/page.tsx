@@ -5,12 +5,15 @@ import UserListClient from "./UserListClient";
 export const dynamic = "force-dynamic";
 
 export default async function UsersPage() {
-  // Fetch users with their clinic name
+  // Fetch users with their clinic name AND address
   const users = await prisma.user.findMany({ 
     orderBy: { createdAt: "desc" },
-    include: { clinic: { select: { id: true, name: true } } }
+    include: { 
+      clinic: { select: { id: true, name: true } },
+      address: true // NEW: Include address data
+    }
   });
-  
+
   // Fetch clinics for the dropdown
   const clinics = await prisma.clinic.findMany({ 
     select: { id: true, name: true }, 

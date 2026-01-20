@@ -6,8 +6,11 @@ import { getSession } from "@/lib/auth";
 export async function GET() {
   const session = await getSession();
   if (!session || session.role !== "admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  
-  const clinics = await prisma.clinic.findMany({ orderBy: { name: "asc" } });
+  // Include address in list for editing
+  const clinics = await prisma.clinic.findMany({ 
+    orderBy: { name: "asc" },
+    include: { address: true, _count: { select: { users: true, cases: true } } }
+  });
   return NextResponse.json(clinics);
 }
 
@@ -16,16 +19,26 @@ export async function POST(req: Request) {
   if (!session || session.role !== "admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const data = await req.json();
-  // Basic validation
   if (!data.name) return NextResponse.json({ error: "Name required" }, { status: 400 });
+
+  const addr = data.address || {};
+  let addressConfig = undefined;
+  if (addr.id) {
+    addressConfig = { connect: { id: addr.id } };
+  } else if (addr.street) {
+    addressConfig = {
+      create: {
+        street: addr.street,
+        city: addr.city,
+        state: addr.state,
+        zipCode: addr.zipCode
+      }
+    };
+  }
 
   const clinic = await prisma.clinic.create({
     data: {
       name: data.name,
-      street: data.street,
-      city: data.city,
-      state: data.state,
-      zipCode: data.zipCode,
       phone: data.phone,
       billingCycleDay: Number(data.billingCycleDay) || 1,
       paymentTerms: Number(data.paymentTerms) || 30,
@@ -34,6 +47,7 @@ export async function POST(req: Request) {
       bankName: data.bankName,
       routingNumber: data.routingNumber,
       bankLast4: data.bankLast4,
+      address: addressConfig
     }
   });
   return NextResponse.json(clinic);

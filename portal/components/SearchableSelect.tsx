@@ -10,11 +10,12 @@ type Props = {
   options: Option[];
   value: string;
   onChange: (val: string) => void;
+  onSearch?: (term: string) => void; // NEW: Callback for server-side search
   placeholder?: string;
   disabled?: boolean;
 };
 
-export default function SearchableSelect({ label, options, value, onChange, placeholder, disabled }: Props) {
+export default function SearchableSelect({ label, options, value, onChange, onSearch, placeholder, disabled }: Props) {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
   const containerRef = useRef<HTMLDivElement>(null);
@@ -32,14 +33,27 @@ export default function SearchableSelect({ label, options, value, onChange, plac
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const filtered = options.filter((o) =>
-    o.label.toLowerCase().includes(search.toLowerCase()) ||
-    (o.subLabel && o.subLabel.toLowerCase().includes(search.toLowerCase()))
-  );
+  // Handle Search Input
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value;
+    setSearch(val);
+    if (onSearch) {
+      onSearch(val); // Trigger server search
+    }
+  };
+
+  // Filter Logic: If onSearch is provided, we assume parent handles filtering (server-side).
+  // Otherwise, we filter locally.
+  const displayedOptions = onSearch 
+    ? options 
+    : options.filter((o) =>
+        o.label.toLowerCase().includes(search.toLowerCase()) ||
+        (o.subLabel && o.subLabel.toLowerCase().includes(search.toLowerCase()))
+      );
 
   return (
     <div className="space-y-2 relative" ref={containerRef}>
-      <label className="text-sm font-medium text-white/70">{label}</label>
+      {label && <label className="text-sm font-medium text-white/70">{label}</label>}
       
       {/* Trigger Button */}
       <button
@@ -48,7 +62,9 @@ export default function SearchableSelect({ label, options, value, onChange, plac
         onClick={() => {
           if (!disabled) {
             setIsOpen(!isOpen);
-            setSearch(""); // Reset search on open
+            // Don't clear search immediately so they can keep typing if they re-open? 
+            // Standard behavior usually clears or selects text. Let's clear for now.
+            if (!isOpen) setSearch(""); 
           }
         }}
         className={`
@@ -78,7 +94,7 @@ export default function SearchableSelect({ label, options, value, onChange, plac
             <input
               autoFocus
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={handleSearchChange}
               placeholder="Type to search..."
               className="w-full bg-black/20 text-white text-sm rounded px-3 py-2 border border-white/5 focus:border-blue-500/50 outline-none"
             />
@@ -86,10 +102,10 @@ export default function SearchableSelect({ label, options, value, onChange, plac
 
           {/* List */}
           <div className="overflow-y-auto flex-1 custom-scrollbar">
-            {filtered.length === 0 ? (
+            {displayedOptions.length === 0 ? (
               <div className="p-3 text-sm text-white/40 text-center">No results found.</div>
             ) : (
-              filtered.map((opt) => (
+              displayedOptions.map((opt) => (
                 <button
                   key={opt.id}
                   type="button"
