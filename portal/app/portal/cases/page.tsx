@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import CaseListRow from "@/components/CaseListRow";
 import StatusFilter from "@/components/StatusFilter";
+import MillingDashboard from "./MillingDashboard"; 
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ type CaseRow = {
   updatedAt: Date;
   doctorName: string | null;
   clinic: { name: string };
+  assigneeUser: { name: string | null; email: string } | null;
 };
 
 export default async function CasesPage({
@@ -29,15 +31,40 @@ export default async function CasesPage({
   if (!session) return notFound();
 
   const sp = await searchParams;
+  const role = session.role;
 
+  // --- MILLING VIEW ---
+  if (role === "milling") {
+    const millingCases = await prisma.dentalCase.findMany({
+        where: { 
+            stage: "MILLING_GLAZING"
+        },
+        orderBy: { dueDate: "asc" },
+        select: {
+            id: true,
+            patientAlias: true,
+            toothCodes: true,
+            status: true,
+            dueDate: true,
+            product: true,
+            shade: true
+        }
+    });
+    
+    const safeMillingCases = millingCases.map(c => ({
+        ...c,
+        dueDate: c.dueDate ? c.dueDate.toISOString() : null
+    }));
+    return <MillingDashboard cases={safeMillingCases} />;
+  }
+
+  // --- STANDARD VIEW ---
   const getParam = (key: string): string | undefined => {
     const value = sp[key];
     if (Array.isArray(value)) return value[0];
     if (typeof value === "string") return value;
     return undefined;
   };
-
-  // Helper to get array of values (for status checklist)
   const getParamArray = (key: string): string[] => {
     const value = sp[key];
     if (Array.isArray(value)) return value;
@@ -45,7 +72,6 @@ export default async function CasesPage({
     return [];
   };
 
-  const role = session.role;
   const canCreate = role === "lab" || role === "admin";
   const isDoctor = role === "customer";
 
@@ -54,20 +80,15 @@ export default async function CasesPage({
   const caseIdFilter = getParam("caseId");
   const dateFilter = getParam("date");
   const aliasFilter = getParam("alias");
-  
-  // New: Status Array
   const statusFilter = getParamArray("status");
 
   const where: Prisma.DentalCaseWhereInput = {};
-
-  // Apply Status Filter (if any selected)
   if (statusFilter.length > 0) {
     where.status = { in: statusFilter };
   }
 
   if (isDoctor) {
     where.doctorUserId = session.userId ?? "__none__";
-
     if (aliasFilter && aliasFilter.trim()) {
       const q = aliasFilter.trim();
       where.OR = [
@@ -119,6 +140,7 @@ export default async function CasesPage({
       updatedAt: true,
       doctorName: true,
       clinic: { select: { name: true } },
+      assigneeUser: { select: { name: true, email: true } }
     },
   })) as CaseRow[];
 
@@ -138,63 +160,32 @@ export default async function CasesPage({
         </header>
 
         <form className="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
-          {/* New Status Filter (Available to everyone) */}
           <StatusFilter selected={statusFilter} />
 
           {canCreate && (
             <>
-              <input
-                name="clinic"
-                placeholder="Clinic Name"
-                defaultValue={clinicFilter ?? ""}
-                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 lg:w-40 transition"
-              />
-              <input
-                name="doctor"
-                placeholder="Doctor Name"
-                defaultValue={doctorFilter ?? ""}
-                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 lg:w-40 transition"
-              />
-              <input
-                name="caseId"
-                placeholder="Case ID"
-                defaultValue={caseIdFilter ?? ""}
-                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 transition font-mono"
-              />
+              <input name="clinic" placeholder="Clinic Name" defaultValue={clinicFilter ?? ""}
+                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 lg:w-40 transition" />
+              <input name="doctor" placeholder="Doctor Name" defaultValue={doctorFilter ?? ""}
+                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 lg:w-40 transition" />
+              <input name="caseId" placeholder="Case ID" defaultValue={caseIdFilter ?? ""}
+                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 transition font-mono" />
               <div className="flex items-center gap-1">
-                <input
-                  type="date"
-                  name="date"
-                  defaultValue={dateFilter ?? ""}
-                  className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none transition [color-scheme:dark]"
-                />
+                <input type="date" name="date" defaultValue={dateFilter ?? ""}
+                  className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none transition [color-scheme:dark]" />
               </div>
             </>
           )}
 
           {isDoctor && (
-            <input
-              name="alias"
-              placeholder="Search patient alias or tooth #"
-              defaultValue={aliasFilter ?? ""}
-              className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white flex-1 min-w-[200px] focus:border-blue-500/50 outline-none transition"
-            />
+            <input name="alias" placeholder="Search patient alias or tooth #" defaultValue={aliasFilter ?? ""}
+              className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white flex-1 min-w-[200px] focus:border-blue-500/50 outline-none transition" />
           )}
 
-          <button
-            type="submit"
-            className="bg-white text-black rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-gray-200 transition"
-          >
-            Search
-          </button>
+          <button type="submit" className="bg-white text-black rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-gray-200 transition">Search</button>
           
           {(clinicFilter || doctorFilter || caseIdFilter || dateFilter || aliasFilter || statusFilter.length > 0) && (
-            <Link
-              href="/portal/cases"
-              className="px-3 py-1.5 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition"
-            >
-              Clear
-            </Link>
+            <Link href="/portal/cases" className="px-3 py-1.5 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition">Clear</Link>
           )}
         </form>
       </div>
@@ -208,6 +199,10 @@ export default async function CasesPage({
                 <th className="p-4 font-medium">Alias</th>
                 <th className="p-4 font-medium">Clinic</th>
                 <th className="p-4 font-medium">Doctor</th>
+                
+                {/* HIDE DESIGNER COLUMN FOR DOCTORS */}
+                {!isDoctor && <th className="p-4 font-medium">Designer</th>}
+                
                 <th className="p-4 font-medium">Tooth</th>
                 <th className="p-4 font-medium">Status</th>
                 <th className="p-4 font-medium">Due Date</th>
@@ -216,14 +211,10 @@ export default async function CasesPage({
             </thead>
             <tbody className="divide-y divide-white/5">
               {rows.map((c) => (
-                <CaseListRow key={c.id} data={c} />
+                <CaseListRow key={c.id} data={c} role={role} />
               ))}
               {rows.length === 0 && (
-                <tr>
-                  <td className="p-12 text-center text-white/40" colSpan={8}>
-                    No cases found.
-                  </td>
-                </tr>
+                <tr><td className="p-12 text-center text-white/40" colSpan={9}>No cases found.</td></tr>
               )}
             </tbody>
           </table>

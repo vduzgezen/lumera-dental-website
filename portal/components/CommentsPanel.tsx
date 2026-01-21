@@ -1,3 +1,4 @@
+// portal/components/CommentsPanel.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -62,7 +63,6 @@ export default function CommentsPanel({
           attachmentFileId: attachmentId 
         }),
       });
-
       if (!res.ok) throw new Error("Failed to post");
 
       const newComment = await res.json();
@@ -120,17 +120,8 @@ export default function CommentsPanel({
     }
   }
 
-  // Helper for color logic
-  const getRoleStyles = (role: string) => {
-    if (role === "admin" || role === "lab") {
-      return "bg-red-500/20 text-red-300 border border-red-500/30";
-    }
-    return "bg-blue-500/20 text-blue-300 border border-blue-500/30";
-  };
-
   // --- NEW: Spacing & Inline Image Fix ---
   function renderBody(text: string) {
-    // Regex: Matches URLs ending in image extensions
     const regex = /((?:https?:\/\/[^\s]+|(?:\/uploads\/)[^\s]+)\.(?:png|jpg|jpeg|gif|webp))/gi;
     const parts = text.split(regex);
 
@@ -138,7 +129,8 @@ export default function CommentsPanel({
       if (part.match(regex)) {
         const safeSrc = fixUrl(part);
         return (
-          <div key={i} className="my-2"> {/* Controlled spacing wrapper */}
+          // FIX: Standardized spacing (my-3)
+          <div key={i} className="my-3">
              {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={safeSrc}
@@ -153,7 +145,6 @@ export default function CommentsPanel({
       return <span key={i}>{part}</span>;
     });
   }
-  // ---------------------------------------
 
   return (
     <div className="flex flex-col h-full min-h-0">
@@ -161,66 +152,79 @@ export default function CommentsPanel({
         Discussion
       </h3>
 
-      <div className="flex-1 overflow-y-auto min-h-0 space-y-4 pr-2 custom-scrollbar flex flex-col-reverse">
+      {/* FIX: Added space-y-reverse to handle bottom-up stacking correctly */}
+      <div className="flex-1 overflow-y-auto min-h-0 space-y-4 space-y-reverse pr-2 custom-scrollbar flex flex-col-reverse">
         {comments.length === 0 ? (
           <p className="text-white/40 text-sm text-center py-4">No comments yet.</p>
         ) : (
-          comments.map((c) => (
-            <div key={c.id} className="group flex gap-3">
-              <div 
-                className={`
-                  w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-                  ${getRoleStyles(c.role)}
-                `}
-              >
-                {c.author.substring(0, 2).toUpperCase()}
-              </div>
+          comments.map((c) => {
+            const isInternal = c.role === "admin" || c.role === "lab" || c.role === "milling";
+            const maskAsLumera = currentUserRole === "customer" && isInternal;
+            
+            const displayAuthor = maskAsLumera ? "Lumera" : c.author;
+            const displayInitials = maskAsLumera ? "L" : displayAuthor.substring(0, 2).toUpperCase();
+            
+            const bubbleStyle = isInternal 
+                ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" 
+                : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
 
-              <div className="flex-1 min-w-0">
-                <div className="flex items-baseline justify-between">
-                  <span className="text-sm font-medium text-white/90">
-                    {c.author}
-                    {c.role !== "customer" && <span className="ml-2 text-[10px] opacity-50 uppercase border border-white/20 px-1 rounded">{c.role}</span>}
-                  </span>
-                  <span className="text-[10px] text-white/40">
-                    {new Date(c.at).toLocaleString()}
-                  </span>
-                </div>
-                
-                {/* MODIFIED: Use renderBody instead of direct output */}
-                <div className="mt-1 text-sm text-white/80 whitespace-pre-wrap leading-relaxed">
-                  {renderBody(c.body)}
+            return (
+              <div key={c.id} className="group flex gap-3">
+                <div 
+                  className={`
+                    w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
+                    ${bubbleStyle}
+                  `}
+                >
+                  {displayInitials}
                 </div>
 
-                {/* Explicit Attachments (Red Pen uploads usually go here) */}
-                {c.attachments && c.attachments.length > 0 && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {c.attachments.map((att) => {
-                      const safeSrc = fixUrl(att.url);
-                      return (
-                        <div 
-                          key={att.id}
-                          onClick={() => setZoomImg(safeSrc)} 
-                          className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 cursor-zoom-in hover:border-white/30 transition-colors bg-black/50"
-                        >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img 
-                            src={safeSrc} 
-                            alt="Attachment" 
-                            className="w-full h-full object-cover" 
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                              (e.target as HTMLImageElement).parentElement!.innerText = "⚠️ Error";
-                            }}
-                          />
-                        </div>
-                      );
-                    })}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-sm font-medium text-white/90">
+                      {displayAuthor}
+                      {!maskAsLumera && c.role !== "customer" && (
+                        <span className="ml-2 text-[10px] opacity-50 uppercase border border-white/20 px-1 rounded">{c.role}</span>
+                      )}
+                    </span>
+                    <span className="text-[10px] text-white/40">
+                      {new Date(c.at).toLocaleString()}
+                    </span>
                   </div>
-                )}
+                  
+                  <div className="mt-1 text-sm text-white/80 whitespace-pre-wrap leading-relaxed">
+                    {renderBody(c.body)}
+                  </div>
+
+                  {c.attachments && c.attachments.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {c.attachments.map((att) => {
+                        const safeSrc = fixUrl(att.url);
+                        return (
+                          <div 
+                            key={att.id}
+                            onClick={() => setZoomImg(safeSrc)} 
+                            className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 cursor-zoom-in hover:border-white/30 transition-colors bg-black/50"
+                          >
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img 
+                              src={safeSrc} 
+                              alt="Attachment" 
+                              className="w-full h-full object-cover" 
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                                (e.target as HTMLImageElement).parentElement!.innerText = "⚠️ Error";
+                              }}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

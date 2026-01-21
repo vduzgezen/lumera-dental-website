@@ -52,16 +52,31 @@ export async function POST(req: Request, { params }: Params) {
 
   const existing = await prisma.dentalCase.findUnique({
     where: { id },
-    select: {
-      id: true,
-      stage: true,
-      status: true,
-    },
+    include: { files: true }, // Include files for checking mandatory uploads
   });
 
   if (!existing) {
     return NextResponse.json({ error: "Case not found." }, { status: 404 });
   }
+
+  // --- MANDATORY FILE CHECK FOR MILLING ---
+  // If moving TO Milling, ensure the 3 deferred files are present.
+  if (targetStage === "MILLING_GLAZING") {
+    const labels = new Set(existing.files.map((f) => f.label));
+    const missing: string[] = [];
+    
+    if (!labels.has("construction_info")) missing.push("Construction Info");
+    if (!labels.has("model_top")) missing.push("Model Top");
+    if (!labels.has("model_bottom")) missing.push("Model Bottom");
+
+    if (missing.length > 0) {
+      return NextResponse.json(
+        { error: `Cannot move to Milling. Missing files: ${missing.join(", ")}` },
+        { status: 400 }
+      );
+    }
+  }
+  // -----------------------------------------
 
   const currentStage = existing.stage as Stage;
   const currentStatus = existing.status as string;

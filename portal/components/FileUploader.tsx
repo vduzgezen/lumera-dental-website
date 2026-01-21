@@ -3,16 +3,22 @@
 
 import { useState } from "react";
 
-type Role = "customer" | "lab" | "admin";
+type Role = "customer" | "lab" | "admin" | "milling";
 
 export default function FileUploader({
   caseId,
   role,
-  slot, // "scan" | "design_with_model" | "design_only"
+  label, // New generic prop
+  slot,  // Legacy prop (for backward compatibility)
+  accept = ".stl,.ply,.obj",
+  description,
 }: {
   caseId: string;
   role: Role;
-  slot: "scan" | "design_with_model" | "design_only";
+  label?: string;
+  slot?: string;
+  accept?: string;
+  description?: string;
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | undefined>();
@@ -21,14 +27,11 @@ export default function FileUploader({
 
   if (role === "customer") return null;
 
-  const accept = slot === "scan" ? ".stl,.ply,.obj" : ".stl";
-
-  const labelText =
-    slot === "scan"
-      ? "Upload scan (STL/PLY/OBJ)"
-      : slot === "design_with_model"
-      ? "Upload design + model (STL/PLY/OBJ)"
-      : "Upload design only (STL/PLY/OBJ)";
+  // COMPATIBILITY FIX: Use 'label' if present, otherwise fallback to 'slot'
+  const activeLabel = label || slot || "file";
+  
+  // Display text: Use description if provided, otherwise prettify the label
+  const labelText = description || activeLabel.replace(/_/g, " ");
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] || null;
@@ -48,7 +51,8 @@ export default function FileUploader({
 
     try {
       const fd = new FormData();
-      fd.append("label", slot);
+      // Send the active label to the API
+      fd.append("label", activeLabel);
       fd.append("files", file);
 
       const r = await fetch(`/api/cases/${caseId}/files`, {
@@ -71,9 +75,9 @@ export default function FileUploader({
 
   return (
     <div className="space-y-2">
-      <div className="text-xs text-white/60">{labelText}</div>
+      <div className="text-xs text-white/60 capitalize">{labelText}</div>
 
-      <label className="flex items-center justify-between gap-3 rounded-lg p-2 bg-black/40 border border-white/10 cursor-pointer">
+      <label className="flex items-center justify-between gap-3 rounded-lg p-2 bg-black/40 border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
         <div className="flex-1 min-w-0 text-white/80">
           {file ? (
             <>
@@ -85,12 +89,12 @@ export default function FileUploader({
               </div>
             </>
           ) : (
-            <div className="text-xs text.white/60 truncate">
-              Choose a file…
+            <div className="text-xs text-white/60 truncate">
+              Choose file…
             </div>
           )}
         </div>
-        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs">
+        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs font-medium">
           Browse
         </div>
         <input
@@ -105,11 +109,11 @@ export default function FileUploader({
         <button
           onClick={send}
           disabled={busy || !file}
-          className="rounded-lg px-3 py-1.5 bg-white text-black text-xs disabled:opacity-50"
+          className="rounded-lg px-3 py-1.5 bg-white text-black text-xs font-bold disabled:opacity-50 hover:bg-gray-200 transition-colors"
         >
           {busy ? "Uploading…" : "Upload"}
         </button>
-        {ok && <span className="text-emerald-400 text-xs">{ok}</span>}
+        {ok && <span className="text-emerald-400 text-xs animate-pulse">{ok}</span>}
         {err && <span className="text-red-400 text-xs">{err}</span>}
       </div>
     </div>

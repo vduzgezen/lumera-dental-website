@@ -1,4 +1,4 @@
-// portal/components/CaseListRow.tsx
+// components/CaseListRow.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -13,6 +13,7 @@ type CaseRowData = {
   updatedAt: Date;
   doctorName: string | null;
   clinic: { name: string };
+  assigneeUser: { name: string | null; email: string } | null;
 };
 
 function fmtDate(d?: Date | null) {
@@ -20,9 +21,18 @@ function fmtDate(d?: Date | null) {
   return new Date(d).toLocaleDateString();
 }
 
-export default function CaseListRow({ data }: { data: CaseRowData }) {
-  const router = useRouter();
+function getInitials(name: string | null, email: string) {
+  if (name) {
+    const parts = name.split(" ");
+    if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  }
+  return email.slice(0, 2).toUpperCase();
+}
 
+// Updated props definition to include 'role'
+export default function CaseListRow({ data, role }: { data: CaseRowData, role: string }) {
+  const router = useRouter();
   const handleRowClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("button, a")) return;
     router.push(`/portal/cases/${data.id}`);
@@ -30,33 +40,11 @@ export default function CaseListRow({ data }: { data: CaseRowData }) {
 
   const getStatusColor = (s: string) => {
     const status = s.toUpperCase();
-
-    // 1. CHANGES REQUESTED -> RED
-    if (status === "CHANGES_REQUESTED") {
-      return "bg-red-500/10 text-red-400 border-red-500/20";
-    }
-
-    // 2. COMPLETED -> EMERALD (Deep Green)
-    if (status === "COMPLETED") {
-      return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-    }
-
-    // 3. DELIVERING -> BLUE
-    if (status === "SHIPPED") {
-      return "bg-blue-500/10 text-blue-400 border-blue-500/20";
-    }
-
-    // 4. PRODUCTION -> PURPLE
-    if (status === "IN_MILLING") {
-      return "bg-purple-500/10 text-purple-400 border-purple-500/20";
-    }
-
-    // 5. APPROVED -> LIME (Distinct Yellow-Green)
-    if (status === "APPROVED") {
-      return "bg-lime-500/10 text-lime-300 border-lime-500/20";
-    }
-
-    // 6. DESIGNING -> ORANGE
+    if (status === "CHANGES_REQUESTED") return "bg-red-500/10 text-red-400 border-red-500/20";
+    if (status === "COMPLETED") return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
+    if (status === "SHIPPED") return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+    if (status === "IN_MILLING") return "bg-purple-500/10 text-purple-400 border-purple-500/20";
+    if (status === "APPROVED") return "bg-lime-500/10 text-lime-300 border-lime-500/20";
     return "bg-orange-500/10 text-orange-400 border-orange-500/20";
   };
 
@@ -73,6 +61,25 @@ export default function CaseListRow({ data }: { data: CaseRowData }) {
       </td>
       <td className="p-3 text-white/70">{data.clinic.name}</td>
       <td className="p-3 text-white/70">{data.doctorName ?? "—"}</td>
+      
+      {/* CONDITIONAL RENDER: Must match the header logic in page.tsx */}
+      {role !== "customer" && (
+        <td className="p-3">
+            {data.assigneeUser ? (
+            <div className="flex items-center gap-2">
+                <div className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center text-[10px] font-bold border border-blue-500/30">
+                {getInitials(data.assigneeUser.name, data.assigneeUser.email)}
+                </div>
+                <span className="text-white/70 text-xs truncate max-w-[100px]">
+                {data.assigneeUser.name || data.assigneeUser.email.split("@")[0]}
+                </span>
+            </div>
+            ) : (
+            <span className="text-white/20 text-xs italic">—</span>
+            )}
+        </td>
+      )}
+
       <td className="p-3 text-white/70">{data.toothCodes}</td>
       <td className="p-3">
         <span
