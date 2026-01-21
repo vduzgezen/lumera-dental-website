@@ -68,8 +68,13 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   // Initialize with the first doctor's preference note (checking both fields)
   const [designPreferences, setDesignPreferences] = useState(getPref(doctors[0])); 
 
-  // File
+  // File Inputs
   const [scanHtml, setScanHtml] = useState<File | null>(null);
+  const [rxPdf, setRxPdf] = useState<File | null>(null);
+  // Optional at start:
+  const [constructionInfo, setConstructionInfo] = useState<File | null>(null);
+  const [modelTop, setModelTop] = useState<File | null>(null);
+  const [modelBottom, setModelBottom] = useState<File | null>(null);
 
   // --- HANDLERS ---
   
@@ -91,7 +96,10 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     if (!doctorUserId) return setErr("Please select a doctor account.");
     if (!alias.trim()) return setErr("Alias is required.");
     if (!tooth.trim()) return setErr("Tooth codes are required.");
+    
+    // Mandatory Files at Creation: Only Scan HTML & Rx PDF
     if (!scanHtml) return setErr("Please upload a scan viewer HTML file.");
+    if (!rxPdf) return setErr("Please upload the Rx PDF.");
 
     const fd = new FormData();
     fd.append("patientAlias", alias.trim());
@@ -102,7 +110,13 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     if (material) fd.append("material", material);
     if (shade) fd.append("shade", shade);
     if (designPreferences) fd.append("designPreferences", designPreferences); 
-    fd.append("scanHtml", scanHtml);
+    
+    // Append Files
+    if (scanHtml) fd.append("scanHtml", scanHtml);
+    if (rxPdf) fd.append("rxPdf", rxPdf);
+    if (constructionInfo) fd.append("constructionInfo", constructionInfo);
+    if (modelTop) fd.append("modelTop", modelTop);
+    if (modelBottom) fd.append("modelBottom", modelBottom);
 
     setBusy(true);
 
@@ -126,6 +140,32 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
       subLabel: d.clinic.name
     }));
   }, [doctors]);
+
+  // Helper for file inputs
+  const FileInput = ({ label, setter, file, accept, req = false }: { label: string, setter: (f: File | null) => void, file: File | null, accept: string, req?: boolean }) => (
+    <div className="space-y-1">
+      <div className="flex justify-between items-baseline">
+        <label className="text-xs font-medium text-white/70 uppercase tracking-wider">{label} {req && <span className="text-blue-400">*</span>}</label>
+        {file && <span className="text-[10px] text-emerald-400 font-mono">✓ {file.name.slice(0, 20)}...</span>}
+      </div>
+      <div className="relative group">
+        <input
+            type="file"
+            accept={accept}
+            onChange={(e) => setter(e.target.files?.[0] || null)}
+            className="
+            w-full text-sm text-white/60
+            file:mr-4 file:py-2.5 file:px-4
+            file:rounded-lg file:border-0
+            file:text-sm file:font-semibold
+            file:bg-blue-600 file:text-white
+            hover:file:bg-blue-500 file:transition-colors
+            cursor-pointer bg-black/40 rounded-lg border border-white/10 p-2
+            "
+        />
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex-1 min-h-0 w-full max-w-5xl mx-auto overflow-y-auto custom-scrollbar pr-2 pb-20">
@@ -238,41 +278,33 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
           </div>
         </div>
 
-        {/* 4. FILE UPLOAD */}
+        {/* 4. FILE UPLOADS (Updated for Milling Workflow) */}
         <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-4 shadow-lg">
           <h2 className="text-lg font-medium text-white/90 border-b border-white/5 pb-2">
-             Scan Viewer File
+             Production Files
           </h2>
-          <div className="space-y-2">
-            <label className="text-sm font-medium text-white/70">Upload HTML (Max 200MB) *</label>
-            <div className="relative group">
-              <input
-                type="file"
-                accept=".html,.htm,text/html"
-                onChange={(e) => setScanHtml(e.target.files?.[0] || null)}
-                className="
-                  w-full text-sm text-white/60
-                  file:mr-4 file:py-2.5 file:px-4
-                  file:rounded-lg file:border-0
-                  file:text-sm file:font-semibold
-                  file:bg-blue-600 file:text-white
-                  hover:file:bg-blue-500 file:transition-colors
-                  cursor-pointer bg-black/40 rounded-lg border border-white/10 p-2
-               "
-              />
-            </div>
-            {scanHtml && (
-               <p className="text-xs text-green-400 mt-1">
-                 Selected: {scanHtml.name} ({(scanHtml.size / (1024 * 1024)).toFixed(2)} MB)
-               </p>
-            )}
-            {!scanHtml && (
-               <p className="text-[10px] text-white/40">Required: Exocad HTML export file.</p>
-            )}
+          <div className="grid grid-cols-1 gap-6">
+             {/* Mandatory at Start */}
+             <div className="grid md:grid-cols-2 gap-6">
+                <FileInput label="Scan Viewer (HTML)" setter={setScanHtml} file={scanHtml} accept=".html" req={true} />
+                <FileInput label="Rx PDF" setter={setRxPdf} file={rxPdf} accept=".pdf" req={true} />
+             </div>
+
+             <div className="w-full h-px bg-white/5" />
+
+             {/* Optional at Start (Mandatory for Milling) */}
+             <div>
+                <span className="text-[10px] uppercase tracking-wider text-white/40 mb-2 block">Optional now (Required before Milling)</span>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <FileInput label="Construction Info" setter={setConstructionInfo} file={constructionInfo} accept=".pdf,.xml,.txt" />
+                    <FileInput label="Model Top (STL)" setter={setModelTop} file={modelTop} accept=".stl,.ply" />
+                    <FileInput label="Model Bottom (STL)" setter={setModelBottom} file={modelBottom} accept=".stl,.ply" />
+                </div>
+             </div>
           </div>
         </div>
 
-        {/* 5. ODONTOGRAM */}
+        {/* 5. ODONTOGRAM - PRESERVED EXACTLY AS REQUESTED */}
         <div className="space-y-2">
            <h2 className="text-lg font-medium text-white/90 px-1">Select Teeth *</h2>
            <ToothSelector value={tooth} onChange={setTooth} />

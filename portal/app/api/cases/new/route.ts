@@ -7,12 +7,11 @@ import fs from "node:fs/promises";
 import { 
   calculateCaseCost, 
   countUnits, 
-  ProductKind, 
   BillingType, 
   PriceTier 
 } from "@/lib/pricing";
 
-const MAX_SCAN_VIEWER_BYTES = 200 * 1024 * 1024; // 200MB
+const MAX_FILE_BYTES = 500 * 1024 * 1024; // 500MB Limit
 
 function addDays(d: Date, n: number) {
   const x = new Date(d);
@@ -22,29 +21,48 @@ function addDays(d: Date, n: number) {
 }
 
 /**
- * Sanitize an HTML filename
+ * Sanitize filename helper
  */
-function sanitizeHtmlFileName(original: string, fallbackBase: string): string {
+function sanitizeFileName(original: string, fallbackBase: string): string {
   const baseName = (original || fallbackBase).replace(/\s+/g, "_");
-  const lower = baseName.toLowerCase();
+  // Basic sanitization, remove special chars except dots/dashes/underscores
+  return baseName.replace(/[^a-zA-Z0-9_.-]/g, "");
+}
 
-  let ext = ".html";
-  if (lower.endsWith(".html")) {
-    ext = ".html";
-  } else if (lower.endsWith(".htm")) {
-    ext = ".htm";
-  }
+/**
+ * Helper to save a generic file to the case folder and DB
+ */
+async function saveCaseFile(file: File, caseId: string, label: string) {
+  const uploadsRoot = path.join(process.cwd(), "public", "uploads", caseId);
+  await fs.mkdir(uploadsRoot, { recursive: true });
 
-  let nameWithoutExt = baseName;
-  if (lower.endsWith(".html") || lower.endsWith(".htm")) {
-    const idx = baseName.lastIndexOf(".");
-    if (idx >= 0) {
-      nameWithoutExt = baseName.slice(0, idx);
-    }
-  }
+  const originalName = file.name || `${label}.bin`;
+  const safeName = sanitizeFileName(originalName, label);
+  
+  const buf = Buffer.from(await file.arrayBuffer());
+  const fullPath = path.join(uploadsRoot, safeName);
+  await fs.writeFile(fullPath, buf);
 
-  const cleanedBase = nameWithoutExt.replace(/[?#]/g, "");
-  return cleanedBase + ext;
+  const publicUrl = `/uploads/${caseId}/${safeName}`;
+
+  // Determine kind based on extension
+  let kind = "OTHER";
+  const lower = safeName.toLowerCase();
+  if (lower.endsWith(".stl")) kind = "STL";
+  else if (lower.endsWith(".ply")) kind = "PLY";
+  else if (lower.endsWith(".obj")) kind = "OBJ";
+  else if (lower.endsWith(".pdf")) kind = "PDF";
+  else if (lower.endsWith(".html") || lower.endsWith(".htm")) kind = "OTHER";
+
+  await prisma.caseFile.create({
+    data: {
+      caseId,
+      label,
+      kind,
+      url: publicUrl,
+      sizeBytes: buf.length,
+    },
+  });
 }
 
 export async function POST(req: Request) {
@@ -62,76 +80,54 @@ export async function POST(req: Request) {
 
     const form = await req.formData();
 
-    const alias = form.get("patientAlias");
-    const doctorUserId = form.get("doctorUserId");
-    const toothCodes = form.get("toothCodes");
-    const orderDateRaw = form.get("orderDate");
-    const product = form.get("product");
-    const material = form.get("material");
-    const shade = form.get("shade");
-    // NEW: Capture preferences
-    const designPreferences = form.get("designPreferences"); 
-    const scanViewerRaw = form.get("scanHtml") ?? form.get("scan");
+    // Text Fields
+    const alias = form.get("patientAlias") as string;
+    const doctorUserId = form.get("doctorUserId") as string;
+    const toothCodes = form.get("toothCodes") as string;
+    const orderDateRaw = form.get("orderDate") as string;
+    const product = form.get("product") as string;
+    const material = form.get("material") as string;
+    const shade = form.get("shade") as string;
+    const designPreferences = form.get("designPreferences") as string;
     
+    // Billing
     const billingTypeRaw = form.get("billingType");
     const billingType = (billingTypeRaw === "WARRANTY") 
       ? BillingType.WARRANTY 
       : BillingType.BILLABLE;
 
-    if (typeof alias !== "string" || !alias.trim()) {
-      return NextResponse.json(
-        { error: "Patient alias is required." },
-        { status: 400 },
-      );
-    }
-    if (typeof doctorUserId !== "string" || !doctorUserId) {
-      return NextResponse.json(
-        { error: "Doctor user id is required." },
-        { status: 400 },
-      );
-    }
-    if (typeof toothCodes !== "string" || !toothCodes.trim()) {
-      return NextResponse.json(
-        { error: "Tooth codes are required." },
-        { status: 400 },
-      );
-    }
-    if (typeof orderDateRaw !== "string") {
-      return NextResponse.json(
-        { error: "Order date missing or invalid." },
-        { status: 400 },
-      );
-    }
-    if (typeof product !== "string" || !product) {
-      return NextResponse.json(
-        { error: "Product is required." },
-        { status: 400 },
-      );
-    }
+    // Files
+    const scanHtml = form.get("scanHtml") as File | null;
+    const rxPdf = form.get("rxPdf") as File | null;
+    
+    // Optional Files (for later milling stage)
+    const constructionInfo = form.get("constructionInfo") as File | null;
+    const modelTop = form.get("modelTop") as File | null;
+    const modelBottom = form.get("modelBottom") as File | null;
 
-    if (!(scanViewerRaw instanceof File)) {
-      return NextResponse.json(
-        { error: "Scan viewer HTML is required." },
-        { status: 400 },
-      );
-    }
+    // --- VALIDATION ---
+    if (!alias?.trim()) return NextResponse.json({ error: "Patient alias is required." }, { status: 400 });
+    if (!doctorUserId) return NextResponse.json({ error: "Doctor user id is required." }, { status: 400 });
+    if (!toothCodes?.trim()) return NextResponse.json({ error: "Tooth codes are required." }, { status: 400 });
+    if (!orderDateRaw) return NextResponse.json({ error: "Order date missing." }, { status: 400 });
+    if (!product) return NextResponse.json({ error: "Product is required." }, { status: 400 });
+
+    // Mandatory Files Validation (Only Scan & RX Required at Creation)
+    if (!scanHtml) return NextResponse.json({ error: "Scan viewer HTML is required." }, { status: 400 });
+    if (!rxPdf) return NextResponse.json({ error: "RX PDF is required." }, { status: 400 });
 
     const orderDate = new Date(orderDateRaw);
     if (Number.isNaN(orderDate.getTime())) {
-      return NextResponse.json(
-        { error: "Order date invalid." },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Order date invalid." }, { status: 400 });
     }
     const dueDate = addDays(orderDate, 8);
 
-    // Fetch Doctor AND Clinic Price Tier
+    // Fetch Doctor Info
     const doctor = await prisma.user.findUnique({
       where: { id: doctorUserId },
       select: {
         id: true,
         name: true,
-        role: true,
         email: true,
         clinicId: true,
         clinic: { 
@@ -144,74 +140,35 @@ export async function POST(req: Request) {
       },
     });
 
-    if (!doctor || doctor.role !== "customer") {
-      return NextResponse.json(
-        { error: "Doctor account not found." },
-        { status: 400 },
-      );
-    }
-    if (!doctor.clinicId || !doctor.clinic) {
-      return NextResponse.json(
-        { error: "Doctor has no clinic linked." },
-        { status: 400 },
-      );
-    }
-
-    // Validate scan viewer type and size
-    const scanViewer = scanViewerRaw as File;
-    const originalName = scanViewer.name || "scan_viewer.html";
-    const lower = originalName.toLowerCase();
-    if (!lower.endsWith(".html") && !lower.endsWith(".htm")) {
-      return NextResponse.json(
-        { error: "Scan viewer must be an HTML file." },
-        { status: 400 },
-      );
-    }
-
-    const scanBuf = Buffer.from(await scanViewer.arrayBuffer());
-    if (scanBuf.length > MAX_SCAN_VIEWER_BYTES) {
-      return NextResponse.json(
-        { error: "Scan viewer file is too large." },
-        { status: 400 },
-      );
+    if (!doctor || !doctor.clinicId || !doctor.clinic) {
+      return NextResponse.json({ error: "Invalid doctor or clinic." }, { status: 400 });
     }
 
     // --- BILLING CALCULATION ---
     const unitCount = countUnits(toothCodes.trim());
-    // Default to STANDARD if missing or invalid
     const tier = doctor.clinic.priceTier || PriceTier.STANDARD;
-    const cost = calculateCaseCost(
-      tier,
-      product, 
-      unitCount,
-      billingType
-    );
+    const cost = calculateCaseCost(tier, product, unitCount, billingType);
 
-    // Create Case with Billing Data AND Preferences
+    // --- DB CREATION ---
     const created = await prisma.dentalCase.create({
       data: {
         clinicId: doctor.clinic.id,
         doctorUserId: doctor.id,
+        assigneeId: session.userId, // Auto-assign creator (Lab/Admin)
+        
         patientAlias: alias.trim(),
         doctorName: doctor.name ?? null,
         toothCodes: toothCodes.trim(),
         orderDate,
         dueDate,
         product: product, 
-        material:
-          typeof material === "string" && material.trim()
-            ? material.trim()
-            : null,
-        shade:
-          typeof shade === "string" && shade.trim() ? shade.trim() : null,
-        
-        // NEW: Save the preferences
-        designPreferences: typeof designPreferences === "string" ? designPreferences.trim() : null,
+        material: material?.trim() || null,
+        shade: shade?.trim() || null,
+        designPreferences: designPreferences?.trim() || null,
 
         status: "IN_DESIGN", 
         stage: "DESIGN",    
         
-        // BILLING FIELDS
         units: unitCount,
         cost: cost,
         billingType: billingType,
@@ -220,36 +177,22 @@ export async function POST(req: Request) {
       select: { id: true },
     });
 
-    // Save scan viewer HTML under /public/uploads/<caseId>/<filename>
-    const uploadsRoot = path.join(
-      process.cwd(),
-      "public",
-      "uploads",
-      created.id,
-    );
-    await fs.mkdir(uploadsRoot, { recursive: true });
+    // --- SAVE FILES ---
+    // 1. Scan HTML (Mandatory)
+    if (scanHtml.size > MAX_FILE_BYTES) return NextResponse.json({ error: "Scan file too large." }, { status: 400 });
+    await saveCaseFile(scanHtml, created.id, "scan_html");
 
-    const safeName = sanitizeHtmlFileName(
-      originalName,
-      "scan_viewer.html",
-    );
-    // Write buffer directly
-    const fullPath = path.join(uploadsRoot, safeName);
-    await fs.writeFile(fullPath, scanBuf);
+    // 2. RX PDF (Mandatory)
+    if (rxPdf.size > MAX_FILE_BYTES) return NextResponse.json({ error: "RX file too large." }, { status: 400 });
+    await saveCaseFile(rxPdf, created.id, "rx_pdf");
 
-    const publicUrl = `/uploads/${created.id}/${safeName}`;
-
-    await prisma.caseFile.create({
-      data: {
-        caseId: created.id,
-        label: "scan_html",
-        kind: "OTHER", 
-        url: publicUrl,
-        sizeBytes: scanBuf.length, 
-      },
-    });
+    // 3. Optional Files (Save if provided)
+    if (constructionInfo) await saveCaseFile(constructionInfo, created.id, "construction_info");
+    if (modelTop) await saveCaseFile(modelTop, created.id, "model_top");
+    if (modelBottom) await saveCaseFile(modelBottom, created.id, "model_bottom");
 
     return NextResponse.json({ ok: true, id: created.id });
+
   } catch (err) {
     console.error("Create case error:", err);
     return NextResponse.json(

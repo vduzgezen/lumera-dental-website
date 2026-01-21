@@ -3,7 +3,8 @@
 
 import { useState } from "react";
 
-type Role = "customer" | "lab" | "admin";
+// FIX: Added "milling" to Role type
+type Role = "customer" | "lab" | "admin" | "milling";
 
 export default function HtmlViewerUploader({
   caseId,
@@ -21,6 +22,7 @@ export default function HtmlViewerUploader({
   const [ok, setOk] = useState<string | undefined>();
   const [file, setFile] = useState<File | null>(null);
 
+  // Customers cannot upload viewers
   if (role === "customer") return null;
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {

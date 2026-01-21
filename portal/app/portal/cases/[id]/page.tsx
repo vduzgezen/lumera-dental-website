@@ -59,6 +59,7 @@ export default async function CaseDetailPage({
   const session = await getSession();
   if (!session) return notFound();
 
+  // Fetch the case + assignee info
   const item = await prisma.dentalCase.findUnique({
     where: { id },
     include: {
@@ -68,7 +69,9 @@ export default async function CaseDetailPage({
       comments: { 
         include: { attachments: true },
         orderBy: { createdAt: "desc" } 
-      }
+      },
+      // Fetch current assignee details
+      assigneeUser: { select: { id: true, name: true, email: true } }
     },
   });
 
@@ -78,6 +81,7 @@ export default async function CaseDetailPage({
     return notFound();
   }
 
+  // Fetch Authors for Comments
   const authorIds = Array.from(new Set(item.comments.map(c => c.authorId)));
   const authors = await prisma.user.findMany({
     where: { id: { in: authorIds } },
@@ -108,6 +112,17 @@ export default async function CaseDetailPage({
   });
 
   const isLabOrAdmin = session.role === "lab" || session.role === "admin";
+
+  // Fetch Potential Designers (Lab/Admin users) if viewer is Admin
+  // Only Admin needs this list now, as Lab cannot re-assign.
+  let designers: { id: string; name: string | null; email: string }[] = [];
+  if (session.role === "admin") {
+    designers = await prisma.user.findMany({
+      where: { role: { in: ["lab", "admin"] } },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: "asc" }
+    });
+  }
 
   let scanFile: CaseFile | null = null;
   let designWithModelFile: CaseFile | null = null;
@@ -151,9 +166,20 @@ export default async function CaseDetailPage({
             <div className="text-white/70 text-sm mt-1 flex flex-wrap items-center gap-x-3">
               <span>Clinic: <span className="text-white">{item.clinic.name}</span></span>
               <span>•</span>
+              
+              {/* DOCTOR NAME: Visible to Lab/Admin */}
               {isLabOrAdmin && item.doctorName && (
                 <><span>Doctor: <span className="text-white">{item.doctorName}</span></span><span>•</span></>
               )}
+
+              {/* DESIGNER NAME: Visible to Lab/Admin only */}
+              {isLabOrAdmin && item.assigneeUser && (
+                <>
+                  <span>Designer: <span className="text-white">{item.assigneeUser.name || item.assigneeUser.email}</span></span>
+                  <span>•</span>
+                </>
+              )}
+
               <span>Teeth: <span className="text-white">{item.toothCodes}</span></span>
               <span>•</span>
               <span>Status: <span className={`${statusColor} font-medium`}>{item.status.replace(/_/g, " ")}</span></span>
@@ -167,7 +193,6 @@ export default async function CaseDetailPage({
             ← Back to Cases
           </Link>
         </div>
-        {/* REMOVED: Top Banner for Preferences */}
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6">
@@ -182,6 +207,9 @@ export default async function CaseDetailPage({
             isLabOrAdmin={isLabOrAdmin}
             currentUserName={currentUserName}
             designPreferences={item.designPreferences}
+            // PASS ASSIGNMENT DATA
+            assigneeId={item.assigneeId}
+            designers={designers}
           />
         </div>
 

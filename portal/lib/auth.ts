@@ -1,14 +1,16 @@
+// portal/lib/auth.ts
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
 export type Session = {
   userId: string;
-  role: "customer" | "lab" | "admin";
+  // FIX: Added "milling" to the union type
+  role: "customer" | "lab" | "admin" | "milling";
   clinicId?: string;
 };
 
 const COOKIE = "lumera_session";
-const SECRET = process.env.JWT_SECRET!;
+const SECRET = process.env.JWT_SECRET || "dev-secret";
 
 /**
  * Read & verify the session JWT from the request cookies.

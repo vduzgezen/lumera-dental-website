@@ -8,7 +8,6 @@ type Clinic = { id: string; name: string };
 
 export default function UserForm({ clinics, initialData, onClose }: { clinics: Clinic[], initialData?: any, onClose?: () => void }) {
   const router = useRouter();
-  
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
     email: initialData?.email || "",
@@ -18,8 +17,7 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
     phoneNumber: initialData?.phoneNumber || "",
     preferenceNote: initialData?.preferenceNote || "",
   });
-
-  // Separate address state
+  
   const [address, setAddress] = useState<AddressData>({
     id: initialData?.address?.id || null,
     street: initialData?.address?.street || "",
@@ -27,7 +25,6 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
     state: initialData?.address?.state || "",
     zipCode: initialData?.address?.zipCode || ""
   });
-
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
@@ -39,16 +36,11 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
     setLoading(true);
     setError("");
     setMsg("");
-
     try {
       const url = isEdit ? `/api/users/${initialData.id}` : "/api/users/new";
       const method = isEdit ? "PUT" : "POST";
 
-      const payload = { 
-        ...formData,
-        address // Pass nested object
-      };
-      
+      const payload = { ...formData, address };
       if (payload.newClinicName) delete (payload as any).clinicId;
 
       const res = await fetch(url, {
@@ -56,14 +48,11 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
 
       setMsg(isEdit ? "User updated!" : "User created!");
-      
       if (!isEdit) {
-        // Reset
         setFormData({
           name: "", email: "", role: "customer",
           clinicId: clinics[0]?.id || "", newClinicName: "",
@@ -74,7 +63,6 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
       
       router.refresh();
       if (onClose) setTimeout(onClose, 800);
-
     } catch (err: any) {
       setError(err.message || "Error saving user.");
     } finally {
@@ -89,24 +77,17 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Name</label>
-          <input
-            type="text"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
-            value={formData.name}
-            onChange={(e) => setFormData({...formData, name: e.target.value})}
-            placeholder="Dr. Smith"
-          />
+          <input type="text" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
+            value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Full Name" />
         </div>
         <div>
           <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Role</label>
-          <select
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
-            value={formData.role}
-            onChange={(e) => setFormData({...formData, role: e.target.value})}
-          >
+          <select className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
+            value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
             <option value="customer">Doctor (Customer)</option>
             <option value="lab">Lab Tech</option>
             <option value="admin">Admin</option>
+            <option value="milling">Milling Center</option> {/* NEW OPTION */}
           </select>
         </div>
       </div>
@@ -114,56 +95,32 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
       <div className="grid grid-cols-2 gap-4">
         <div>
             <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Email</label>
-            <input
-            type="email"
-            required
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
-            value={formData.email}
-            onChange={(e) => setFormData({...formData, email: e.target.value})}
-            placeholder="email@example.com"
-            />
+            <input type="email" required className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
+            value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="email@example.com" />
         </div>
         <div>
             <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Phone</label>
-            <input
-            type="text"
-            className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
-            value={formData.phoneNumber}
-            onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})}
-            placeholder="(555) 000-0000"
-            />
+            <input type="text" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
+            value={formData.phoneNumber} onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} placeholder="(555) 000-0000" />
         </div>
       </div>
 
-      {/* REUSABLE ADDRESS PICKER */}
       <AddressPicker value={address} onChange={setAddress} />
 
       {formData.role === "customer" && (
         <div className="space-y-4 pt-2 border-t border-white/5">
            <div className="bg-white/5 rounded-lg p-4 border border-white/10 space-y-3">
-            <label className="block text-xs font-medium text-white/60 uppercase">Assign Clinic</label>
-            <select
-                className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white disabled:opacity-50"
-                value={formData.clinicId}
-                onChange={(e) => setFormData({...formData, clinicId: e.target.value})}
-                disabled={!!formData.newClinicName}
-            >
+             <label className="block text-xs font-medium text-white/60 uppercase">Assign Clinic</label>
+             <select className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white disabled:opacity-50"
+                value={formData.clinicId} onChange={(e) => setFormData({...formData, clinicId: e.target.value})} disabled={!!formData.newClinicName}>
                 <option value="">-- Select Clinic --</option>
-                {clinics.map((c) => (
-                 <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-            </select>
-            </div>
-            
-            <div>
+                {clinics.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+             </select>
+           </div>
+           <div>
                 <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Preference Note</label>
-                <textarea
-                    rows={3}
-                    className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none resize-none"
-                    value={formData.preferenceNote}
-                    onChange={(e) => setFormData({...formData, preferenceNote: e.target.value})}
-                    placeholder="E.g. Prefers looser contacts, always uses zirconia..."
-                />
+                <textarea rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none resize-none"
+                    value={formData.preferenceNote} onChange={(e) => setFormData({...formData, preferenceNote: e.target.value})} placeholder="Doctor preferences..." />
             </div>
         </div>
       )}
@@ -172,16 +129,8 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
       {msg && <p className="text-emerald-400 text-sm">{msg}</p>}
 
       <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
-        {onClose && (
-          <button type="button" onClick={onClose} className="px-4 py-2 text-white/60 hover:text-white transition">
-            Cancel
-          </button>
-        )}
-        <button
-          type="submit"
-          disabled={loading}
-          className="px-6 py-2 bg-accent text-midnight font-bold rounded-lg hover:bg-white transition-colors"
-        >
+        {onClose && <button type="button" onClick={onClose} className="px-4 py-2 text-white/60 hover:text-white transition">Cancel</button>}
+        <button type="submit" disabled={loading} className="px-6 py-2 bg-accent text-midnight font-bold rounded-lg hover:bg-white transition-colors">
           {loading ? "Saving..." : (isEdit ? "Update User" : "Create User")}
         </button>
       </div>
