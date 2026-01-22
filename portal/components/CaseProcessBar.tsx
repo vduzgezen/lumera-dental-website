@@ -5,7 +5,7 @@ import { useState } from "react";
 
 // FIX: Added "COMPLETED" to match Prisma's ProductionStage enum
 type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
-type Role = "admin" | "lab" | "customer";
+type Role = "admin" | "lab" | "customer" | "milling";
 
 // FIX: Added COMPLETED to visualization order
 const STAGE_ORDER: Stage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED"];

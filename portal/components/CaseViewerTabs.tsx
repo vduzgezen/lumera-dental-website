@@ -29,7 +29,7 @@ export default function CaseViewerTabs({
   designHtmlUrl,
 }: {
   caseId: string;
-  role: "customer" | "lab" | "admin";
+  role: "customer" | "lab" | "admin" | "milling";
   status: string;
   scan3DUrl: string | null;
   designWithModel3DUrl: string | null;

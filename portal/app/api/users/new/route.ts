@@ -77,7 +77,6 @@ export async function POST(req: Request) {
         clinic: resolvedClinicId ? { connect: { id: resolvedClinicId } } : undefined,
         phoneNumber: data.phoneNumber || null,
         preferenceNote: data.preferenceNote || null,
-        // @ts-ignore: Dynamic relation handling
         address: addressConfig
     };
 
