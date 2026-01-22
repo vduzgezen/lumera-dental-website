@@ -3,10 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
-
-// Local type definitions (schema uses string fields, not enums)
-type CaseStatus = "IN_DESIGN" | "READY_FOR_REVIEW" | "CHANGES_REQUESTED" | "APPROVED" | "IN_MILLING" | "SHIPPED" | "COMPLETED";
-type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING";
+import type { CaseStatus, ProductionStage } from "@/lib/types";
 
 // FIX: 'APPROVED' now keeps the stage as 'DESIGN'.
 // This ensures the case waits in the Design bucket until the Lab clicks "Start Milling".
