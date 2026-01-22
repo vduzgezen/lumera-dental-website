@@ -1,8 +1,14 @@
-// components/CasePreviewSwitcher.tsx
+// portal/components/CasePreviewSwitcher.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Case3DPanel from "@/components/Case3DPanel";
+import dynamic from "next/dynamic"; // <--- 1. Import dynamic
+
+// <--- 2. Lazy Load
+const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
+  ssr: false,
+  loading: () => <div className="w-full h-full bg-black/10 animate-pulse" />,
+});
 
 type SlotKey = "scan" | "design_with_model" | "design_only";
 
@@ -21,7 +27,6 @@ export default function CasePreviewSwitcher({
   designWithModelUrl?: string | null;
   designOnlyUrl?: string | null;
 }) {
-  // FIX: Memoize slotUrls to prevent re-creation on every render
   const slotUrls = useMemo(() => ({
     scan: scanUrl,
     design_with_model: designWithModelUrl,
@@ -30,20 +35,17 @@ export default function CasePreviewSwitcher({
 
   const [selected, setSelected] = useState<SlotKey>("scan");
 
-  // 🔁 Remember the last selected slot across refreshes / uploads
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const stored = window.localStorage.getItem("lumera.casePreviewSlot") as SlotKey | null;
     const order: SlotKey[] = ["design_with_model", "design_only", "scan"];
 
-    // If we have a stored value and that slot actually has a file, use it.
     if (stored && slotUrls[stored]) {
       setSelected(stored);
       return;
     }
 
-    // Otherwise pick first available in priority order
     for (const key of order) {
       if (slotUrls[key]) {
         setSelected(key);
@@ -52,7 +54,7 @@ export default function CasePreviewSwitcher({
     }
 
     setSelected("scan");
-  }, [slotUrls]); // Safe dependency now that slotUrls is memoized
+  }, [slotUrls]);
 
   const activeUrl = useMemo(
     () => slotUrls[selected] ?? null,
@@ -105,7 +107,6 @@ export default function CasePreviewSwitcher({
       </div>
 
       <div className="flex-1 min-h-[16rem]">
-        {/* FIX: Removed 'title' prop which caused the build error */}
         <Case3DPanel url={activeUrl ?? null} />
       </div>
     </div>

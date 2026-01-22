@@ -1,4 +1,4 @@
-// app/api/cases/[id]/files/route.ts
+// portal/app/api/cases/[id]/files/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -10,6 +10,7 @@ const FileKind = {
   STL: "STL",
   PLY: "PLY",
   OBJ: "OBJ",
+  PDF: "PDF", // Added PDF
   OTHER: "OTHER"
 } as const;
 type FileKindType = typeof FileKind[keyof typeof FileKind];
@@ -47,19 +48,30 @@ function chooseExtAndKind(
   slot: string,
 ): { ext: string; kind: FileKindType } {
   const lower = originalName.toLowerCase();
-  // Treat Exocad HTML exports as HTML
+  
+  // HTML Viewers
   if (lower.endsWith(".html")) return { ext: ".html", kind: FileKind.OTHER };
   if (lower.endsWith(".htm")) return { ext: ".htm", kind: FileKind.OTHER };
 
-  // 3D formats
+  // 3D Formats
   if (lower.endsWith(".stl")) return { ext: ".stl", kind: FileKind.STL };
   if (lower.endsWith(".ply")) return { ext: ".ply", kind: FileKind.PLY };
   if (lower.endsWith(".obj")) return { ext: ".obj", kind: FileKind.OBJ };
+  
+  // Documents
+  if (lower.endsWith(".pdf")) return { ext: ".pdf", kind: FileKind.PDF };
+  
+  // ✅ FIX: Explicitly handle .constructionInfo files
+  if (lower.endsWith(".constructioninfo")) return { ext: ".constructionInfo", kind: FileKind.OTHER };
+  if (lower.endsWith(".xml")) return { ext: ".xml", kind: FileKind.OTHER };
+  if (lower.endsWith(".txt")) return { ext: ".txt", kind: FileKind.OTHER };
+
   // Images
   if (lower.endsWith(".png")) return { ext: ".png", kind: FileKind.OTHER };
   if (lower.endsWith(".jpg")) return { ext: ".jpg", kind: FileKind.OTHER };
   if (lower.endsWith(".jpeg")) return { ext: ".jpeg", kind: FileKind.OTHER };
-  // No extension: assume STL for standard 3D slots
+
+  // Fallbacks
   if (
     slot === "scan" ||
     slot === "design_with_model" ||
@@ -68,7 +80,6 @@ function chooseExtAndKind(
     return { ext: ".stl", kind: FileKind.STL };
   }
 
-  // Everything else
   return { ext: ".bin", kind: FileKind.OTHER };
 }
 
@@ -81,7 +92,15 @@ export async function POST(req: Request, props: { params: Params }) {
 
     const { id } = await props.params;
 
-    const form = await req.formData();
+    // ✅ FIX: Use simple FormData() to avoid parsing issues if body is empty/malformed
+    let form: FormData;
+    try {
+        form = await req.formData();
+    } catch (e) {
+        console.error("FormData parse error:", e);
+        return NextResponse.json({ error: "Failed to upload. File might be too large." }, { status: 400 });
+    }
+
     const slotLabel = normalizeSlotLabel(form.get("label"));
 
     // --- PERMISSIONS LOGIC ---
@@ -158,7 +177,8 @@ export async function POST(req: Request, props: { params: Params }) {
       const originalName = (file.name || "file").replace(/\s+/g, "_");
 
       const { ext, kind } = chooseExtAndKind(originalName, slotLabel);
-      const hasExt = originalName.toLowerCase().endsWith(ext);
+      
+      const hasExt = originalName.toLowerCase().endsWith(ext.toLowerCase()); // Fixed case sensitivity
       const base = hasExt
         ? originalName.slice(0, originalName.length - ext.length)
         : originalName;

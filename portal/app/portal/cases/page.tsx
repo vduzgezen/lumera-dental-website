@@ -1,4 +1,4 @@
-// app/portal/cases/page.tsx
+// portal/app/portal/cases/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import Link from "next/link";
@@ -33,13 +33,16 @@ export default async function CasesPage({
   const sp = await searchParams;
   const role = session.role;
 
-  // --- MILLING VIEW ---
+  // --- MILLING VIEW (Optimized) ---
   if (role === "milling") {
+    const totalMilling = await prisma.dentalCase.count({
+        where: { stage: "MILLING_GLAZING" }
+    });
+
     const millingCases = await prisma.dentalCase.findMany({
-        where: { 
-            stage: "MILLING_GLAZING"
-        },
+        where: { stage: "MILLING_GLAZING" },
         orderBy: { dueDate: "asc" },
+        take: 200, 
         select: {
             id: true,
             patientAlias: true,
@@ -50,12 +53,22 @@ export default async function CasesPage({
             shade: true
         }
     });
-    
+
     const safeMillingCases = millingCases.map(c => ({
         ...c,
         dueDate: c.dueDate ? c.dueDate.toISOString() : null
     }));
-    return <MillingDashboard cases={safeMillingCases} />;
+
+    return (
+        <div className="flex flex-col h-full">
+            <MillingDashboard cases={safeMillingCases} />
+            {totalMilling > 200 && (
+                <div className="text-center p-2 text-xs text-white/30 bg-midnight">
+                    ⚠️ Showing top 200 of {totalMilling} active cases. Clear some to see more.
+                </div>
+            )}
+        </div>
+    );
   }
 
   // --- STANDARD VIEW ---
@@ -83,8 +96,13 @@ export default async function CasesPage({
   const statusFilter = getParamArray("status");
 
   const where: Prisma.DentalCaseWhereInput = {};
+
+  // ✅ LOGIC CHANGE: Default to "Active Only"
   if (statusFilter.length > 0) {
     where.status = { in: statusFilter };
+  } else {
+    // If no filter selected, show everything EXCEPT completed
+    where.status = { not: "COMPLETED" };
   }
 
   if (isDoctor) {
@@ -98,23 +116,14 @@ export default async function CasesPage({
     }
   } else {
     if (clinicFilter && clinicFilter.trim()) {
-      where.clinic = {
-        name: { contains: clinicFilter.trim() },
-      };
+      where.clinic = { name: { contains: clinicFilter.trim() } };
     }
-
     if (doctorFilter && doctorFilter.trim()) {
-      where.doctorName = {
-        contains: doctorFilter.trim(),
-      };
+      where.doctorName = { contains: doctorFilter.trim() };
     }
-
     if (caseIdFilter && caseIdFilter.trim()) {
-      where.id = {
-        contains: caseIdFilter.trim(),
-      };
+      where.id = { contains: caseIdFilter.trim() };
     }
-
     if (dateFilter && dateFilter.trim()) {
       const d = new Date(dateFilter);
       if (!Number.isNaN(d.getTime())) {
@@ -127,28 +136,34 @@ export default async function CasesPage({
     }
   }
 
-  const rows = (await prisma.dentalCase.findMany({
-    where,
-    orderBy: [{ updatedAt: "desc" }],
-    take: 50,
-    select: {
-      id: true,
-      patientAlias: true,
-      toothCodes: true,
-      status: true,
-      dueDate: true,
-      updatedAt: true,
-      doctorName: true,
-      clinic: { select: { name: true } },
-      assigneeUser: { select: { name: true, email: true } }
-    },
-  })) as CaseRow[];
+  const [totalCount, rows] = await Promise.all([
+    prisma.dentalCase.count({ where }),
+    prisma.dentalCase.findMany({
+        where,
+        orderBy: [{ updatedAt: "desc" }],
+        take: 50,
+        select: {
+            id: true,
+            patientAlias: true,
+            toothCodes: true,
+            status: true,
+            dueDate: true,
+            updatedAt: true,
+            doctorName: true,
+            clinic: { select: { name: true } },
+            assigneeUser: { select: { name: true, email: true } }
+        },
+    })
+  ]);
 
   return (
     <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
       <div className="flex-none space-y-4 mb-4">
         <header className="flex items-center justify-between">
-          <h1 className="text-2xl font-semibold">Cases</h1>
+          <div className="flex items-baseline gap-3">
+            <h1 className="text-2xl font-semibold">Cases</h1>
+            <span className="text-sm text-white/40">Total: {totalCount}</span>
+          </div>
           {canCreate && (
             <Link
               href="/portal/cases/new"
@@ -199,10 +214,7 @@ export default async function CasesPage({
                 <th className="p-4 font-medium">Alias</th>
                 <th className="p-4 font-medium">Clinic</th>
                 <th className="p-4 font-medium">Doctor</th>
-                
-                {/* HIDE DESIGNER COLUMN FOR DOCTORS */}
                 {!isDoctor && <th className="p-4 font-medium">Designer</th>}
-                
                 <th className="p-4 font-medium">Tooth</th>
                 <th className="p-4 font-medium">Status</th>
                 <th className="p-4 font-medium">Due Date</th>
@@ -210,7 +222,7 @@ export default async function CasesPage({
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5">
-              {rows.map((c) => (
+              {(rows as CaseRow[]).map((c) => (
                 <CaseListRow key={c.id} data={c} role={role} />
               ))}
               {rows.length === 0 && (
@@ -218,6 +230,11 @@ export default async function CasesPage({
               )}
             </tbody>
           </table>
+        </div>
+        <div className="flex-none p-2 border-t border-white/5 bg-white/[0.02] text-center text-xs text-white/30">
+            {totalCount > rows.length 
+                ? `Showing recent ${rows.length} of ${totalCount} cases. Use filters to find older records.` 
+                : `Showing all ${rows.length} cases.`}
         </div>
       </div>
     </section>

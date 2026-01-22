@@ -4,12 +4,17 @@ import jwt from "jsonwebtoken";
 
 export type Session = {
   userId: string;
-  // FIX: Added "milling" to the union type
   role: "customer" | "lab" | "admin" | "milling";
   clinicId?: string;
 };
 
 const COOKIE = "lumera_session";
+
+// ✅ SECURITY FIX: Fail fast in production if secret is missing
+if (process.env.NODE_ENV === "production" && !process.env.JWT_SECRET) {
+  throw new Error("FATAL: JWT_SECRET is not defined in production environment.");
+}
+
 const SECRET = process.env.JWT_SECRET || "dev-secret";
 
 /**

@@ -2,12 +2,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Case3DPanel from "@/components/Case3DPanel";
+import dynamic from "next/dynamic"; // <--- 1. Import dynamic
 import CaseActions from "@/components/CaseActions";
 
-type TabKey = "scan" | "design_with_model" | "design_only";
+// <--- 2. Lazy Load the heavy 3D Panel
+const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
+  ssr: false, // 3D cannot render on server
+  loading: () => (
+    <div className="w-full h-full bg-black/20 animate-pulse flex items-center justify-center text-white/30 text-sm">
+      Loading 3D Viewer...
+    </div>
+  ),
+});
 
-// FIX: Removed NEW and READY_FOR_REVIEW
+type TabKey = "scan" | "design_with_model" | "design_only";
 type CaseStatus = "IN_DESIGN" | "CHANGES_REQUESTED" | "APPROVED" | "IN_MILLING" | "SHIPPED" | "COMPLETED";
 
 export default function CaseViewerTabs({

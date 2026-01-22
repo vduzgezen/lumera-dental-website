@@ -3,8 +3,6 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-
-// Components
 import BillingToolbar from "@/components/BillingToolbar";
 import BillingStats from "@/components/BillingStats";
 import BillingList from "@/components/BillingList";
@@ -21,7 +19,7 @@ export default async function BillingPage({
 
   const sp = await searchParams;
 
-  // --- 1. PARSE FILTERS ---
+  // --- 1. FILTERS ---
   const getParam = (key: string) => {
     const val = sp[key];
     if (Array.isArray(val)) return val[0];
@@ -32,58 +30,57 @@ export default async function BillingPage({
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth() + 1;
 
-  const pYear = getParam("year");
-  const pMonth = getParam("month");
-  
-  const selYear = pYear ? parseInt(pYear) : currentYear;
-  const selMonth = pMonth ? parseInt(pMonth) : currentMonth;
+  const selYear = getParam("year") ? parseInt(getParam("year")!) : currentYear;
+  const selMonth = getParam("month") ? parseInt(getParam("month")!) : currentMonth;
 
   const qFilter = getParam("q") || "";
   const doctorFilter = getParam("doctor") || "";
   const clinicFilter = getParam("clinic") || "";
-
   const isAdminOrLab = session.role === "admin" || session.role === "lab";
 
-  // --- 2. BUILD QUERY ---
   const where: Prisma.DentalCaseWhereInput = {};
   
   if (session.role === "customer") {
-    // Safety check: Ensure they are linked to a clinic context (even if filtering by user)
     if (!session.clinicId) {
-      return (
-        <div className="p-8 text-white/50">
-          Your account is not linked to a clinic. Please contact support.
-        </div>
-      );
+      return <div className="p-8 text-white/50">No clinic linked. Contact support.</div>;
     }
-    // FIX: Restrict strictly to the logged-in doctor's cases, not the whole clinic
     where.doctorUserId = session.userId;
   }
 
-  // Date Range
   const start = new Date(selYear, selMonth - 1, 1);
   const end = new Date(selYear, selMonth, 0, 23, 59, 59, 999);
   where.orderDate = { gte: start, lte: end };
 
-  // Search
   if (qFilter.trim()) {
-    const q = qFilter.trim();
     where.OR = [
-      { patientAlias: { contains: q } },
-      { id: { contains: q } },
+      { patientAlias: { contains: qFilter.trim() } },
+      { id: { contains: qFilter.trim() } },
     ];
   }
 
-  // Admin Filters
   if (isAdminOrLab) {
     if (doctorFilter.trim()) where.doctorName = { contains: doctorFilter.trim() };
     if (clinicFilter.trim()) where.clinic = { name: { contains: clinicFilter.trim() } };
   }
 
-  // --- 3. FETCH DATA ---
+  // --- 2. OPTIMIZED FETCH ---
+  // A. Get Totals via Aggregation (FAST, instead of iterating JS)
+  const stats = await prisma.dentalCase.aggregate({
+    where,
+    _sum: {
+        cost: true,
+        units: true
+    },
+    _count: {
+        id: true
+    }
+  });
+
+  // B. Get Recent Cases (Limit to 100 to prevent crashes)
   const rawCases = await prisma.dentalCase.findMany({
     where,
     orderBy: { orderDate: "desc" },
+    take: 100, // ✅ LIMIT: Prevent rendering 5,000 rows
     select: {
       id: true,
       orderDate: true,
@@ -97,21 +94,12 @@ export default async function BillingPage({
     },
   });
 
-  // --- 4. TRANSFORM & CALCULATE ---
-  // FIX: Convert Prisma 'Decimal' to plain 'number' for Client Component safety
   const cases = rawCases.map((c) => ({
     ...c,
-    cost: Number(c.cost), // <--- SERIALIZATION FIX
+    cost: Number(c.cost),
   }));
 
-  const totalCost = cases.reduce((sum, c) => sum + c.cost, 0);
-  const totalUnits = cases.reduce((sum, c) => sum + (c.units || 0), 0);
-
-  const isFiltered = 
-    !!qFilter || 
-    (isAdminOrLab && (!!doctorFilter || !!clinicFilter)) || 
-    selYear !== currentYear || 
-    selMonth !== currentMonth;
+  const isFiltered = !!qFilter || (isAdminOrLab && (!!doctorFilter || !!clinicFilter)) || selYear !== currentYear || selMonth !== currentMonth;
 
   return (
     <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
@@ -126,12 +114,18 @@ export default async function BillingPage({
       />
 
       <BillingStats 
-        totalCost={totalCost}
-        caseCount={cases.length}
-        totalUnits={totalUnits}
+        // ✅ Use DB Aggregates (Fast)
+        totalCost={Number(stats._sum.cost || 0)}
+        caseCount={stats._count.id}
+        totalUnits={stats._sum.units || 0}
       />
 
       <BillingList cases={cases} isAdminOrLab={isAdminOrLab} />
+      {stats._count.id > 100 && (
+        <p className="text-center text-xs text-white/30 pt-2">
+            Showing recent 100 of {stats._count.id} records. Export to CSV for full history.
+        </p>
+      )}
     </section>
   );
 }

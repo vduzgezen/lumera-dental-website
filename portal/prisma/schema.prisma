@@ -49,7 +49,7 @@ model User {
   phoneNumber    String?  
   preferenceNote String? 
 
-  role           String   // customer, lab, admin
+  role           String   // customer, lab, admin, milling
   
   // NEW: Token for setting up password after approval
   invitationToken String? @unique 
@@ -164,6 +164,12 @@ model DentalCase {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // ✅ PERFORMANCE INDEXES (Added for scalability)
+  @@index([clinicId])        // Fast lookup for Clinic Dashboard
+  @@index([doctorUserId])    // Fast lookup for Doctor Dashboard
+  @@index([status])          // Fast filtering for Admin/Lab
+  @@index([createdAt])       // Fast sorting by date
+  
   @@map("Case")
 }
 
