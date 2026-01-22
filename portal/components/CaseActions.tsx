@@ -1,9 +1,11 @@
 // portal/components/CaseActions.tsx
 "use client";
 
+import type { Role } from "@/lib/types";
+
 type Props = {
   caseId: string;
-  role: "customer" | "lab" | "admin" | "milling";
+  role: Role;
   currentStatus: string;
 };
 

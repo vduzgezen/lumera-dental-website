@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic"; // <--- 1. Import dynamic
 import CaseActions from "@/components/CaseActions";
+import type { Role, CaseStatus } from "@/lib/types";
 
 // <--- 2. Lazy Load the heavy 3D Panel
 const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
@@ -16,7 +17,6 @@ const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
 });
 
 type TabKey = "scan" | "design_with_model" | "design_only";
-type CaseStatus = "IN_DESIGN" | "CHANGES_REQUESTED" | "APPROVED" | "IN_MILLING" | "SHIPPED" | "COMPLETED";
 
 export default function CaseViewerTabs({
   caseId,
@@ -29,7 +29,7 @@ export default function CaseViewerTabs({
   designHtmlUrl,
 }: {
   caseId: string;
-  role: "customer" | "lab" | "admin" | "milling";
+  role: Role;
   status: string;
   scan3DUrl: string | null;
   designWithModel3DUrl: string | null;

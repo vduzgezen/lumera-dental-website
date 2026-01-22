@@ -10,6 +10,11 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  // Only admin and lab users can access address search
+  if (session.role !== "admin" && session.role !== "lab") {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const url = new URL(req.url);
   const q = url.searchParams.get("q") || "";
 

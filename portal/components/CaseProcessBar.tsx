@@ -2,15 +2,12 @@
 "use client";
 
 import { useState } from "react";
-
-// FIX: Added "COMPLETED" to match Prisma's ProductionStage enum
-type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
-type Role = "admin" | "lab" | "customer" | "milling";
+import type { Role, ProductionStage } from "@/lib/types";
 
 // FIX: Added COMPLETED to visualization order
-const STAGE_ORDER: Stage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED"];
+const STAGE_ORDER: ProductionStage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED"];
 
-const STAGE_LABEL: Record<Stage, string> = {
+const STAGE_LABEL: Record<ProductionStage, string> = {
   DESIGN: "Designing",
   MILLING_GLAZING: "Milling & Glazing",
   SHIPPING: "Delivering",
@@ -24,7 +21,7 @@ export default function CaseProcessBar({
   role,
 }: {
   caseId: string;
-  stage: Stage;
+  stage: ProductionStage;
   status: string;
   role: Role;
 }) {
@@ -38,7 +35,7 @@ export default function CaseProcessBar({
   const isApproved = status === "APPROVED" || status === "IN_MILLING" || status === "SHIPPED";
   
   // Logic for the "Advance" button
-  let nextStage: Stage | null = null;
+  let nextStage: ProductionStage | null = null;
   let nextLabel = "";
   let canAdvance = false;
   let reason = "";

@@ -7,9 +7,7 @@ import FileUploader from "@/components/FileUploader";
 import CommentsPanel from "@/components/CommentsPanel";
 import DesignerPicker from "@/components/DesignerPicker";
 import { CaseFile } from "@prisma/client";
-
-// Updated to include 'milling'
-type Role = "customer" | "lab" | "admin" | "milling";
+import type { Role } from "@/lib/types";
 
 type Props = {
   caseId: string;
