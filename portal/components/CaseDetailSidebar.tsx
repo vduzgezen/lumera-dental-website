@@ -14,11 +14,9 @@ type Role = "customer" | "lab" | "admin" | "milling";
 type Props = {
   caseId: string;
   role: Role;
-  status: string;
   files: CaseFile[];
   comments: any[];
   events: any[];   
-  isLabOrAdmin: boolean; // Note: We'll treat 'milling' as internal too for UI logic
   currentUserName: string;
   designPreferences?: string | null;
   assigneeId?: string | null;
@@ -33,11 +31,9 @@ function fmtDate(d?: Date | string | null) {
 export default function CaseDetailSidebar({
   caseId,
   role,
-  status,
   files,
   comments,
   events,
-  isLabOrAdmin: _isLabOrAdmin, 
   currentUserName,
   designPreferences,
   assigneeId,

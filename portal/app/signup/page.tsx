@@ -3,10 +3,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
-  const router = useRouter();
   const [form, setForm] = useState({
     name: "",
     email: "",

@@ -1,6 +1,6 @@
 // portal/lib/schemas.ts
 import { z } from "zod";
-import { PriceTier, ProductKind, BillingType } from "@/lib/pricing";
+import { ProductKind, BillingType } from "@/lib/pricing";
 
 // --- EXISTING CASE SCHEMAS (Keep these) ---
 const ProductEnum = z.nativeEnum(ProductKind);

@@ -3,34 +3,17 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import CaseActions from "@/components/CaseActions";
-import FileUploader from "@/components/FileUploader";
 import CaseProcessBar from "@/components/CaseProcessBar";
-import HtmlViewerUploader from "@/components/HtmlViewerUploader";
 import CaseViewerTabs from "@/components/CaseViewerTabs";
-import CommentsPanel from "@/components/CommentsPanel";
 import { CaseFile } from "@prisma/client";
 import CopyableId from "@/components/CopyableId";
 import CaseDetailSidebar from "@/components/CaseDetailSidebar";
 
 export const dynamic = "force-dynamic";
 
-type CaseStatus = 
-  | "IN_DESIGN" 
-  | "CHANGES_REQUESTED" 
-  | "APPROVED" 
-  | "IN_MILLING" 
-  | "SHIPPED"
-  | "COMPLETED";
-
 type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
 
 type Params = Promise<{ id: string }>;
-
-function fmtDate(d?: Date | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleString();
-}
 
 function normalizeSlot(
   label: string | null,
@@ -200,14 +183,11 @@ export default async function CaseDetailPage({
           <CaseDetailSidebar 
             caseId={item.id}
             role={session.role}
-            status={item.status}
             files={item.files}
             comments={uiComments}
             events={item.events}
-            isLabOrAdmin={isLabOrAdmin}
             currentUserName={currentUserName}
             designPreferences={item.designPreferences}
-            // PASS ASSIGNMENT DATA
             assigneeId={item.assigneeId}
             designers={designers}
           />
