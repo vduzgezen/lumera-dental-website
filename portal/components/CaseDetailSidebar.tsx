@@ -242,7 +242,7 @@ export default function CaseDetailSidebar({
                   <div key={ev.id} className="ml-4 relative">
                     <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-blue-500 border border-black" />
                     <div className="flex flex-col"><span className="text-sm font-medium text-white">{ev.to.replace(/_/g, " ")}</span><span className="text-xs text-white/40 font-mono mt-0.5">{fmtDate(ev.at)}</span></div>
-                    {ev.note && <div className="mt-2 text-xs text-white/80 bg-white/5 p-2 rounded border border-white/5 italic">"{ev.note}"</div>}
+                    {ev.note && <div className="mt-2 text-xs text-white/80 bg-white/5 p-2 rounded border border-white/5 italic">&quot;{ev.note}&quot;</div>}
                   </div>
                 ))}
               </div>

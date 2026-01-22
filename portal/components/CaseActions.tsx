@@ -3,7 +3,7 @@
 
 type Props = {
   caseId: string;
-  role: "customer" | "lab" | "admin";
+  role: "customer" | "lab" | "admin" | "milling";
   currentStatus: string;
 };
 

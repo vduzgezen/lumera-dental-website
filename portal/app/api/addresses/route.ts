@@ -1,36 +1,38 @@
-// portal/app/api/addresses/[id]/route.ts
+// portal/app/api/addresses/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { Prisma } from "@prisma/client";
 
-export async function DELETE(req: Request, props: { params: Promise<{ id: string }> }) {
+export async function GET(req: Request) {
   const session = await getSession();
-  if (!session || session.role !== "admin") {
+  if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const params = await props.params;
-  const { id } = params;
+  const url = new URL(req.url);
+  const q = url.searchParams.get("q") || "";
 
   try {
-    // 1. Unlink from Users (Wipe address data from user profiles)
-    await prisma.user.updateMany({
-      where: { addressId: id },
-      data: { addressId: null }
+    const where: Prisma.AddressWhereInput = {};
+    
+    if (q.trim()) {
+      where.OR = [
+        { street: { contains: q.trim() } },
+        { city: { contains: q.trim() } },
+        { state: { contains: q.trim() } },
+        { zipCode: { contains: q.trim() } },
+      ];
+    }
+
+    const addresses = await prisma.address.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      take: 50,
     });
 
-    // 2. Unlink from Clinics (Wipe address data from clinic profiles)
-    await prisma.clinic.updateMany({
-      where: { addressId: id },
-      data: { addressId: null }
-    });
-
-    // 3. Delete the Address Record
-    await prisma.address.delete({ where: { id } });
-
-    return NextResponse.json({ ok: true });
-  } catch (e: any) {
-    console.error("Address delete error:", e);
-    return NextResponse.json({ error: "Failed to delete address." }, { status: 500 });
+    return NextResponse.json(addresses);
+  } catch {
+    return NextResponse.json({ error: "Failed to fetch addresses." }, { status: 500 });
   }
 }
