@@ -9,9 +9,8 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { Resend } from "resend";
+import { CreateUserSchema } from "@/lib/schemas"; // <--- Zod Schema
 
-// Initialize Resend
-// Checks for key to prevent crashes if env is missing during dev
 const resend = process.env.RESEND_API_KEY 
   ? new Resend(process.env.RESEND_API_KEY) 
   : null;
@@ -24,44 +23,41 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json().catch(() => ({}));
-    const email = String(body.email || "").trim().toLowerCase();
-    const name = String(body.name || "").trim();
-    const clinicId = String(body.clinicId || "");
-    const newClinicName = String(body.newClinicName || "").trim();
-    const phoneNumber = String(body.phoneNumber || "").trim();
-    const preferenceNote = String(body.preferenceNote || "").trim();
-    const role = body.role || "customer";
 
-    // Address Payload
-    const addr = body.address || {};
-    const hasAddress = addr.street || addr.city || addr.state || addr.zipCode;
-
-    if (!email) {
-      return NextResponse.json({ error: "Please provide an email." }, { status: 400 });
+    // 1. Zod Validation
+    const validation = CreateUserSchema.safeParse(body);
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      return NextResponse.json(
+        { error: `${firstError.path.join(".")}: ${firstError.message}` }, 
+        { status: 400 }
+      );
     }
+    const data = validation.data;
 
-    const existing = await prisma.user.findUnique({ where: { email } });
+    // 2. Check Uniqueness
+    const existing = await prisma.user.findUnique({ where: { email: data.email } });
     if (existing) {
       return NextResponse.json({ error: "A user with this email already exists." }, { status: 400 });
     }
 
-    // Clinic Resolution
-    let resolvedClinicId: string | null = clinicId || null;
-    if (!resolvedClinicId && newClinicName) {
-      const createdClinic = await prisma.clinic.create({ data: { name: newClinicName } });
+    // 3. Clinic Resolution
+    let resolvedClinicId: string | null = data.clinicId || null;
+    if (!resolvedClinicId && data.newClinicName) {
+      const createdClinic = await prisma.clinic.create({ data: { name: data.newClinicName } });
       resolvedClinicId = createdClinic.id;
     }
 
-    // --- 1. GENERATE CREDENTIALS ---
-    // Generate a human-friendly temp password (12 chars hex)
-    const tempPassword = crypto.randomBytes(6).toString("hex"); 
+    // 4. Generate Credentials
+    const tempPassword = crypto.randomBytes(6).toString("hex");
     const pw = await bcrypt.hash(tempPassword, 10);
 
-    // Prepare Address Connect or Create
+    // 5. Address Logic
     let addressConfig = undefined;
-    if (addr.id) {
+    const addr = data.address;
+    if (addr?.id) {
         addressConfig = { connect: { id: addr.id } };
-    } else if (hasAddress) {
+    } else if (addr?.street) {
         addressConfig = {
             create: {
                 street: addr.street,
@@ -72,16 +68,15 @@ export async function POST(req: Request) {
         };
     }
 
-    // --- 2. CREATE USER ---
-    // Using explicit type to satisfy Prisma TS Check
+    // 6. Create User
     const createData: Prisma.UserCreateInput = {
-        email,
+        email: data.email,
         password: pw,
-        name: name || null,
-        role,
+        name: data.name,
+        role: data.role,
         clinic: resolvedClinicId ? { connect: { id: resolvedClinicId } } : undefined,
-        phoneNumber: phoneNumber || null,
-        preferenceNote: preferenceNote || null,
+        phoneNumber: data.phoneNumber || null,
+        preferenceNote: data.preferenceNote || null,
         // @ts-ignore: Dynamic relation handling
         address: addressConfig
     };
@@ -91,45 +86,27 @@ export async function POST(req: Request) {
       select: { id: true, email: true, name: true },
     });
 
-    // --- 3. SEND EMAIL ---
+    // 7. Send Email (Non-blocking failure)
     if (resend) {
         try {
-            const sender = process.env.EMAIL_FROM || "onboarding@resend.dev";
-            
             await resend.emails.send({
-                from: sender,
-                to: email,
+                from: process.env.EMAIL_FROM || "onboarding@resend.dev",
+                to: data.email,
                 subject: "Welcome to Lumera Dental Portal",
                 html: `
-                    <div style="font-family: sans-serif; color: #111; max-width: 600px; padding: 20px;">
+                    <div style="font-family: sans-serif; color: #111; padding: 20px;">
                         <h2 style="color: #0a1020;">Welcome to Lumera</h2>
-                        <p>Hello ${name || "Doctor"},</p>
-                        <p>Your account has been created. You can now log in to submit and track your cases.</p>
-                        
-                        <div style="background: #f4f4f5; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e4e4e7;">
-                            <p style="margin: 0; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Login Email</p>
-                            <p style="margin: 5px 0 15px 0; font-weight: bold; font-size: 16px;">${email}</p>
-                            
-                            <p style="margin: 0; font-size: 12px; color: #666; text-transform: uppercase; letter-spacing: 0.5px;">Temporary Password</p>
-                            <p style="margin: 5px 0 0 0; font-weight: bold; font-family: monospace; font-size: 18px; color: #000;">${tempPassword}</p>
-                        </div>
-
-                        <p>Please log in and change your password as soon as possible.</p>
-                        <a href="https://lumeradental.com/login" style="display: inline-block; background: #000; color: #fff; text-decoration: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; font-size: 14px;">Log in to Portal</a>
-                        
-                        <p style="margin-top: 30px; font-size: 12px; color: #888;">
-                            If you did not request this account, please ignore this email.
-                        </p>
+                        <p>Hello ${data.name || "Doctor"},</p>
+                        <p>Your account has been created.</p>
+                        <p><strong>Login:</strong> ${data.email}</p>
+                        <p><strong>Password:</strong> ${tempPassword}</p>
+                        <p><a href="https://lumeradental.com/login">Log in here</a></p>
                     </div>
                 `
             });
-            console.log(`[Email] Sent credentials to ${email}`);
         } catch (err) {
             console.error("[Email] Failed to send credentials:", err);
-            // We do NOT fail the request, because the user was created successfully.
         }
-    } else {
-        console.warn("[Email] Skipped sending (No RESEND_API_KEY found)");
     }
 
     return NextResponse.json({ ok: true, user });

@@ -1,4 +1,4 @@
-// components/FileUploader.tsx
+// portal/components/FileUploader.tsx
 "use client";
 
 import { useState } from "react";
@@ -8,9 +8,9 @@ type Role = "customer" | "lab" | "admin" | "milling";
 export default function FileUploader({
   caseId,
   role,
-  label, // New generic prop
-  slot,  // Legacy prop (for backward compatibility)
-  accept = ".stl,.ply,.obj",
+  label,
+  slot,
+  accept, // We will default this smarter now
   description,
 }: {
   caseId: string;
@@ -27,11 +27,14 @@ export default function FileUploader({
 
   if (role === "customer") return null;
 
-  // COMPATIBILITY FIX: Use 'label' if present, otherwise fallback to 'slot'
   const activeLabel = label || slot || "file";
-  
-  // Display text: Use description if provided, otherwise prettify the label
   const labelText = description || activeLabel.replace(/_/g, " ");
+
+  // ✅ FIX: Smarter defaults if 'accept' isn't passed
+  // If label is construction_info, explicitly allow weird extensions
+  const finalAccept = accept || (activeLabel === "construction_info" 
+    ? ".pdf,.xml,.txt,.constructionInfo" 
+    : ".stl,.ply,.obj");
 
   function onFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0] || null;
@@ -41,9 +44,7 @@ export default function FileUploader({
   }
 
   async function send() {
-    if (!file) {
-      return setErr("Please choose a file first.");
-    }
+    if (!file) return setErr("Please choose a file first.");
 
     setBusy(true);
     setErr(undefined);
@@ -51,18 +52,16 @@ export default function FileUploader({
 
     try {
       const fd = new FormData();
-      // Send the active label to the API
       fd.append("label", activeLabel);
-      fd.append("files", file);
+      fd.append("files", file); // Using 'files' to match route logic
 
       const r = await fetch(`/api/cases/${caseId}/files`, {
         method: "POST",
         body: fd,
       });
       const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        throw new Error(j.error || "Upload failed");
-      }
+      
+      if (!r.ok) throw new Error(j.error || "Upload failed");
 
       setOk("Uploaded successfully.");
       setTimeout(() => window.location.reload(), 600);
@@ -99,7 +98,7 @@ export default function FileUploader({
         </div>
         <input
           type="file"
-          accept={accept}
+          accept={finalAccept}
           onChange={onFileChange}
           className="hidden"
         />

@@ -3,7 +3,6 @@
 
 import { useState, useRef, useEffect } from "react";
 
-// FIX: Removed "NEW" and "READY_FOR_REVIEW"
 const ALL_STATUSES = [
   "IN_DESIGN",
   "CHANGES_REQUESTED",
@@ -28,15 +27,32 @@ export default function StatusFilter({ selected }: { selected: string[] }) {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
+  // Helper: Is the filter in "Default Mode" (Active Only)?
+  const isDefault = selection.size === 0;
+
   const toggle = (status: string) => {
-    const next = new Set(selection);
-    if (next.has(status)) next.delete(status);
-    else next.add(status);
+    let next: Set<string>;
+
+    if (isDefault) {
+      // Transition from Default (Implicitly all active) to Custom
+      // 1. Start with all ACTIVE statuses (everything except COMPLETED)
+      next = new Set(ALL_STATUSES.filter(s => s !== "COMPLETED"));
+      
+      // 2. Apply the toggle
+      if (next.has(status)) next.delete(status); // Uncheck if already checked
+      else next.add(status); // Check if not checked (e.g. COMPLETED)
+    } else {
+      // Standard toggle
+      next = new Set(selection);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+    }
+    
     setSelection(next);
   };
 
-  const label = selection.size === 0 
-    ? "Status (All)" 
+  const label = isDefault 
+    ? "Status (Current)" 
     : `Status (${selection.size})`;
 
   const getStatusColor = (s: string) => {
@@ -55,7 +71,7 @@ export default function StatusFilter({ selected }: { selected: string[] }) {
         onClick={() => setIsOpen(!isOpen)}
         className={`
           flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm border transition-colors
-          ${isOpen || selection.size > 0 
+          ${isOpen || !isDefault 
             ? "bg-white/10 border-white/30 text-white" 
             : "bg-black/40 border-white/10 text-white/70 hover:border-white/30"}
         `}
@@ -66,7 +82,11 @@ export default function StatusFilter({ selected }: { selected: string[] }) {
         </svg>
       </button>
 
-      {Array.from(selection).map(s => (
+      {/* FORM SUBMISSION LOGIC:
+        - If isDefault (Active Only), submit NO status inputs. Server defaults to { not: "COMPLETED" }.
+        - If !isDefault (Custom), submit the specific statuses.
+      */}
+      {!isDefault && Array.from(selection).map(s => (
         <input key={s} type="hidden" name="status" value={s} />
       ))}
 
@@ -74,7 +94,13 @@ export default function StatusFilter({ selected }: { selected: string[] }) {
         <div className="absolute top-full left-0 mt-2 w-64 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 p-1">
           <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
             {ALL_STATUSES.map((status) => {
-              const isSelected = selection.has(status);
+              // VISUAL LOGIC:
+              // If Default: Check everything except COMPLETED.
+              // If Custom: Check what's in the set.
+              const isChecked = isDefault 
+                ? status !== "COMPLETED" 
+                : selection.has(status);
+
               const colorClass = getStatusColor(status);
               
               return (
@@ -85,11 +111,11 @@ export default function StatusFilter({ selected }: { selected: string[] }) {
                 >
                   <div className={`
                     w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0
-                    ${isSelected 
+                    ${isChecked 
                       ? "bg-blue-500 border-blue-500" 
                       : "border-white/30 bg-transparent"}
                   `}>
-                    {isSelected && (
+                    {isChecked && (
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
                       </svg>
@@ -108,7 +134,7 @@ export default function StatusFilter({ selected }: { selected: string[] }) {
               onClick={() => setSelection(new Set())}
               className="w-full text-left px-3 py-2 text-xs text-white/40 hover:text-white transition-colors"
             >
-              Clear Selection
+              Reset to Current
             </button>
           </div>
         </div>
