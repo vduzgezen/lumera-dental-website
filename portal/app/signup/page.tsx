@@ -47,7 +47,7 @@ export default function SignupPage() {
 
   if (submitted) {
     return (
-      <main className="h-screen w-full bg-midnight flex items-center justify-center p-6 overflow-hidden">
+      <main className="h-screen w-full bg-background flex items-center justify-center p-6 overflow-hidden">
         <div className="max-w-md w-full bg-white/5 border border-white/10 rounded-2xl p-8 text-center shadow-2xl backdrop-blur-xl">
           <div className="w-16 h-16 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
@@ -66,7 +66,7 @@ export default function SignupPage() {
 
   return (
     // FIX: 'h-screen overflow-hidden' ensures no scrolling
-    <main className="h-screen w-full bg-midnight flex items-center justify-center p-6 relative overflow-hidden">
+    <main className="h-screen w-full bg-background flex items-center justify-center p-6 relative overflow-hidden">
         {/* Background Gradients */}
         <div className="absolute inset-0 pointer-events-none">
             <div className="absolute top-0 left-0 w-[800px] h-[800px] bg-accent/5 rounded-full blur-[120px] -translate-y-1/2 -translate-x-1/4" />

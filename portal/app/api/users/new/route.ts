@@ -94,7 +94,7 @@ export async function POST(req: Request) {
                 subject: "Welcome to Lumera Dental Portal",
                 html: `
                     <div style="font-family: sans-serif; color: #111; padding: 20px;">
-                        <h2 style="color: #0a1020;">Welcome to Lumera</h2>
+                        <h2 style="color: #1e1e1e;">Welcome to Lumera</h2>
                         <p>Hello ${data.name || "Doctor"},</p>
                         <p>Your account has been created.</p>
                         <p><strong>Login:</strong> ${data.email}</p>

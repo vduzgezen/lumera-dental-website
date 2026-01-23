@@ -81,7 +81,7 @@ function SetupForm() {
         <button 
           type="submit" 
           disabled={busy}
-          className="w-full py-3 bg-accent text-midnight font-bold rounded-lg hover:bg-white transition disabled:opacity-50"
+          className="w-full py-3 bg-accent text-background font-bold rounded-lg hover:bg-white transition disabled:opacity-50"
         >
           {busy ? "Setting up..." : "Complete Setup"}
         </button>
@@ -92,7 +92,7 @@ function SetupForm() {
 
 export default function SetupPage() {
   return (
-    <main className="min-h-screen bg-midnight flex items-center justify-center p-6">
+    <main className="min-h-screen bg-background flex items-center justify-center p-6">
       <Suspense fallback={<div className="text-white/50">Loading...</div>}>
         <SetupForm />
       </Suspense>

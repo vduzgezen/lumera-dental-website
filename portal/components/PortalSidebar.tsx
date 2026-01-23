@@ -54,11 +54,11 @@ export default function PortalSidebar({ role, children }: Props) {
   const isMilling = role === "milling";
 
   return (
-    <div className="flex h-screen w-full bg-midnight text-white overflow-hidden transition-all">
+    <div className="flex h-screen w-full bg-background text-white overflow-hidden transition-all">
       <aside 
         className={`${
           isCollapsed ? "w-20" : "w-64"
-        } border-r border-white/5 bg-[#0a1020] flex flex-col fixed h-full z-20 transition-all duration-300 ease-in-out`}
+        } border-r border-white/5 bg-background flex flex-col fixed h-full z-20 transition-all duration-300 ease-in-out`}
       >
         <div className={`p-6 flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}>
           <Link href="/portal/cases">
@@ -68,7 +68,7 @@ export default function PortalSidebar({ role, children }: Props) {
 
         <button
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-8 bg-midnight border border-white/10 rounded-full p-1 text-white/40 hover:text-white shadow-lg z-50 transition-colors"
+          className="absolute -right-3 top-8 bg-background border border-white/10 rounded-full p-1 text-white/40 hover:text-white shadow-lg z-50 transition-colors"
         >
           {isCollapsed ? (
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>

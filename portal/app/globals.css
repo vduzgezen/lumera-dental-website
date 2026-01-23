@@ -2,7 +2,7 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0a1020; /* Defaulting to Midnight Blue for consistency */
+  --background: #1e1e1e; /* Dark charcoal brand background */
   --foreground: #f5f7fb;
   --glass-border: rgba(255, 255, 255, 0.14);
   --glass-bg: rgba(255, 255, 255, 0.06);

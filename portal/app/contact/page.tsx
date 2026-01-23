@@ -4,7 +4,7 @@ import PublicFooter from "@/components/PublicFooter";
 
 export default function ContactPage() {
   return (
-    <main className="min-h-screen flex flex-col bg-midnight text-porcelain">
+    <main className="min-h-screen flex flex-col bg-background text-porcelain">
       <PublicNavbar />
       
       <section className="pt-24 pb-12">
@@ -24,7 +24,7 @@ export default function ContactPage() {
             Attach STL/PLY files, photos, shade, and notes. We’ll reply quickly with design confirmation.
           </p>
           
-          <a href="mailto:hello@glo.dental" className="inline-block w-full text-center py-4 rounded-xl bg-white text-midnight font-bold hover:bg-gray-200 transition mb-8">
+          <a href="mailto:hello@glo.dental" className="inline-block w-full text-center py-4 rounded-xl bg-white text-background font-bold hover:bg-gray-200 transition mb-8">
             Email hello@glo.dental
           </a>
 
