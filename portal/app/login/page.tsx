@@ -4,6 +4,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -43,19 +44,22 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="min-h-screen bg-midnight flex items-center justify-center p-6 relative overflow-hidden">
+    <main className="min-h-screen bg-background flex items-center justify-center p-6 relative overflow-hidden">
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-accent/5 rounded-full blur-[100px] -translate-y-1/2 translate-x-1/3" />
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/4" />
+        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent/5 rounded-full blur-[100px] translate-y-1/3 -translate-x-1/4" />
       </div>
 
       <div className="w-full max-w-sm relative z-10">
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-8 h-8 rounded bg-gradient-to-br from-accent to-accent2 shadow-[0_0_20px_rgba(121,231,224,0.3)] relative overflow-hidden">
-              <div className="absolute inset-0 bg-white/20 mix-blend-overlay" />
-            </div>
-            <span className="text-2xl font-light tracking-wide text-white">Lumera</span>
+            <Image 
+              src="/Images/Lumera-Lab-White-.png" 
+              alt="Lumera" 
+              width={160} 
+              height={40} 
+              className="h-10 w-auto"
+            />
           </Link>
         </div>
 
@@ -82,7 +86,7 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button type="submit" disabled={loading} className="w-full rounded-lg py-3 text-sm font-bold bg-accent text-midnight hover:bg-white transition-colors disabled:opacity-50">
+          <button type="submit" disabled={loading} className="w-full rounded-lg py-3 text-sm font-bold bg-accent text-background hover:bg-white transition-colors disabled:opacity-50">
             {loading ? "Signing in..." : "Sign In"}
           </button>
         </form>

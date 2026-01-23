@@ -61,8 +61,7 @@
   <header class="nav">
     <div class="container nav-inner">
       <div class="brand">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span class="wordmark">Lumera</span>
+        <img src="Images/Lumera-Lab-White-.png" alt="Lumera" class="brand-logo" />
       </div>
       <nav>
         <a href="index.html">Home</a>
@@ -167,7 +166,7 @@
     viewer.appendChild(renderer.domElement);
 
     // Lights
-    const hemi = new THREE.HemisphereLight(0xffffff, 0x0a1020, 0.8);
+    const hemi = new THREE.HemisphereLight(0xffffff, 0x1e1e1e, 0.8);
     scene.add(hemi);
     const dir = new THREE.DirectionalLight(0xffffff, 1.0);
     dir.position.set(60, 120, 80);

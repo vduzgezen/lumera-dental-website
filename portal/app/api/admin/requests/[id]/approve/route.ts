@@ -97,7 +97,7 @@ export async function POST(req: Request, props: { params: Promise<{ id: string }
           subject: "Your Lumera Account is Approved",
           html: `
             <div style="font-family: sans-serif; color: #111; max-width: 600px; padding: 20px;">
-              <h2 style="color: #0a1020;">Access Granted</h2>
+              <h2 style="color: #1e1e1e;">Access Granted</h2>
               <p>Hello ${request.name},</p>
               <p>Your request to join the Lumera Dental Portal has been approved.</p>
               <a href="${setupUrl}" style="display: inline-block; background: #000; color: #fff; padding: 12px 24px; border-radius: 6px; text-decoration: none; font-weight: bold;">Set Password</a>

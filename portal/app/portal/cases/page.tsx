@@ -63,7 +63,7 @@ export default async function CasesPage({
         <div className="flex flex-col h-full">
             <MillingDashboard cases={safeMillingCases} />
             {totalMilling > 200 && (
-                <div className="text-center p-2 text-xs text-white/30 bg-midnight">
+                <div className="text-center p-2 text-xs text-white/30 bg-background">
                     ⚠️ Showing top 200 of {totalMilling} active cases. Clear some to see more.
                 </div>
             )}
