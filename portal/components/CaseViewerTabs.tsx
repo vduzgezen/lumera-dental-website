@@ -145,7 +145,7 @@ export default function CaseViewerTabs({
         </div>
       </div>
 
-      <div className="flex-1 p-2 relative min-h-0 bg-[#0a1020]">
+      <div className="flex-1 p-2 relative min-h-0 bg-[#1e1e1e]">
         {renderContent()}
       </div>
     </div>

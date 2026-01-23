@@ -55,9 +55,9 @@ export default function DesignerPicker({ caseId, currentAssigneeId, designers, d
             disabled ? "cursor-not-allowed" : "cursor-pointer hover:text-white"
           }`}
         >
-          <option value="" className="bg-midnight text-white/50">-- Unassigned --</option>
+          <option value="" className="bg-background text-white/50">-- Unassigned --</option>
           {designers.map(d => (
-            <option key={d.id} value={d.id} className="bg-midnight text-white">
+            <option key={d.id} value={d.id} className="bg-background text-white">
               {d.name || d.email}
             </option>
           ))}

@@ -17,7 +17,7 @@ export default function WorkPage() {
   return (
     // FIX: Removed 'font-sans' to match HomePage (Arial default) and prevent Navbar jump
     // FIX: Changed structure to 'main' with 'flex flex-col' for consistent sticky footer behavior
-    <main className="min-h-screen flex flex-col bg-midnight text-porcelain selection:bg-accent/30">
+    <main className="min-h-screen flex flex-col bg-background text-porcelain selection:bg-accent/30">
       <PublicNavbar />
 
       <div className="flex-1">
@@ -38,7 +38,7 @@ export default function WorkPage() {
         </section>
 
         {/* GALLERY GRID */}
-        <section className="py-20 px-6 bg-[#0a1020]/50">
+        <section className="py-20 px-6 bg-[#1e1e1e]/50">
           <div className="container mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 auto-rows-[300px] gap-6">
               {galleryItems.map((item) => (
@@ -77,7 +77,7 @@ export default function WorkPage() {
             <h2 className="text-3xl font-light mb-8">Ready to send your first case?</h2>
             <Link 
               href="/signup"
-              className="inline-flex items-center justify-center px-8 py-4 text-base font-bold text-midnight bg-accent rounded-full hover:bg-white hover:scale-105 transition-all shadow-[0_0_30px_rgba(121,231,224,0.3)]"
+              className="inline-flex items-center justify-center px-8 py-4 text-base font-bold text-background bg-accent rounded-full hover:bg-white hover:scale-105 transition-all shadow-[0_0_30px_rgba(150,150,226,0.3)]"
             >
               Get Started
             </Link>

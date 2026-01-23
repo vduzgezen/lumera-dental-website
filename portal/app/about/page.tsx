@@ -4,7 +4,7 @@ import PublicFooter from "@/components/PublicFooter";
 
 export default function AboutPage() {
   return (
-    <main className="min-h-screen flex flex-col bg-midnight text-porcelain">
+    <main className="min-h-screen flex flex-col bg-background text-porcelain">
       <PublicNavbar />
       
       <section className="pt-24 pb-12">
