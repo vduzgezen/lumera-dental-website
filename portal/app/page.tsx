@@ -38,7 +38,7 @@ export default function HomePage() {
   };
 
   return (
-    <main className="min-h-screen flex flex-col bg-midnight text-porcelain selection:bg-accent selection:text-midnight">
+    <main className="min-h-screen flex flex-col bg-background text-porcelain selection:bg-accent selection:text-background">
       <PublicNavbar />
 
       {/* HERO SECTION */}
@@ -61,7 +61,7 @@ export default function HomePage() {
             <div className="flex flex-wrap gap-4 reveal">
               <Link
                 href="/contact"
-                className="px-8 py-4 rounded-full bg-white text-midnight font-bold hover:bg-gray-100 transition shadow-[0_0_30px_rgba(255,255,255,0.2)]"
+                className="px-8 py-4 rounded-full bg-white text-background font-bold hover:bg-gray-100 transition shadow-[0_0_30px_rgba(255,255,255,0.2)]"
               >
                 Send a Case
               </Link>
@@ -109,7 +109,7 @@ export default function HomePage() {
                       src="/Images/CrownLoop.gif" 
                       alt="Crown" 
                       fill
-                      className="object-contain drop-shadow-[0_20px_50px_rgba(121,231,224,0.15)]"
+                      className="object-contain drop-shadow-[0_20px_50px_rgba(150,150,226,0.15)]"
                       unoptimized
                     />
                   </div>

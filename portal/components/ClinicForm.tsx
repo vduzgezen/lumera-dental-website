@@ -51,7 +51,7 @@ export default function ClinicForm({ initialData, onClose }: { initialData?: any
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-2xl bg-[#0a1020] border border-white/10 rounded-xl p-6 max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl">
+      <div className="w-full max-w-2xl bg-[#1e1e1e] border border-white/10 rounded-xl p-6 max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl">
         <h2 className="text-xl font-semibold mb-6">{initialData ? "Edit Clinic" : "New Clinic"}</h2>
         <form onSubmit={save} className="space-y-6">
           
@@ -101,7 +101,7 @@ export default function ClinicForm({ initialData, onClose }: { initialData?: any
 
           <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
             <button type="button" onClick={onClose} className="px-4 py-2 text-white/60 hover:text-white">Cancel</button>
-            <button type="submit" disabled={busy} className="px-6 py-2 bg-accent text-midnight font-bold rounded hover:bg-white transition">
+            <button type="submit" disabled={busy} className="px-6 py-2 bg-accent text-background font-bold rounded hover:bg-white transition">
               {busy ? "Saving..." : "Save Clinic"}
             </button>
           </div>

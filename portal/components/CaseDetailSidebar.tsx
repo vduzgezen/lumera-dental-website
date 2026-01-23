@@ -78,7 +78,7 @@ export default function CaseDetailSidebar({
 
   // --- 1. DROPDOWN NAVIGATION (Admin/Lab/Milling) ---
   const InternalNav = () => (
-    <div className="p-4 border-b border-white/10 bg-[#0a1020]">
+    <div className="p-4 border-b border-white/10 bg-[#1e1e1e]">
       <label className="text-xs font-bold text-white/40 uppercase tracking-wider mb-2 block">
         View Section
       </label>
@@ -105,7 +105,7 @@ export default function CaseDetailSidebar({
 
   // --- 2. TAB BUTTON NAVIGATION (Doctors) ---
   const CustomerNav = () => (
-    <div className="flex border-b border-white/10 bg-[#0a1020]">
+    <div className="flex border-b border-white/10 bg-[#1e1e1e]">
       <button
         onClick={() => handleTabChange("discussion")}
         className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${

@@ -23,7 +23,7 @@ export default function Case3DPanel({ url }: { url: string | null }) {
   }
 
   return (
-    <div className="w-full h-full bg-[#0a1020] relative">
+    <div className="w-full h-full bg-[#1e1e1e] relative">
       <STLViewer url={url} />
     </div>
   );

@@ -71,7 +71,7 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-lg bg-[#0a1020] p-6 rounded-xl border border-white/5 shadow-2xl">
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-lg bg-[#1e1e1e] p-6 rounded-xl border border-white/5 shadow-2xl">
       <h3 className="text-lg font-medium text-white mb-4">{isEdit ? "Edit User" : "New User"}</h3>
       
       <div className="grid grid-cols-2 gap-4">
@@ -130,7 +130,7 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
 
       <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
         {onClose && <button type="button" onClick={onClose} className="px-4 py-2 text-white/60 hover:text-white transition">Cancel</button>}
-        <button type="submit" disabled={loading} className="px-6 py-2 bg-accent text-midnight font-bold rounded-lg hover:bg-white transition-colors">
+        <button type="submit" disabled={loading} className="px-6 py-2 bg-accent text-background font-bold rounded-lg hover:bg-white transition-colors">
           {loading ? "Saving..." : (isEdit ? "Update User" : "Create User")}
         </button>
       </div>

@@ -91,7 +91,7 @@ export default function MillingDashboard({ cases }: { cases: MillingCase[] }) {
   }
 
   return (
-    <section className="h-screen w-full flex flex-col p-6 overflow-hidden bg-midnight">
+    <section className="h-screen w-full flex flex-col p-6 overflow-hidden bg-background">
       <div className="flex-none mb-6 flex items-center justify-between">
         <div>
             <h1 className="text-2xl font-semibold text-white">Milling Center</h1>
@@ -165,7 +165,7 @@ export default function MillingDashboard({ cases }: { cases: MillingCase[] }) {
       {/* Shipping Modal */}
       {shippingMode && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-[#0a1020] border border-white/10 rounded-xl p-6 w-full max-w-md shadow-2xl">
+            <div className="bg-[#1e1e1e] border border-white/10 rounded-xl p-6 w-full max-w-md shadow-2xl">
                 <h3 className="text-xl font-semibold text-white mb-4">Ship {selected.size} Cases</h3>
                 <div className="space-y-4">
                     <div>

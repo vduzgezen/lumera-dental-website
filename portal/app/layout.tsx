@@ -17,7 +17,7 @@ export default function RootLayout({
         'font-sans' uses Tailwind's robust default stack: 
         (Inter, system-ui, -apple-system, Segoe UI, Roboto, etc.)
       */}
-      <body className="font-sans antialiased bg-midnight text-porcelain">
+      <body className="font-sans antialiased bg-background text-porcelain">
         {children}
       </body>
     </html>
