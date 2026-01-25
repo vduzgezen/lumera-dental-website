@@ -1,12 +1,10 @@
-// components/CaseProcessBar.tsx
+// portal/components/CaseProcessBar.tsx
 "use client";
 
 import { useState } from "react";
 import type { Role, ProductionStage } from "@/lib/types";
 
-// FIX: Added COMPLETED to visualization order
 const STAGE_ORDER: ProductionStage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED"];
-
 const STAGE_LABEL: Record<ProductionStage, string> = {
   DESIGN: "Designing",
   MILLING_GLAZING: "Milling & Glazing",
@@ -16,7 +14,7 @@ const STAGE_LABEL: Record<ProductionStage, string> = {
 
 export default function CaseProcessBar({
   caseId,
-  stage, // Use prop directly (no need for local state if we reload)
+  stage, 
   status,
   role,
 }: {
@@ -31,10 +29,8 @@ export default function CaseProcessBar({
   const currentIndex = STAGE_ORDER.indexOf(stage);
   const canEdit = role === "admin" || role === "lab";
 
-  // GUARD RAILS
   const isApproved = status === "APPROVED" || status === "IN_MILLING" || status === "SHIPPED";
   
-  // Logic for the "Advance" button
   let nextStage: ProductionStage | null = null;
   let nextLabel = "";
   let canAdvance = false;
@@ -43,8 +39,15 @@ export default function CaseProcessBar({
   if (stage === "DESIGN") {
     nextStage = "MILLING_GLAZING";
     nextLabel = "Start Milling";
+    
     if (isApproved) {
-      canAdvance = true;
+      // LOGIC CHANGE: Only Admin can force this. Lab must wait for Milling Download.
+      if (role === "lab") {
+         canAdvance = false;
+         reason = "Waiting for Milling Center pickup";
+      } else {
+         canAdvance = true; // Admin override
+      }
     } else {
       canAdvance = false;
       reason = "Requires Design Approval";
@@ -54,7 +57,6 @@ export default function CaseProcessBar({
     nextLabel = "Ship Case";
     canAdvance = true; 
   } else if (stage === "SHIPPING") {
-    // FIX: Added logic to finish the case
     nextStage = "COMPLETED";
     nextLabel = "Complete Case";
     canAdvance = true;
@@ -65,7 +67,6 @@ export default function CaseProcessBar({
     setBusy(true);
     setErr(null);
     try {
-      // FIX: Changed PATCH to POST to match your API route definition
       const res = await fetch(`/api/cases/${caseId}/stage`, {
         method: "POST", 
         headers: { "Content-Type": "application/json" },
@@ -74,7 +75,6 @@ export default function CaseProcessBar({
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error || "Failed");
       
-      // Reload to reflect new status/stage sync
       window.location.reload();
     } catch (e: any) {
       setErr(e?.message);
@@ -84,14 +84,12 @@ export default function CaseProcessBar({
 
   return (
     <div className="bg-black/20 border-b border-white/10 p-4">
-      {/* Top Row: Title + Advance Button */}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h2 className="text-sm font-semibold text-white/90">Manufacturing Process</h2>
           <p className="text-xs text-white/50">Current: {STAGE_LABEL[stage]}</p>
         </div>
 
-        {/* Advance Button (Lab Only) */}
         {canEdit && nextStage && (
           <div className="flex flex-col items-end">
             <button
@@ -117,13 +115,12 @@ export default function CaseProcessBar({
         )}
       </div>
 
-      {/* Progress Circles */}
       <div className="relative flex items-center mx-2">
         <div className="absolute left-0 right-0 h-0.5 bg-white/10 top-3" />
         
         <ol className="relative z-10 flex w-full justify-between">
           {STAGE_ORDER.map((s, idx) => {
-            const isDone = idx < currentIndex || stage === "COMPLETED"; // Ensure completed marks all as done
+            const isDone = idx < currentIndex || stage === "COMPLETED";
             const isCurrent = idx === currentIndex;
             
             return (

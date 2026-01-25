@@ -1,9 +1,8 @@
-//components/UserForm.tsx
+// components/UserForm.tsx
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AddressPicker, { AddressData } from "@/components/AddressPicker";
-
 type Clinic = { id: string; name: string };
 
 export default function UserForm({ clinics, initialData, onClose }: { clinics: Clinic[], initialData?: any, onClose?: () => void }) {
@@ -17,7 +16,6 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
     phoneNumber: initialData?.phoneNumber || "",
     preferenceNote: initialData?.preferenceNote || "",
   });
-  
   const [address, setAddress] = useState<AddressData>({
     id: initialData?.address?.id || null,
     street: initialData?.address?.street || "",
@@ -30,7 +28,6 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
   const [error, setError] = useState("");
 
   const isEdit = !!initialData;
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -42,7 +39,6 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
 
       const payload = { ...formData, address };
       if (payload.newClinicName) delete (payload as any).clinicId;
-
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -71,23 +67,24 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 max-w-lg bg-[#1e1e1e] p-6 rounded-xl border border-white/5 shadow-2xl">
+    // FIX: Changed bg-[#1e1e1e] to bg-[#111b2d] (Midnight Surface)
+    <form onSubmit={handleSubmit} className="space-y-6 max-w-lg bg-[#111b2d] p-6 rounded-xl border border-white/10 shadow-2xl">
       <h3 className="text-lg font-medium text-white mb-4">{isEdit ? "Edit User" : "New User"}</h3>
       
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Name</label>
-          <input type="text" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
+          <input type="text" className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
             value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="Full Name" />
         </div>
         <div>
           <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Role</label>
-          <select className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
+          <select className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
             value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
             <option value="customer">Doctor (Customer)</option>
             <option value="lab">Lab Tech</option>
             <option value="admin">Admin</option>
-            <option value="milling">Milling Center</option> {/* NEW OPTION */}
+            <option value="milling">Milling Center</option>
           </select>
         </div>
       </div>
@@ -95,12 +92,12 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
       <div className="grid grid-cols-2 gap-4">
         <div>
             <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Email</label>
-            <input type="email" required className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
+            <input type="email" required className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
             value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="email@example.com" />
         </div>
         <div>
             <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Phone</label>
-            <input type="text" className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
+            <input type="text" className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
             value={formData.phoneNumber} onChange={(e) => setFormData({...formData, phoneNumber: e.target.value})} placeholder="(555) 000-0000" />
         </div>
       </div>
@@ -109,9 +106,9 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
 
       {formData.role === "customer" && (
         <div className="space-y-4 pt-2 border-t border-white/5">
-           <div className="bg-white/5 rounded-lg p-4 border border-white/10 space-y-3">
+           <div className="bg-black/20 rounded-lg p-4 border border-white/10 space-y-3">
              <label className="block text-xs font-medium text-white/60 uppercase">Assign Clinic</label>
-             <select className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white disabled:opacity-50"
+             <select className="w-full bg-black/40 border border-white/10 rounded-lg px-4 py-2 text-white disabled:opacity-50"
                 value={formData.clinicId} onChange={(e) => setFormData({...formData, clinicId: e.target.value})} disabled={!!formData.newClinicName}>
                 <option value="">-- Select Clinic --</option>
                 {clinics.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
@@ -119,8 +116,8 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
            </div>
            <div>
                 <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Preference Note</label>
-                <textarea rows={3} className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none resize-none"
-                    value={formData.preferenceNote} onChange={(e) => setFormData({...formData, preferenceNote: e.target.value})} placeholder="Doctor preferences..." />
+                <textarea rows={3} className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none resize-none"
+                   value={formData.preferenceNote} onChange={(e) => setFormData({...formData, preferenceNote: e.target.value})} placeholder="Doctor preferences..." />
             </div>
         </div>
       )}

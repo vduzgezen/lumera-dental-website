@@ -4,7 +4,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
-// We import dynamically inside useEffect to avoid SSR issues with Three.js examples
 
 export default function STLViewer({ url }: { url: string }) {
   const ref = useRef<HTMLDivElement | null>(null);
@@ -22,8 +21,8 @@ export default function STLViewer({ url }: { url: string }) {
 
     // 1. Scene Setup
     const scene = new THREE.Scene();
-    // Slightly darker background to make the white model pop more
-    scene.background = new THREE.Color(0x111111);
+    // FIX: Set background to Midnight Blue (0x0a1020)
+    scene.background = new THREE.Color(0x0a1020);
 
     // 2. Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
@@ -32,32 +31,25 @@ export default function STLViewer({ url }: { url: string }) {
     // 3. Renderer
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
-    // Max pixel ratio 2 is good balance of quality vs performance
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     
-    // Clear previous canvas
     while (container.firstChild) {
       container.removeChild(container.firstChild);
     }
     container.appendChild(renderer.domElement);
 
-    // 4. Lighting (High Contrast for Detail View)
-    
-    // Lower ambient light = darker shadows
-    const ambient = new THREE.AmbientLight(0xffffff, 0.3); 
+    // 4. Lighting
+    const ambient = new THREE.AmbientLight(0xffffff, 0.3);
     scene.add(ambient);
 
-    // Stronger key light = brighter highlights and more defined shape
     const dirLight = new THREE.DirectionalLight(0xffffff, 2.2);
-    dirLight.position.set(15, 25, 20); // Slightly higher angle
+    dirLight.position.set(15, 25, 20); 
     scene.add(dirLight);
 
-    // Fill light (side)
     const fillLight = new THREE.DirectionalLight(0xffffff, 0.6);
     fillLight.position.set(-15, 5, 10);
     scene.add(fillLight);
 
-    // Rim light (back) to separate model from background
     const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
     backLight.position.set(0, -10, -20);
     scene.add(backLight);
@@ -69,7 +61,6 @@ export default function STLViewer({ url }: { url: string }) {
     let raf = 0;
 
     const init = async () => {
-      // Dynamic imports to prevent server-side crashes
       const { OrbitControls } = await import("three/examples/jsm/controls/OrbitControls.js");
       const { STLLoader } = await import("three/examples/jsm/loaders/STLLoader.js");
       const { PLYLoader } = await import("three/examples/jsm/loaders/PLYLoader.js");
@@ -77,7 +68,6 @@ export default function STLViewer({ url }: { url: string }) {
       const { mergeVertices } = await import("three/examples/jsm/utils/BufferGeometryUtils.js");
 
       if (cancelled) return;
-
       controls = new OrbitControls(camera, renderer.domElement);
       controls.enableDamping = true;
       controls.dampingFactor = 0.05;
@@ -105,8 +95,7 @@ export default function STLViewer({ url }: { url: string }) {
 
       const processGeometry = (geometry: THREE.BufferGeometry) => {
         geometry.deleteAttribute('normal'); 
-        geometry.deleteAttribute('uv'); 
-        // Merge vertices to smooth the mesh
+        geometry.deleteAttribute('uv');
         let smoothGeometry = mergeVertices(geometry, 1e-4);
         smoothGeometry.computeVertexNormals();
         return smoothGeometry;
@@ -114,13 +103,10 @@ export default function STLViewer({ url }: { url: string }) {
 
       const addMesh = (geometry: THREE.BufferGeometry) => {
         const smoothGeo = processGeometry(geometry);
-
-        // Dental Plaster Material
-        // Slightly off-white color prevents blown-out highlights under strong light
         const material = new THREE.MeshStandardMaterial({
           color: 0xf0f0f0, 
-          roughness: 0.65,   // Slightly rougher for more diffuse light scatter
-          metalness: 0.0,    // Non-metallic
+          roughness: 0.65,   
+          metalness: 0.0,    
           flatShading: false,
         });
 
@@ -130,55 +116,28 @@ export default function STLViewer({ url }: { url: string }) {
       };
 
       const cleanUrl = url.split("?")[0].toLowerCase();
-      
       try {
         if (cleanUrl.endsWith(".stl")) {
-          new STLLoader().load(
-            url,
-            (geo) => !cancelled && addMesh(geo),
-            undefined,
-            (err) => !cancelled && handleError(err)
-          );
+          new STLLoader().load(url, (geo) => !cancelled && addMesh(geo), undefined, (err) => !cancelled && handleError(err));
         } else if (cleanUrl.endsWith(".ply")) {
-          new PLYLoader().load(
-            url,
-            (geo) => !cancelled && addMesh(geo),
-            undefined,
-            (err) => !cancelled && handleError(err)
-          );
+          new PLYLoader().load(url, (geo) => !cancelled && addMesh(geo), undefined, (err) => !cancelled && handleError(err));
         } else if (cleanUrl.endsWith(".obj")) {
-          new OBJLoader().load(
-            url,
-            (obj) => {
+          new OBJLoader().load(url, (obj) => {
               if (cancelled) return;
               obj.traverse((child) => {
                 if ((child as THREE.Mesh).isMesh) {
-                  const mesh = child as THREE.Mesh;
-                  // Clone to avoid shared geometry issues
-                  const processed = processGeometry(mesh.geometry.clone());
-                  mesh.geometry = processed;
-                  mesh.material = new THREE.MeshStandardMaterial({
-                     color: 0xf0f0f0,
-                     roughness: 0.65,
-                     metalness: 0.0
-                  });
+                   const mesh = child as THREE.Mesh;
+                   const processed = processGeometry(mesh.geometry.clone());
+                   mesh.geometry = processed;
+                   mesh.material = new THREE.MeshStandardMaterial({ color: 0xf0f0f0, roughness: 0.65, metalness: 0.0 });
                 }
               });
               group.add(obj);
               fitCameraToObj(obj);
-            },
-            undefined,
-            (err) => !cancelled && handleError(err)
+            }, undefined, (err) => !cancelled && handleError(err)
           );
         } else {
-          // Default fallback to STL if extension is unknown but likely 3D
-          // Or just throw error
-           new STLLoader().load(
-            url,
-            (geo) => !cancelled && addMesh(geo),
-            undefined,
-            (err) => !cancelled && handleError(err)
-          );
+           new STLLoader().load(url, (geo) => !cancelled && addMesh(geo), undefined, (err) => !cancelled && handleError(err));
         }
       } catch (err) {
         handleError(err);
@@ -209,7 +168,6 @@ export default function STLViewer({ url }: { url: string }) {
       renderer.setSize(w, h);
     };
     window.addEventListener("resize", onResize);
-
     return () => {
       cancelled = true;
       cancelAnimationFrame(raf);
@@ -224,7 +182,8 @@ export default function STLViewer({ url }: { url: string }) {
   }, [url]);
 
   return (
-    <div className="relative w-full h-full bg-black/20">
+    // FIX: Container background also Midnight Blue to match scene
+    <div className="relative w-full h-full bg-[#0a1020]">
       <div ref={ref} className="w-full h-full cursor-move" />
       {error && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">

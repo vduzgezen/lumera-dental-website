@@ -1,111 +1,144 @@
 // portal/components/PortalSidebar.tsx
 "use client";
 
+import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import Logo from "@/components/Logo";
 import { useState } from "react";
+import Logo from "./Logo";
 
-type Props = {
-  role: "customer" | "lab" | "admin" | "milling"; // Updated Type
-  children: React.ReactNode;
-};
+// Icons
+import { 
+  LayoutDashboard, 
+  FolderOpen, 
+  CreditCard,
+  LogOut,
+  ChevronRight,
+  ChevronLeft,
+  ShieldCheck // New Icon for unified Admin
+} from "lucide-react";
 
-export default function PortalSidebar({ role, children }: Props) {
+export default function PortalSidebar({ userRole }: { userRole: string }) {
   const pathname = usePathname();
-  const router = useRouter();
-  const [isSigningOut, setIsSigningOut] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  const [expanded, setExpanded] = useState(true);
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  async function handleSignOut() {
-    setIsSigningOut(true);
+  // FIX: Reduced to 4 key icons (Dashboard, New Case, Billing, Admin)
+  const navItems = [
+    { label: "Dashboard", href: "/portal/cases", icon: LayoutDashboard, roles: ["customer", "lab", "admin", "milling"] },
+    { label: "New Case", href: "/portal/cases/new", icon: FolderOpen, roles: ["lab", "admin"] },
+    { label: "Billing", href: "/portal/billing", icon: CreditCard, roles: ["customer", "admin"] },
+    // Unified Admin Link
+    { label: "Admin", href: "/portal/admin/users", icon: ShieldCheck, roles: ["admin"] },
+  ];
+
+  const filteredNav = navItems.filter((item) => item.roles.includes(userRole));
+
+  async function handleLogout() {
+    setLoggingOut(true);
     try {
       await fetch("/api/auth/logout", { method: "POST" });
-      router.push("/login");
-      router.refresh();
-    } catch (error) {
-      console.error("Logout failed", error);
-      setIsSigningOut(false);
+      window.location.href = "/login";
+    } catch (e) {
+      console.error("Logout failed", e);
+      setLoggingOut(false);
     }
   }
 
-  const navItem = (path: string, label: string, icon: React.ReactNode) => {
-    const isActive = pathname.startsWith(path);
-    return (
-      <Link
-        href={path}
-        title={isCollapsed ? label : ""}
-        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-          isActive
-            ? "bg-accent/10 text-accent border border-accent/20"
-            : "text-white/60 hover:text-white hover:bg-white/5"
-        } ${isCollapsed ? "justify-center px-2" : ""}`}
-      >
-        <div className="flex-shrink-0">{icon}</div>
-        {!isCollapsed && (
-          <span className="font-medium whitespace-nowrap overflow-hidden transition-opacity duration-200">
-            {label}
-          </span>
-        )}
-      </Link>
-    );
-  };
-
-  const isMilling = role === "milling";
-
   return (
-    <div className="flex h-screen w-full bg-background text-white overflow-hidden transition-all">
-      <aside 
-        className={`${
-          isCollapsed ? "w-20" : "w-64"
-        } border-r border-white/5 bg-background flex flex-col fixed h-full z-20 transition-all duration-300 ease-in-out`}
-      >
-        <div className={`p-6 flex items-center ${isCollapsed ? "justify-center" : "justify-between"}`}>
-          <Link href="/portal/cases">
-              <Logo showText={!isCollapsed} />
-          </Link>
+    <aside 
+      className={`
+        h-full bg-[#0a1020] border-r border-white/5 
+        transition-all duration-300 ease-in-out flex flex-col shrink-0 relative
+        ${expanded ? "w-64" : "w-20"}
+      `}
+    >
+      {/* Header / Logo - Fixed Height */}
+      <div className="h-24 flex items-center justify-center shrink-0 p-6">
+        <div className={`${expanded ? "w-48" : "w-8"} transition-all duration-300 flex justify-center items-center`}>
+          <Logo showText={expanded} />
         </div>
+      </div>
 
-        <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="absolute -right-3 top-8 bg-background border border-white/10 rounded-full p-1 text-white/40 hover:text-white shadow-lg z-50 transition-colors"
+      {/* Navigation */}
+      <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto custom-scrollbar flex flex-col items-center">
+        {filteredNav.map((item) => {
+          // Highlight "Admin" if we are on ANY /portal/admin route
+          const isActive = item.label === "Admin" 
+            ? pathname.startsWith("/portal/admin")
+            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+            
+          const Icon = item.icon;
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`
+                h-11 flex items-center rounded-lg transition-all group relative
+                ${expanded 
+                  ? "w-full px-3 justify-start" 
+                  : "w-11 justify-center"
+                }
+                ${isActive 
+                  ? "bg-accent text-background font-bold shadow-none" 
+                  : "text-white/60 hover:bg-white/5 hover:text-white"
+                }
+              `}
+              title={!expanded ? item.label : ""}
+            >
+              <Icon 
+                size={20} 
+                className={`
+                  shrink-0 transition-colors duration-300
+                  ${isActive ? "text-background" : "text-white/40 group-hover:text-white"}
+                `} 
+              />
+              
+              <span 
+                className={`
+                  ml-3 font-medium whitespace-nowrap overflow-hidden transition-all duration-300
+                  ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"}
+                `}
+              >
+                {item.label}
+              </span>
+            </Link>
+          );
+        })}
+      </nav>
+
+      {/* Footer / Logout */}
+      <div className="p-4 border-t border-white/5 bg-[#0a1020] flex flex-col items-center">
+        <button 
+          onClick={handleLogout}
+          disabled={loggingOut}
+          className={`
+            h-11 flex items-center rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors group
+            ${expanded 
+              ? "w-full px-3 justify-start" 
+              : "w-11 justify-center"
+            }
+          `}
+          title={!expanded ? "Sign Out" : ""}
         >
-          {isCollapsed ? (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" /></svg>
-          ) : (
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg>
-          )}
+          <LogOut size={20} className="shrink-0 group-hover:scale-110 transition-transform" />
+          <span 
+             className={`
+               ml-3 font-medium whitespace-nowrap transition-all duration-300 overflow-hidden
+               ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"}
+             `}
+          >
+            {loggingOut ? "..." : "Sign Out"}
+          </span>
         </button>
 
-        <nav className="flex-1 px-3 space-y-2 mt-4">
-          {navItem(
-            "/portal/cases", isMilling ? "Production" : "Cases", 
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-          )}
-          
-          {!isMilling && navItem(
-            "/portal/billing", "Billing", 
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-          )}
-          
-          {role === "admin" && navItem(
-            "/portal/admin", "Admin", 
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-          )}
-        </nav>
-
-        <div className="p-4 border-t border-white/5 space-y-2">
-          <button onClick={handleSignOut} disabled={isSigningOut} title={isCollapsed ? "Sign Out" : ""}
-            className={`w-full flex items-center gap-3 px-4 py-2 text-sm text-red-400/60 hover:text-red-400 hover:bg-red-400/5 rounded-lg transition-all ${isCollapsed ? "justify-center" : ""}`}>
-            <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
-            {!isCollapsed && <span>{isSigningOut ? "..." : "Sign Out"}</span>}
-          </button>
-        </div>
-      </aside>
-
-      <main className={`flex-1 h-full transition-all duration-300 ease-in-out ${isCollapsed ? "ml-20" : "ml-64"}`}>
-        {children}
-      </main>
-    </div>
+        <button
+          onClick={() => setExpanded(!expanded)}
+          className="mt-2 w-full flex justify-center py-2 text-white/20 hover:text-accent transition-colors"
+        >
+          {expanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
+        </button>
+      </div>
+    </aside>
   );
 }

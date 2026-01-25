@@ -1,4 +1,4 @@
-// app/api/cases/[id]/transition/route.ts
+// portal/app/api/cases/[id]/transition/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -6,7 +6,7 @@ import type { Prisma } from "@prisma/client";
 import type { CaseStatus, ProductionStage } from "@/lib/types";
 
 // FIX: 'APPROVED' now keeps the stage as 'DESIGN'.
-// This ensures the case waits in the Design bucket until the Lab clicks "Start Milling".
+// This ensures the case waits in the Design bucket until the Milling Center downloads it.
 function stageForStatus(to: CaseStatus): ProductionStage {
   switch (to) {
     case "IN_MILLING":
@@ -33,7 +33,12 @@ export async function POST(
 
   if (!to) return NextResponse.json({ error: "Missing 'to' status" }, { status: 400 });
 
-  const item = await prisma.dentalCase.findUnique({ where: { id } });
+  // FETCH: Include files to check requirements
+  const item = await prisma.dentalCase.findUnique({ 
+    where: { id },
+    include: { files: true }
+  });
+  
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // Doctors: only APPROVED or CHANGES_REQUESTED on their own case
@@ -47,10 +52,25 @@ export async function POST(
     }
   }
 
-  // FIX: Guard rail - prevent re-approving if already approved/in production
+  // LOGIC CHANGE: Guard rail - Validations moved to Approval Step
   if (to === "APPROVED") {
     if (["APPROVED", "IN_MILLING", "SHIPPED"].includes(item.status)) {
       return NextResponse.json({ error: "Case is already approved." }, { status: 400 });
+    }
+
+    // CHECK: Ensure mandatory milling files exist BEFORE approval
+    const labels = new Set(item.files.map((f) => f.label));
+    const missing: string[] = [];
+    
+    // Check for mandatory production files
+    if (!labels.has("construction_info")) missing.push("Construction Info");
+    if (!labels.has("model_top")) missing.push("Model Top");
+    if (!labels.has("model_bottom")) missing.push("Model Bottom");
+    
+    if (missing.length > 0) {
+       return NextResponse.json({ 
+         error: `Cannot Approve Design. Missing files: ${missing.join(", ")}` 
+       }, { status: 400 });
     }
   }
 
