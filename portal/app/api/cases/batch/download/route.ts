@@ -6,7 +6,6 @@ import fs from "node:fs";
 import path from "node:path";
 import archiver from "archiver";
 
-// Helper to wrap archiver in a promise
 function zipFiles(files: { path: string, name: string }[]): Promise<Buffer> {
     return new Promise((resolve, reject) => {
         const chunks: Buffer[] = [];
@@ -29,7 +28,6 @@ function zipFiles(files: { path: string, name: string }[]): Promise<Buffer> {
 export async function POST(req: Request) {
     try {
         const session = await getSession();
-        // Role check should now pass cleanly with updated lib/auth.ts
         if (!session || (session.role !== "milling" && session.role !== "admin")) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
@@ -37,24 +35,47 @@ export async function POST(req: Request) {
         const { ids } = await req.json();
         if (!ids || !Array.isArray(ids)) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-        // Fetch all files for these cases
+        // FETCH: Get details needed for naming (Shade, Material, Product)
         const caseFiles = await prisma.caseFile.findMany({
             where: { caseId: { in: ids } },
-            include: { case: { select: { patientAlias: true, toothCodes: true } } }
+            include: { 
+                case: { 
+                    select: { 
+                        patientAlias: true, 
+                        shade: true, 
+                        material: true, 
+                        product: true 
+                    } 
+                } 
+            }
         });
 
         const fileList: { path: string, name: string }[] = [];
-
+        
         for (const file of caseFiles) {
-            // Clean up the URL to get the file system path
-            // URL: /uploads/[id]/[name] -> Path: public/uploads/[id]/[name]
-            const relativePath = file.url.replace(/^\//, ""); // remove leading slash
+            const relativePath = file.url.replace(/^\//, "");
             const diskPath = path.join(process.cwd(), "public", relativePath);
             
-            // Organize zip structure: [CaseID]_[Patient]/[Label]_[OriginalName]
-            const folderName = `${file.caseId.slice(-4)}_${file.case.patientAlias.replace(/\s+/g, "_")}`;
-            const cleanLabel = file.label?.replace(/_/g, " ").toUpperCase() || "FILE";
-            const fileName = `${folderName}/${cleanLabel}_${path.basename(diskPath)}`;
+            // --- NEW NAMING LOGIC ---
+            // Format: AliasColorMaterialType (No Spaces)
+            const c = file.case;
+            const alias = c.patientAlias || "Unknown";
+            const color = c.shade || "";
+            const material = c.material || "";
+            const type = c.product || "";
+
+            // Construct Base Name
+            const rawBase = `${alias}${color}${material}${type}`;
+            // Remove ALL spaces
+            const cleanBase = rawBase.replace(/\s+/g, ""); 
+            
+            // Clean Label (e.g. "model_top" -> "ModelTop")
+            const cleanLabel = (file.label || "File").replace(/_/g, "").replace(/\s+/g, "");
+            
+            // Final Filename: [Base]_[Label].[ext]
+            // Example: QW44A2ZirconiaCrown_ModelTop.stl
+            const ext = path.extname(diskPath);
+            const fileName = `${cleanBase}_${cleanLabel}${ext}`;
 
             fileList.push({ path: diskPath, name: fileName });
         }
@@ -65,14 +86,25 @@ export async function POST(req: Request) {
 
         const buffer = await zipFiles(fileList);
 
-        // FIX: Cast buffer to 'any' or 'BodyInit' to satisfy strict TS
-        return new NextResponse(buffer as any, {
-            headers: {
-                "Content-Type": "application/zip",
-                "Content-Disposition": `attachment; filename="batch_cases.zip"`
+        // LOGIC: Automatically move APPROVED cases to IN_MILLING
+        await prisma.dentalCase.updateMany({
+            where: { 
+                id: { in: ids },
+                status: "APPROVED" 
+            },
+            data: {
+                status: "IN_MILLING",
+                stage: "MILLING_GLAZING",
+                milledAt: new Date()
             }
         });
 
+        return new NextResponse(buffer as any, {
+            headers: {
+                "Content-Type": "application/zip",
+                "Content-Disposition": `attachment; filename="production_batch.zip"`
+            }
+        });
     } catch (e) {
         console.error("Batch zip error:", e);
         return NextResponse.json({ error: "Failed to generate zip" }, { status: 500 });

@@ -7,22 +7,16 @@ type Params = {
   params: Promise<{ id: string }>;
 };
 
-// FIX: Removed NEW and READY_FOR_REVIEW, added COMPLETED
 type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
 const STAGE_ORDER: Stage[] = ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED"];
-
-const STAGE_READABLE: Record<Stage, string> = {
-  DESIGN: "Designing",
-  MILLING_GLAZING: "Milling",
-  SHIPPING: "Shipping",
-  COMPLETED: "Completed"
-};
 
 export async function POST(req: Request, { params }: Params) {
   const session = await getSession();
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  
+  // Basic role check
   if (session.role !== "admin" && session.role !== "lab") {
     return NextResponse.json(
       { error: "Only lab/admin can update the process." },
@@ -50,33 +44,21 @@ export async function POST(req: Request, { params }: Params) {
     );
   }
 
+  // LOGIC CHANGE: Lab cannot manually start milling. It happens via download.
+  if (targetStage === "MILLING_GLAZING" && session.role === "lab") {
+    return NextResponse.json(
+        { error: "Lab users cannot manually start milling. This happens automatically when the Milling Center downloads the files." },
+        { status: 403 }
+    );
+  }
+
   const existing = await prisma.dentalCase.findUnique({
     where: { id },
-    include: { files: true }, // Include files for checking mandatory uploads
   });
-
+  
   if (!existing) {
     return NextResponse.json({ error: "Case not found." }, { status: 404 });
   }
-
-  // --- MANDATORY FILE CHECK FOR MILLING ---
-  // If moving TO Milling, ensure the 3 deferred files are present.
-  if (targetStage === "MILLING_GLAZING") {
-    const labels = new Set(existing.files.map((f) => f.label));
-    const missing: string[] = [];
-    
-    if (!labels.has("construction_info")) missing.push("Construction Info");
-    if (!labels.has("model_top")) missing.push("Model Top");
-    if (!labels.has("model_bottom")) missing.push("Model Bottom");
-
-    if (missing.length > 0) {
-      return NextResponse.json(
-        { error: `Cannot move to Milling. Missing files: ${missing.join(", ")}` },
-        { status: 400 }
-      );
-    }
-  }
-  // -----------------------------------------
 
   const currentStage = existing.stage as Stage;
   const currentStatus = existing.status as string;
@@ -152,7 +134,6 @@ export async function POST(req: Request, { params }: Params) {
         caseId: id,
         from: currentStatus,
         to: nextStatus,
-        // FIX: Set note to null so History tab is clean
         note: null, 
         actorId: session.userId,
       }

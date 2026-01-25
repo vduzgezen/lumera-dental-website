@@ -2,15 +2,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic"; // <--- 1. Import dynamic
+import dynamic from "next/dynamic";
 import CaseActions from "@/components/CaseActions";
 import type { Role, CaseStatus } from "@/lib/types";
 
-// <--- 2. Lazy Load the heavy 3D Panel
 const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
-  ssr: false, // 3D cannot render on server
+  ssr: false, 
   loading: () => (
-    <div className="w-full h-full bg-black/20 animate-pulse flex items-center justify-center text-white/30 text-sm">
+    <div className="w-full h-full bg-[#0a1020] animate-pulse flex items-center justify-center text-white/30 text-sm">
       Loading 3D Viewer...
     </div>
   ),
@@ -75,6 +74,29 @@ export default function CaseViewerTabs({
     }
   }
 
+  // FIX: Inject Midnight Blue into the Iframe
+  const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement, Event>) => {
+    try {
+      const iframe = e.target as HTMLIFrameElement;
+      const doc = iframe.contentDocument;
+      if (doc) {
+        // 1. Force Body
+        doc.body.style.backgroundColor = "#0a1020";
+        
+        // 2. Inject Style Override (Stronger)
+        const style = doc.createElement("style");
+        style.textContent = `
+          body, html { background-color: #0a1020 !important; }
+          #background { background-color: #0a1020 !important; }
+          .webviewer-canvas-container { background-color: #0a1020 !important; }
+        `;
+        doc.head.appendChild(style);
+      }
+    } catch (err) {
+      console.warn("Could not inject styles into viewer (Cross-Origin blocking?)", err);
+    }
+  };
+
   const tabBtn = (key: TabKey, label: string, active: boolean, disabled: boolean) => (
     <button
       type="button"
@@ -84,10 +106,10 @@ export default function CaseViewerTabs({
         px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center
         ${
           active
-            ? "border-white text-white"
+            ? "border-accent text-accent" // FIX: Use Accent (Purple) instead of White
             : disabled
             ? "border-transparent text-white/20 cursor-not-allowed"
-            : "border-transparent text-white/60 hover:text-white/80"
+            : "border-transparent text-white/60 hover:text-white"
         }
       `}
     >
@@ -99,11 +121,12 @@ export default function CaseViewerTabs({
     if (tab === "scan") {
       if (scanHtmlUrl) {
         return (
-          <div className="w-full h-full bg-black/30 rounded-lg overflow-hidden">
+          <div className="w-full h-full bg-[#0a1020] rounded-lg overflow-hidden">
              <iframe 
                src={scanHtmlUrl} 
                className="w-full h-full border-0 block" 
                title="Exocad Scan Viewer"
+               onLoad={handleIframeLoad} // Trigger color fix
              />
           </div>
         );
@@ -114,11 +137,12 @@ export default function CaseViewerTabs({
     if (tab === "design_with_model") {
       if (designHtmlUrl) {
         return (
-          <div className="w-full h-full bg-black/30 rounded-lg overflow-hidden">
+          <div className="w-full h-full bg-[#0a1020] rounded-lg overflow-hidden">
              <iframe 
                src={designHtmlUrl} 
                className="w-full h-full border-0 block" 
                title="Exocad Design Viewer"
+               onLoad={handleIframeLoad} // Trigger color fix
              />
           </div>
         );
@@ -130,7 +154,7 @@ export default function CaseViewerTabs({
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 flex flex-col h-full overflow-hidden shadow-2xl">
+    <div className="rounded-xl border border-white/10 bg-[#0a1020] flex flex-col h-full overflow-hidden shadow-2xl">
       <div className="flex items-center border-b border-white/10 px-2 bg-white/5 h-14 shrink-0">
         {tabBtn("scan", "Scan", tab === "scan", !hasScanViewer)}
         {tabBtn("design_with_model", "Design + Model", tab === "design_with_model", !hasDesignViewer)}
@@ -145,7 +169,7 @@ export default function CaseViewerTabs({
         </div>
       </div>
 
-      <div className="flex-1 p-2 relative min-h-0 bg-[#1e1e1e]">
+      <div className="flex-1 p-2 relative min-h-0 bg-[#0a1020]">
         {renderContent()}
       </div>
     </div>

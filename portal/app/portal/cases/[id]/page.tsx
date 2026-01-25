@@ -1,4 +1,4 @@
-// app/portal/cases/[id]/page.tsx
+// portal/app/portal/cases/[id]/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
@@ -10,7 +10,6 @@ import CopyableId from "@/components/CopyableId";
 import CaseDetailSidebar from "@/components/CaseDetailSidebar";
 
 export const dynamic = "force-dynamic";
-
 type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
 
 type Params = Promise<{ id: string }>;
@@ -53,11 +52,9 @@ export default async function CaseDetailPage({
         include: { attachments: true },
         orderBy: { createdAt: "desc" } 
       },
-      // Fetch current assignee details
       assigneeUser: { select: { id: true, name: true, email: true } }
     },
   });
-
   if (!item) return notFound();
 
   if (session.role === "customer" && session.clinicId !== item.clinicId) {
@@ -95,9 +92,6 @@ export default async function CaseDetailPage({
   });
 
   const isLabOrAdmin = session.role === "lab" || session.role === "admin";
-
-  // Fetch Potential Designers (Lab/Admin users) if viewer is Admin
-  // Only Admin needs this list now, as Lab cannot re-assign.
   let designers: { id: string; name: string | null; email: string }[] = [];
   if (session.role === "admin") {
     designers = await prisma.user.findMany({
@@ -135,8 +129,12 @@ export default async function CaseDetailPage({
     "text-white";
 
   return (
-    <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
-      <div className="flex-none space-y-4 mb-4">
+    // FIX: 'h-full' instead of 'h-screen' to fit inside the layout without scrolling the window
+    // FIX: Reduced padding to p-4 for a tighter fit
+    <section className="h-full w-full flex flex-col p-4 overflow-hidden">
+      
+      {/* Header Section */}
+      <div className="flex-none space-y-3 mb-2">
         <CaseProcessBar
           caseId={item.id}
           stage={item.stage as ProductionStage}
@@ -144,18 +142,16 @@ export default async function CaseDetailPage({
           role={session.role}
         />
         <div className="flex items-center justify-between">
-           <div>
-            <h1 className="text-2xl font-semibold">{item.patientAlias}</h1>
-            <div className="text-white/70 text-sm mt-1 flex flex-wrap items-center gap-x-3">
+          <div>
+            <h1 className="text-xl font-semibold">{item.patientAlias}</h1>
+            <div className="text-white/70 text-xs mt-1 flex flex-wrap items-center gap-x-3">
               <span>Clinic: <span className="text-white">{item.clinic.name}</span></span>
               <span>•</span>
               
-              {/* DOCTOR NAME: Visible to Lab/Admin */}
               {isLabOrAdmin && item.doctorName && (
                 <><span>Doctor: <span className="text-white">{item.doctorName}</span></span><span>•</span></>
               )}
 
-              {/* DESIGNER NAME: Visible to Lab/Admin only */}
               {isLabOrAdmin && item.assigneeUser && (
                 <>
                   <span>Designer: <span className="text-white">{item.assigneeUser.name || item.assigneeUser.email}</span></span>
@@ -172,14 +168,19 @@ export default async function CaseDetailPage({
               </div>
             </div>
           </div>
-          <Link href="/portal/cases" className="px-4 py-2 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-sm">
-            ← Back to Cases
+          
+          {/* FIX: Shortened Text */}
+          <Link href="/portal/cases" className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-xs font-medium text-white/80">
+            ← Cases
           </Link>
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-6">
-        <div className="flex-none w-full lg:w-[30%] h-full min-h-0">
+      {/* Main Content: Flex-1 to fill remaining height */}
+      <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4">
+        
+        {/* Sidebar (Chat/Files) */}
+        <div className="flex-none w-full lg:w-[350px] xl:w-[400px] h-full min-h-0">
           <CaseDetailSidebar 
             caseId={item.id}
             role={session.role}
@@ -193,6 +194,7 @@ export default async function CaseDetailPage({
           />
         </div>
 
+        {/* Viewer (3D/HTML) */}
         <div className="flex-1 h-full min-h-0">
           <CaseViewerTabs
             caseId={item.id}

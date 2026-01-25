@@ -10,22 +10,22 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Base Backgrounds
-        background: "#1e1e1e", // Your new brand dark charcoal
-        surface: "#2a2a2a",    // Slightly lighter for cards/sidebars
+        // Base Backgrounds (Updated to Midnight Blue Theme)
+        background: "#0a1020", // Deep Midnight Blue
+        surface: "#111b2d",    // Slightly lighter blue for cards/sidebars (Replacing Grey)
         
         // Brand Accents
-        accent: "#9696e2",     // Your new brand purple
-        accentHover: "#8282d6", // Slightly darker purple for hover states
+        accent: "#9696e2",     // Brand purple
+        accentHover: "#8282d6", 
         
         // Text Colors
         foreground: "#f5f7fb", // High contrast white
-        muted: "#a1a1aa",      // Secondary text grey
+        muted: "#94a3b8",      // Blue-grey for secondary text
         
-        // Semantic Colors (Status indicators remain roughly the same)
-        success: "#34d399",    // Emerald for "Approved/Completed"
-        warning: "#fbbf24",    // Amber for "Needs Review"
-        error: "#f87171",      // Red for "Rejected/Error"
+        // Semantic Colors
+        success: "#34d399",    
+        warning: "#fbbf24",    
+        error: "#f87171",      
       },
       fontFamily: {
         sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],

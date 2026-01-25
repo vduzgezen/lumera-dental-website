@@ -30,9 +30,9 @@ export default function PublicNavbar() {
           <Image 
             src="/Images/Lumera-Lab-White-.png" 
             alt="Lumera" 
-            width={120} 
-            height={32} 
-            className="h-8 w-auto"
+            width={320} 
+            height={64} 
+            className="h-16 w-auto"
           />
         </Link>
 

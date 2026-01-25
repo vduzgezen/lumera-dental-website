@@ -1,6 +1,5 @@
 // app/portal/cases/MillingDashboard.tsx
 "use client";
-
 import { useState } from "react";
 import CopyableId from "@/components/CopyableId";
 
@@ -13,6 +12,13 @@ type MillingCase = {
   product: string;
   shade: string | null;
 };
+
+// FIX: Helper to distinguish status colors
+function getStatusColor(s: string) {
+  if (s === "APPROVED") return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"; // Green = Ready
+  if (s === "IN_MILLING") return "bg-purple-500/10 text-purple-400 border-purple-500/20"; // Purple = Active
+  return "bg-white/5 text-white/50 border-white/10";
+}
 
 export default function MillingDashboard({ cases }: { cases: MillingCase[] }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -42,7 +48,6 @@ export default function MillingDashboard({ cases }: { cases: MillingCase[] }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ids: Array.from(selected) }),
       });
-      
       if (!res.ok) throw new Error("Download failed");
       
       // Trigger download blob
@@ -54,6 +59,9 @@ export default function MillingDashboard({ cases }: { cases: MillingCase[] }) {
       document.body.appendChild(a);
       a.click();
       a.remove();
+
+      // FIX: Reload to show status update (Approved -> In Milling)
+      window.location.reload();
     } catch (e) {
       alert("Download failed. See console.");
       console.error(e);
@@ -147,7 +155,8 @@ export default function MillingDashboard({ cases }: { cases: MillingCase[] }) {
                             <td className="p-4 text-white/70">{c.product.replace(/_/g, " ")}</td>
                             <td className="p-4 text-white/70">{c.shade || "-"}</td>
                             <td className="p-4">
-                                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border bg-purple-500/10 text-purple-400 border-purple-500/20">
+                                {/* FIX: Use helper function instead of hardcoded purple */}
+                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getStatusColor(c.status)}`}>
                                     {c.status.replace(/_/g, " ")}
                                 </span>
                             </td>

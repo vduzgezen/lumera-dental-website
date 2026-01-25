@@ -4,8 +4,6 @@ import PublicFooter from "@/components/PublicFooter";
 import Link from "next/link";
 
 export default function WorkPage() {
-  // Placeholder data for when you have images.
-  // Replace 'bg-white/5' with <Image src="..." /> later.
   const galleryItems = [
     { id: 1, title: "Full Arch Zirconia", category: "Restoration", colSpan: "col-span-1 md:col-span-2 row-span-2" },
     { id: 2, title: "Single Central Incisor", category: "Esthetic", colSpan: "col-span-1" },
@@ -15,8 +13,6 @@ export default function WorkPage() {
   ];
 
   return (
-    // FIX: Removed 'font-sans' to match HomePage (Arial default) and prevent Navbar jump
-    // FIX: Changed structure to 'main' with 'flex flex-col' for consistent sticky footer behavior
     <main className="min-h-screen flex flex-col bg-background text-porcelain selection:bg-accent/30">
       <PublicNavbar />
 
@@ -38,7 +34,8 @@ export default function WorkPage() {
         </section>
 
         {/* GALLERY GRID */}
-        <section className="py-20 px-6 bg-[#1e1e1e]/50">
+        {/* FIX: bg-surface (Midnight Blue variant) instead of hardcoded grey */}
+        <section className="py-20 px-6 bg-surface/50">
           <div className="container mx-auto">
             <div className="grid grid-cols-1 md:grid-cols-3 auto-rows-[300px] gap-6">
               {galleryItems.map((item) => (
@@ -54,7 +51,7 @@ export default function WorkPage() {
                   </div>
 
                   {/* Overlay Content */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-midnight via-midnight/50 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
                   
                   <div className="absolute bottom-0 left-0 p-8 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                     <span className="text-accent text-xs font-bold tracking-widest uppercase mb-2 block opacity-0 group-hover:opacity-100 transition-opacity delay-100">

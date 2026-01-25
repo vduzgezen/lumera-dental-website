@@ -35,54 +35,42 @@ export default async function CasesPage({
 
   // --- MILLING VIEW (Optimized) ---
   if (role === "milling") {
-    const totalMilling = await prisma.dentalCase.count({
-        where: { stage: "MILLING_GLAZING" }
-    });
+    // LOGIC CHANGE: Milling sees "APPROVED" (Waiting) and "IN_MILLING" (Active/Milling)
+    const whereMilling: Prisma.DentalCaseWhereInput = {
+        OR: [
+            { status: "APPROVED" },
+            { stage: "MILLING_GLAZING" }
+        ]
+    };
 
+    const totalMilling = await prisma.dentalCase.count({ where: whereMilling });
     const millingCases = await prisma.dentalCase.findMany({
-        where: { stage: "MILLING_GLAZING" },
+        where: whereMilling,
         orderBy: { dueDate: "asc" },
         take: 200, 
         select: {
-            id: true,
-            patientAlias: true,
-            toothCodes: true,
-            status: true,
-            dueDate: true,
-            product: true,
-            shade: true
+            id: true, patientAlias: true, toothCodes: true, status: true,
+            dueDate: true, product: true, shade: true
         }
     });
-
     const safeMillingCases = millingCases.map(c => ({
-        ...c,
-        dueDate: c.dueDate ? c.dueDate.toISOString() : null
+        ...c, dueDate: c.dueDate ? c.dueDate.toISOString() : null
     }));
-
     return (
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full overflow-hidden">
             <MillingDashboard cases={safeMillingCases} />
-            {totalMilling > 200 && (
-                <div className="text-center p-2 text-xs text-white/30 bg-background">
-                    ⚠️ Showing top 200 of {totalMilling} active cases. Clear some to see more.
-                </div>
-            )}
         </div>
     );
   }
 
   // --- STANDARD VIEW ---
-  const getParam = (key: string): string | undefined => {
+  const getParam = (key: string) => {
     const value = sp[key];
-    if (Array.isArray(value)) return value[0];
-    if (typeof value === "string") return value;
-    return undefined;
+    return Array.isArray(value) ? value[0] : value;
   };
-  const getParamArray = (key: string): string[] => {
+  const getParamArray = (key: string) => {
     const value = sp[key];
-    if (Array.isArray(value)) return value;
-    if (typeof value === "string") return [value];
-    return [];
+    return Array.isArray(value) ? value : (typeof value === "string" ? [value] : []);
   };
 
   const canCreate = role === "lab" || role === "admin";
@@ -96,41 +84,29 @@ export default async function CasesPage({
   const statusFilter = getParamArray("status");
 
   const where: Prisma.DentalCaseWhereInput = {};
-
-  // ✅ LOGIC CHANGE: Default to "Active Only"
   if (statusFilter.length > 0) {
     where.status = { in: statusFilter };
   } else {
-    // If no filter selected, show everything EXCEPT completed
     where.status = { not: "COMPLETED" };
   }
 
   if (isDoctor) {
     where.doctorUserId = session.userId ?? "__none__";
     if (aliasFilter && aliasFilter.trim()) {
-      const q = aliasFilter.trim();
       where.OR = [
-        { patientAlias: { contains: q } },
-        { toothCodes: { contains: q } },
+        { patientAlias: { contains: aliasFilter.trim() } },
+        { toothCodes: { contains: aliasFilter.trim() } },
       ];
     }
   } else {
-    if (clinicFilter && clinicFilter.trim()) {
-      where.clinic = { name: { contains: clinicFilter.trim() } };
-    }
-    if (doctorFilter && doctorFilter.trim()) {
-      where.doctorName = { contains: doctorFilter.trim() };
-    }
-    if (caseIdFilter && caseIdFilter.trim()) {
-      where.id = { contains: caseIdFilter.trim() };
-    }
-    if (dateFilter && dateFilter.trim()) {
+    if (clinicFilter?.trim()) where.clinic = { name: { contains: clinicFilter.trim() } };
+    if (doctorFilter?.trim()) where.doctorName = { contains: doctorFilter.trim() };
+    if (caseIdFilter?.trim()) where.id = { contains: caseIdFilter.trim() };
+    if (dateFilter?.trim()) {
       const d = new Date(dateFilter);
       if (!Number.isNaN(d.getTime())) {
-        const start = new Date(d);
-        start.setHours(0, 0, 0, 0);
-        const end = new Date(start);
-        end.setDate(end.getDate() + 1);
+        const start = new Date(d); start.setHours(0, 0, 0, 0);
+        const end = new Date(start); end.setDate(end.getDate() + 1);
         where.dueDate = { gte: start, lt: end };
       }
     }
@@ -143,12 +119,8 @@ export default async function CasesPage({
         orderBy: [{ updatedAt: "desc" }],
         take: 50,
         select: {
-            id: true,
-            patientAlias: true,
-            toothCodes: true,
-            status: true,
-            dueDate: true,
-            updatedAt: true,
+            id: true, patientAlias: true, toothCodes: true,
+            status: true, dueDate: true, updatedAt: true,
             doctorName: true,
             clinic: { select: { name: true } },
             assigneeUser: { select: { name: true, email: true } }
@@ -157,11 +129,11 @@ export default async function CasesPage({
   ]);
 
   return (
-    <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
+    <section className="flex flex-col h-full w-full p-6 overflow-hidden">
       <div className="flex-none space-y-4 mb-4">
         <header className="flex items-center justify-between">
           <div className="flex items-baseline gap-3">
-            <h1 className="text-2xl font-semibold">Cases</h1>
+            <h1 className="text-2xl font-semibold text-white">Cases</h1>
             <span className="text-sm text-white/40">Total: {totalCount}</span>
           </div>
           {canCreate && (
@@ -176,31 +148,20 @@ export default async function CasesPage({
 
         <form className="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
           <StatusFilter selected={statusFilter} />
-
           {canCreate && (
             <>
-              <input name="clinic" placeholder="Clinic Name" defaultValue={clinicFilter ?? ""}
-                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 lg:w-40 transition" />
-              <input name="doctor" placeholder="Doctor Name" defaultValue={doctorFilter ?? ""}
-                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 lg:w-40 transition" />
-              <input name="caseId" placeholder="Case ID" defaultValue={caseIdFilter ?? ""}
-                className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-32 transition font-mono" />
-              <div className="flex items-center gap-1">
-                <input type="date" name="date" defaultValue={dateFilter ?? ""}
-                  className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none transition [color-scheme:dark]" />
-              </div>
+              <input name="clinic" placeholder="Clinic Name" defaultValue={clinicFilter ?? ""} className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none w-32 lg:w-40" />
+              <input name="doctor" placeholder="Doctor Name" defaultValue={doctorFilter ?? ""} className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none w-32 lg:w-40" />
+              <input name="caseId" placeholder="Case ID" defaultValue={caseIdFilter ?? ""} className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none w-32 font-mono" />
+              <input type="date" name="date" defaultValue={dateFilter ?? ""} className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none [color-scheme:dark]" />
             </>
           )}
-
           {isDoctor && (
-            <input name="alias" placeholder="Search patient alias or tooth #" defaultValue={aliasFilter ?? ""}
-              className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white flex-1 min-w-[200px] focus:border-blue-500/50 outline-none transition" />
+            <input name="alias" placeholder="Search patient alias..." defaultValue={aliasFilter ?? ""} className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white flex-1 min-w-[200px] outline-none" />
           )}
-
           <button type="submit" className="bg-white text-black rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-gray-200 transition">Search</button>
-          
           {(clinicFilter || doctorFilter || caseIdFilter || dateFilter || aliasFilter || statusFilter.length > 0) && (
-            <Link href="/portal/cases" className="px-3 py-1.5 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition">Clear</Link>
+             <Link href="/portal/cases" className="px-3 py-1.5 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition">Clear</Link>
           )}
         </form>
       </div>
@@ -226,7 +187,7 @@ export default async function CasesPage({
                 <CaseListRow key={c.id} data={c} role={role} />
               ))}
               {rows.length === 0 && (
-                <tr><td className="p-12 text-center text-white/40" colSpan={9}>No cases found.</td></tr>
+                 <tr><td className="p-12 text-center text-white/40" colSpan={9}>No cases found.</td></tr>
               )}
             </tbody>
           </table>
