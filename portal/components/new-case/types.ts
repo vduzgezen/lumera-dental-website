@@ -1,33 +1,85 @@
 // portal/components/new-case/types.ts
 
-// 1. Doctor Type
-export type Doctor = {
+export type ProductType = "ZIRCONIA" | "EMAX" | "NIGHTGUARD" | "INLAY_ONLAY";
+export type MaterialType = "HT" | "ML" | "HARD" | "SOFT" | null;
+export type ServiceLevel = "IN_HOUSE" | "STANDARD";
+
+export interface DoctorRow {
   id: string;
-  email: string;
   name: string | null;
-  preferenceNote: string | null;
-  defaultDesignPreferences: string | null;
-  clinic: { id: string; name: string };
-};
+  email: string;
+  // Primary Clinic
+  clinic: { 
+    id: string; 
+    name: string; 
+    priceTier: string | null;
+  };
+  // ✅ NEW: Secondary Clinics
+  secondaryClinics: {
+    id: string;
+    name: string;
+    priceTier: string | null;
+  }[];
+  preferenceNote?: string | null;
+  defaultDesignPreferences?: string | null;
+}
 
-// 2. Product List (Names only - Prices are in lib/pricing.ts)
-export type ProductKind = "ZIRCONIA" | "MULTILAYER_ZIRCONIA" | "EMAX" | "INLAY_ONLAY";
-
-// 3. Main State Interface
-export interface NewCaseState {
+export interface CaseData {
   doctorUserId: string;
+  doctorName: string;
+  
+  // ✅ NEW: Selected Clinic ID
+  clinicId: string;
+  
+  patientFirstName: string;
+  patientLastName: string;
   patientAlias: string;
-  toothCodes: string;
-  orderDate: string; // YYYY-MM-DD
-  product: ProductKind; 
+  
+  orderDate: string; 
+  dueDate: string;
+  
+  product: ProductType;
+  material: MaterialType;
+  serviceLevel: ServiceLevel;
   shade: string;
-  material: string;
   designPreferences: string;
   
-  // Files
+  toothCodes: string[];
+  
   scanHtml: File | null;
   rxPdf: File | null;
   constructionInfo: File | null;
   modelTop: File | null;
   modelBottom: File | null;
 }
+
+const today = new Date();
+const defaultDue = new Date(today);
+defaultDue.setDate(today.getDate() + 8);
+
+export const INITIAL_DATA: CaseData = {
+  doctorUserId: "",
+  doctorName: "",
+  clinicId: "", // Starts empty
+  
+  patientFirstName: "",
+  patientLastName: "",
+  patientAlias: "",
+  
+  orderDate: today.toISOString().split("T")[0],
+  dueDate: defaultDue.toISOString().split("T")[0],
+  
+  product: "ZIRCONIA",
+  material: "HT",
+  serviceLevel: "STANDARD",
+  shade: "",
+  designPreferences: "",
+  
+  toothCodes: [],
+  
+  scanHtml: null,
+  rxPdf: null,
+  constructionInfo: null,
+  modelTop: null,
+  modelBottom: null,
+};

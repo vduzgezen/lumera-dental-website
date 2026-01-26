@@ -10,16 +10,32 @@ import MillingDashboard from "./MillingDashboard";
 
 export const dynamic = "force-dynamic";
 
-type CaseRow = {
+// ✅ UPDATED: Added new fields (product, material, serviceLevel, doctorUser)
+// This ensures TypeScript allows us to fetch/pass this data.
+export type CaseRow = {
   id: string;
   patientAlias: string;
   toothCodes: string;
   status: string;
   dueDate: Date | null;
   updatedAt: Date;
+  createdAt: Date; // Added for sorting consistency
   doctorName: string | null;
   clinic: { name: string };
   assigneeUser: { name: string | null; email: string } | null;
+  
+  // New Fields for Logic/Dashboard
+  product: string;
+  material: string | null;
+  serviceLevel: string | null;
+  doctorUser: {
+    name: string | null;
+    address: {
+      zipCode: string | null;
+      city: string | null;
+      state: string | null;
+    } | null;
+  } | null;
 };
 
 export default async function CasesPage({
@@ -39,23 +55,53 @@ export default async function CasesPage({
     const whereMilling: Prisma.DentalCaseWhereInput = {
         OR: [
             { status: "APPROVED" },
-            { stage: "MILLING_GLAZING" }
+            { stage: "MILLING_GLAZING" },
+            { status: "IN_MILLING" } // Explicitly include IN_MILLING status
         ]
     };
 
     const totalMilling = await prisma.dentalCase.count({ where: whereMilling });
+    
+    // ✅ INJECTED: Fetching address/material/serviceLevel for Dashboard Filters
     const millingCases = await prisma.dentalCase.findMany({
         where: whereMilling,
         orderBy: { dueDate: "asc" },
         take: 200, 
         select: {
-            id: true, patientAlias: true, toothCodes: true, status: true,
-            dueDate: true, product: true, shade: true
+            id: true, 
+            patientAlias: true, 
+            toothCodes: true, 
+            status: true,
+            dueDate: true, 
+            product: true, 
+            shade: true,
+            updatedAt: true,
+            createdAt: true,
+            // New Fields
+            material: true,
+            serviceLevel: true,
+            doctorName: true,
+            clinic: { select: { name: true } }, // Required by type
+            assigneeUser: { select: { name: true, email: true } }, // Required by type
+            doctorUser: {
+                select: {
+                    name: true,
+                    address: {
+                        select: { zipCode: true, city: true, state: true }
+                    }
+                }
+            }
         }
     });
+
+    // Cast to any to bypass strict serialization checks for the dashboard component if needed
+    // or keep your existing map logic if MillingDashboard expects strings.
+    // Assuming new MillingDashboard accepts Date or string, we pass as is or map.
     const safeMillingCases = millingCases.map(c => ({
-        ...c, dueDate: c.dueDate ? c.dueDate.toISOString() : null
-    }));
+        ...c, 
+        dueDate: c.dueDate ? c.dueDate : null // Passing Date object to match Component Interface
+    })) as unknown as any[]; 
+
     return (
         <div className="flex flex-col h-full overflow-hidden">
             <MillingDashboard cases={safeMillingCases} />
@@ -112,6 +158,7 @@ export default async function CasesPage({
     }
   }
 
+  // ✅ INJECTED: Fetching new fields here too for consistency
   const [totalCount, rows] = await Promise.all([
     prisma.dentalCase.count({ where }),
     prisma.dentalCase.findMany({
@@ -119,11 +166,28 @@ export default async function CasesPage({
         orderBy: [{ updatedAt: "desc" }],
         take: 50,
         select: {
-            id: true, patientAlias: true, toothCodes: true,
-            status: true, dueDate: true, updatedAt: true,
+            id: true, 
+            patientAlias: true, 
+            toothCodes: true,
+            status: true, 
+            dueDate: true, 
+            updatedAt: true,
+            createdAt: true,
             doctorName: true,
             clinic: { select: { name: true } },
-            assigneeUser: { select: { name: true, email: true } }
+            assigneeUser: { select: { name: true, email: true } },
+            // New Fields
+            product: true,
+            material: true,
+            serviceLevel: true,
+            doctorUser: {
+                select: {
+                    name: true,
+                    address: {
+                        select: { zipCode: true, city: true, state: true }
+                    }
+                }
+            }
         },
     })
   ]);

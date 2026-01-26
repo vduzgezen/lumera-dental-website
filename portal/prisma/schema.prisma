@@ -32,7 +32,11 @@ model Clinic {
   routingNumber   String?
   
   // RELATIONS
-  users     User[]
+  users           User[] // Primary doctors (One-to-Many)
+  
+  // ✅ FIX: Back-relation for Secondary Clinics
+  partTimeDoctors User[] @relation("DoctorSecondaryClinics")
+
   cases     DentalCase[]
   invoices  Invoice[]
   payments  Payment[]
@@ -42,134 +46,132 @@ model Clinic {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  password       String   // Hashed
-  name           String?
-  phoneNumber    String?  
-  preferenceNote String? 
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password        String   // Hashed
+  name            String?
+  phoneNumber     String?  
+  preferenceNote  String? 
 
-  role           String   // customer, lab, admin, milling
+  role            String   // customer, lab, admin, milling
   
-  // NEW: Token for setting up password after approval
   invitationToken String? @unique 
-
-  // NEW: Default preferences for this doctor
   defaultDesignPreferences String?
   
-  clinicId       String?
-  clinic         Clinic?  @relation(fields: [clinicId], references: [id])
+  // PRIMARY CLINIC (One-to-Many)
+  clinicId        String?
+  clinic          Clinic?  @relation(fields: [clinicId], references: [id])
 
-  addressId      String?
-  address        Address? @relation(fields: [addressId], references: [id])
+  // ✅ SECONDARY CLINICS (Many-to-Many)
+  secondaryClinics Clinic[] @relation("DoctorSecondaryClinics")
 
-  doctorCases    DentalCase[] @relation("DoctorCases")
-  workingCases   DentalCase[] @relation("WorkingCases")
+  addressId       String?
+  address         Address? @relation(fields: [addressId], references: [id])
 
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  doctorCases     DentalCase[] @relation("DoctorCases")
+  workingCases    DentalCase[] @relation("WorkingCases")
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
-// NEW: Pending Sign-ups
+// --- SUPPORTING MODELS ------------------------------------------------------
+
 model RegistrationRequest {
   id        String   @id @default(cuid())
   email     String   @unique
   name      String
   phone     String?
   clinicName String
-  
-  // Address Fields
   street    String?
   city      String?
   state     String?
   zipCode   String?
-
-  status    String   @default("PENDING") // PENDING, APPROVED, REJECTED, PROCESSED
+  status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-// SHARED ADDRESS MODEL
 model Address {
   id        String   @id @default(cuid())
-  
   street    String?
   city      String?
   state     String?
   zipCode   String?
   country   String?  @default("USA")
-
   users     User[]
   clinics   Clinic[]
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model DentalCase {
-  id            String @id @default(cuid())
-  clinicId      String
-  clinic        Clinic @relation(fields: [clinicId], references: [id])
+  id             String @id @default(cuid())
   
-  doctorUserId String?
-  doctorUser   User?   @relation("DoctorCases", fields: [doctorUserId], references: [id])
+  // Clinic is mandatory for billing
+  clinicId       String
+  clinic         Clinic @relation(fields: [clinicId], references: [id])
+  
+  // Doctor is the user who owns the case
+  doctorUserId   String?
+  doctorUser     User?    @relation("DoctorCases", fields: [doctorUserId], references: [id])
 
-  assigneeId   String?
-  assigneeUser User?   @relation("WorkingCases", fields: [assigneeId], references: [id])
+  // Lab Assignee
+  assigneeId     String?
+  assigneeUser   User?    @relation("WorkingCases", fields: [assigneeId], references: [id])
 
-  patientAlias String
-  doctorName   String?
-  toothCodes   String
+  patientAlias   String
+  doctorName     String?
+  toothCodes     String
 
-  orderDate     DateTime    @default(now())
-  product       String      @default("ZIRCONIA") 
+  orderDate      DateTime    @default(now())
+  product        String      @default("ZIRCONIA") 
 
-  material      String?
-  shade         String?
-
-  // NEW: Preferences specific to this case
+  material       String?
+  serviceLevel   String?     // IN_HOUSE, STANDARD
+  shade          String?
   designPreferences String?
   
-  billingType   String      @default("BILLABLE") 
-  units         Int         @default(1)
-  cost          Decimal     @default(0.00)
-  isRush        Boolean     @default(false) 
-  currency      String      @default("USD")
-  invoiced      Boolean     @default(false) 
+  // Billing
+  billingType    String      @default("BILLABLE") 
+  units          Int         @default(1)
+  cost           Decimal     @default(0.00)
+  isRush         Boolean     @default(false) 
+  currency       String      @default("USD")
+  invoiced       Boolean     @default(false) 
   
-  invoiceId     String?
-  invoice       Invoice?    @relation(fields: [invoiceId], references: [id])
+  invoiceId      String?
+  invoice        Invoice?    @relation(fields: [invoiceId], references: [id])
 
-  dueDate       DateTime?
-  status        String      @default("IN_DESIGN") 
-  stage         String      @default("DESIGN")    
+  // Production
+  dueDate        DateTime?
+  status         String      @default("IN_DESIGN") 
+  stage          String      @default("DESIGN")    
   
-  designedAt    DateTime?
-  milledAt      DateTime?
-  shippedAt     DateTime?
+  designedAt     DateTime?
+  milledAt       DateTime?
+  shippedAt      DateTime?
   
   shippingCarrier String?
   trackingNumber  String?
   shippingEta     DateTime?
 
-  needsReview       Boolean   @default(false)
-  reviewQuestion    String?
-  reviewRequestedAt DateTime?
-  reviewDeadline    DateTime?
+  needsReview        Boolean   @default(false)
+  reviewQuestion     String?
+  reviewRequestedAt  DateTime?
+  reviewDeadline     DateTime?
 
-  files    CaseFile[]
-  events   StatusEvent[]
-  comments CaseComment[]
+  files      CaseFile[]
+  events     StatusEvent[]
+  comments   CaseComment[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  // ✅ PERFORMANCE INDEXES (Added for scalability)
-  @@index([clinicId])        // Fast lookup for Clinic Dashboard
-  @@index([doctorUserId])    // Fast lookup for Doctor Dashboard
-  @@index([status])          // Fast filtering for Admin/Lab
-  @@index([createdAt])       // Fast sorting by date
-  
+  @@index([clinicId])
+  @@index([doctorUserId])
+  @@index([status])
+  @@index([createdAt])
   @@map("Case")
 }
 
@@ -204,15 +206,15 @@ model Payment {
 }
 
 model CaseFile {
-  id        String     @id @default(cuid())
+  id        String      @id @default(cuid())
   caseId    String
-  case      DentalCase @relation(fields: [caseId], references: [id])
+  case      DentalCase  @relation(fields: [caseId], references: [id])
   
   label     String?
-  kind      String     
+  kind      String      
   url       String
   sizeBytes Int?
-  createdAt DateTime   @default(now())
+  createdAt DateTime    @default(now())
 
   commentId String?
   comment   CaseComment? @relation(fields: [commentId], references: [id])
@@ -230,12 +232,12 @@ model StatusEvent {
 }
 
 model CaseComment {
-  id        String     @id @default(cuid())
+  id        String      @id @default(cuid())
   caseId    String
-  case      DentalCase @relation(fields: [caseId], references: [id])
+  case      DentalCase  @relation(fields: [caseId], references: [id])
   authorId  String
   body      String
-  createdAt DateTime   @default(now())
+  createdAt DateTime    @default(now())
 
   attachments CaseFile[]
 }

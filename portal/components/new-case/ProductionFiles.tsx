@@ -1,26 +1,26 @@
 // portal/components/new-case/ProductionFiles.tsx
 "use client";
 
-import { NewCaseState } from "./types";
+import { CaseData } from "./types";
 
-interface Props {
-  data: NewCaseState;
-  onChange: (updates: Partial<NewCaseState>) => void;
+interface ProductionFilesProps {
+  data: CaseData;
+  update: (fields: Partial<CaseData>) => void;
 }
 
-// Recreated Local Helper to match original styling
+// Reusable File Input Sub-component
 const FileInput = ({ 
   label, 
   file, 
   accept, 
-  req = false, 
-  onSelect 
+  req = false,
+  onChange 
 }: { 
   label: string, 
   file: File | null, 
   accept: string, 
   req?: boolean,
-  onSelect: (f: File | null) => void 
+  onChange: (f: File | null) => void 
 }) => (
   <div className="space-y-1">
     <div className="flex justify-between items-baseline">
@@ -33,7 +33,7 @@ const FileInput = ({
       <input
           type="file"
           accept={accept}
-          onChange={(e) => onSelect(e.target.files?.[0] || null)}
+          onChange={(e) => onChange(e.target.files?.[0] || null)}
           className="
           w-full text-sm text-white/60
           file:mr-4 file:py-2.5 file:px-4
@@ -48,7 +48,7 @@ const FileInput = ({
   </div>
 );
 
-export default function ProductionFiles({ data, onChange }: Props) {
+export default function ProductionFiles({ data, update }: ProductionFilesProps) {
   return (
     <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-4 shadow-lg">
       <h2 className="text-lg font-medium text-white/90 border-b border-white/5 pb-2">
@@ -58,47 +58,46 @@ export default function ProductionFiles({ data, onChange }: Props) {
          {/* Mandatory at Start */}
          <div className="grid md:grid-cols-2 gap-6">
             <FileInput 
-                label="Scan Viewer (HTML)" 
-                file={data.scanHtml} 
-                accept=".html" 
-                req={true} 
-                onSelect={(f) => onChange({ scanHtml: f })} 
+              label="Scan Viewer (HTML)" 
+              file={data.scanHtml} 
+              accept=".html" 
+              req={true} 
+              onChange={(f) => update({ scanHtml: f })} 
             />
             <FileInput 
-                label="Rx PDF" 
-                file={data.rxPdf} 
-                accept=".pdf" 
-                req={true} 
-                onSelect={(f) => onChange({ rxPdf: f })} 
+              label="Rx PDF" 
+              file={data.rxPdf} 
+              accept=".pdf" 
+              req={true} 
+              onChange={(f) => update({ rxPdf: f })} 
             />
          </div>
 
          <div className="w-full h-px bg-white/5" />
 
-         {/* Optional at Start (Mandatory for Milling) */}
+         {/* Optional / Construction Files */}
          <div>
             <span className="text-[10px] uppercase tracking-wider text-white/40 mb-2 block">
-                Optional now (Required before Milling)
+              Optional now (Required before Milling)
             </span>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                 <FileInput 
-                    label="Construction Info" 
-                    file={data.constructionInfo} 
-                    // ✅ FIX: Added .constructionInfo (and lowercase) to accept
-                    accept=".constructionInfo,.constructioninfo" 
-                    onSelect={(f) => onChange({ constructionInfo: f })} 
+                  label="Construction Info" 
+                  file={data.constructionInfo} 
+                  accept=".pdf,.xml,.txt" 
+                  onChange={(f) => update({ constructionInfo: f })} 
                 />
                 <FileInput 
-                    label="Model Top (STL)" 
-                    file={data.modelTop} 
-                    accept=".stl,.ply" 
-                    onSelect={(f) => onChange({ modelTop: f })} 
+                  label="Model Top (STL)" 
+                  file={data.modelTop} 
+                  accept=".stl,.ply" 
+                  onChange={(f) => update({ modelTop: f })} 
                 />
                 <FileInput 
-                    label="Model Bottom (STL)" 
-                    file={data.modelBottom} 
-                    accept=".stl,.ply" 
-                    onSelect={(f) => onChange({ modelBottom: f })} 
+                  label="Model Bottom (STL)" 
+                  file={data.modelBottom} 
+                  accept=".stl,.ply" 
+                  onChange={(f) => update({ modelBottom: f })} 
                 />
             </div>
          </div>

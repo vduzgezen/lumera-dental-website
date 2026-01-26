@@ -4,16 +4,35 @@ import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import path from "node:path";
 import fs from "node:fs/promises";
-import { 
-  calculateCaseCost, 
-  countUnits, 
-  PriceTier 
-} from "@/lib/pricing";
-import { CreateCaseSchema } from "@/lib/schemas"; // <--- Zod Schema
+import { z } from "zod";
 
-const MAX_FILE_BYTES = 500 * 1024 * 1024; // 500MB Limit
+const MAX_FILE_BYTES = 500 * 1024 * 1024; // 500MB
 
-function addDays(d: Date, n: number) {
+// --- ZOD SCHEMA ---
+const CreateCaseSchema = z.object({
+  patientAlias: z.string().min(1, "Patient Alias is required"),
+  doctorUserId: z.string().min(1, "Doctor is required"),
+  clinicId: z.string().min(1, "Clinic is required"), // ✅ Required
+  toothCodes: z.string().min(1, "Tooth selection is required"),
+  
+  orderDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid Order Date"),
+  dueDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid Due Date").optional(),
+
+  product: z.string().min(1, "Product is required"),
+  material: z.string().optional(),
+  shade: z.string().optional(),
+  designPreferences: z.string().optional(),
+  serviceLevel: z.enum(["IN_HOUSE", "STANDARD"]).default("IN_HOUSE"),
+  
+  scanHtml: z.instanceof(File, { message: "Scan Viewer HTML is required" }),
+  rxPdf: z.instanceof(File, { message: "Rx PDF is required" }),
+  
+  constructionInfo: z.instanceof(File).optional(),
+  modelTop: z.instanceof(File).optional(),
+  modelBottom: z.instanceof(File).optional(),
+});
+
+function addDays(d: string | Date, n: number) {
   const x = new Date(d);
   x.setDate(x.getDate() + n);
   x.setHours(0, 0, 0, 0);
@@ -55,44 +74,71 @@ async function saveCaseFile(file: File, caseId: string, label: string) {
   });
 }
 
+async function getUniqueAlias(baseAlias: string) {
+  const root = baseAlias.slice(0, -2); 
+  const existing = await prisma.dentalCase.findMany({
+    where: { patientAlias: { startsWith: root } },
+    select: { patientAlias: true }
+  });
+
+  if (existing.length === 0) return baseAlias;
+
+  let maxSuffix = -1;
+  existing.forEach((c) => {
+    const suffix = parseInt(c.patientAlias.slice(-2), 10);
+    if (!isNaN(suffix) && suffix > maxSuffix) {
+      maxSuffix = suffix;
+    }
+  });
+
+  const nextSuffix = (maxSuffix + 1).toString().padStart(2, "0");
+  return `${root}${nextSuffix}`;
+}
+
+function calculateEstimate(product: string, serviceLevel: string, toothCodes: string) {
+  const units = toothCodes.split(",").filter(Boolean).length;
+  let basePrice = 0;
+  if (product === "ZIRCONIA") basePrice = serviceLevel === "IN_HOUSE" ? 55 : 65;
+  else if (product === "EMAX") basePrice = serviceLevel === "IN_HOUSE" ? 110 : 120;
+  else if (product === "NIGHTGUARD") basePrice = serviceLevel === "IN_HOUSE" ? 50 : 60;
+  else if (product === "INLAY_ONLAY") basePrice = serviceLevel === "IN_HOUSE" ? 65 : 75;
+  return basePrice * units;
+}
+
 export async function POST(req: Request) {
   try {
-    // 1. Auth Check
     const session = await getSession();
-    if (!session) {
-      return NextResponse.json({ error: "Please sign in." }, { status: 401 });
-    }
-    if (session.role === "customer") {
-      return NextResponse.json({ error: "Only lab/admin can create cases." }, { status: 403 });
-    }
+    if (!session) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
 
-    // 2. Parse FormData
     const form = await req.formData();
     
-    // Convert FormData to a plain object for Zod
+    const getFile = (key: string) => {
+      const f = form.get(key);
+      return f instanceof File ? f : undefined;
+    };
+
     const rawData = {
       patientAlias: form.get("patientAlias"),
       doctorUserId: form.get("doctorUserId"),
+      clinicId: form.get("clinicId"), // ✅ Validated
       toothCodes: form.get("toothCodes"),
       orderDate: form.get("orderDate"),
+      dueDate: form.get("dueDate"),
       product: form.get("product"),
       shade: form.get("shade") || undefined,
       material: form.get("material") || undefined,
       designPreferences: form.get("designPreferences") || undefined,
-      billingType: form.get("billingType") || undefined,
-      // Files
-      scanHtml: form.get("scanHtml"),
-      rxPdf: form.get("rxPdf"),
-      constructionInfo: form.get("constructionInfo"),
-      modelTop: form.get("modelTop"),
-      modelBottom: form.get("modelBottom"),
+      serviceLevel: form.get("serviceLevel") || "IN_HOUSE",
+      
+      scanHtml: getFile("scanHtml"),
+      rxPdf: getFile("rxPdf"),
+      constructionInfo: getFile("constructionInfo"),
+      modelTop: getFile("modelTop"),
+      modelBottom: getFile("modelBottom"),
     };
 
-    // 3. Zod Validation (The Bouncer)
     const validation = CreateCaseSchema.safeParse(rawData);
-
     if (!validation.success) {
-      // ✅ FIX: Use .issues instead of .errors
       const firstError = validation.error.issues[0];
       return NextResponse.json(
         { error: `${firstError.path.join(".")}: ${firstError.message}` }, 
@@ -100,64 +146,53 @@ export async function POST(req: Request) {
       );
     }
 
-    const data = validation.data; // Safe, typed data
+    const data = validation.data;
 
-    // 4. Business Logic (Doctor/Clinic Lookup)
+    // Verify Doctor
     const doctor = await prisma.user.findUnique({
       where: { id: data.doctorUserId },
-      select: {
-        id: true,
-        name: true,
-        clinicId: true,
-        clinic: { select: { id: true, priceTier: true } },
-      },
+      select: { id: true, name: true },
     });
+    if (!doctor) return NextResponse.json({ error: "Invalid doctor." }, { status: 400 });
 
-    if (!doctor || !doctor.clinicId || !doctor.clinic) {
-      return NextResponse.json({ error: "Invalid doctor or clinic." }, { status: 400 });
-    }
+    // Verify Clinic
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: data.clinicId },
+      select: { id: true, priceTier: true },
+    });
+    if (!clinic) return NextResponse.json({ error: "Invalid clinic." }, { status: 400 });
 
-    // 5. Billing Calculation
-    const unitCount = countUnits(data.toothCodes);
-    const dueDate = addDays(data.orderDate, 8);
-    
-    const cost = calculateCaseCost(
-        doctor.clinic.priceTier || PriceTier.STANDARD, 
-        data.product, 
-        unitCount, 
-        data.billingType
-    );
+    const uniqueAlias = await getUniqueAlias(data.patientAlias);
+    const cost = calculateEstimate(data.product, data.serviceLevel, data.toothCodes);
+    const unitCount = data.toothCodes.split(",").filter(Boolean).length;
+    const dueDate = data.dueDate ? new Date(data.dueDate) : addDays(data.orderDate, 8);
 
-    // 6. DB Creation
     const created = await prisma.dentalCase.create({
       data: {
-        clinicId: doctor.clinic.id,
+        clinicId: clinic.id, // ✅ Using the validated Clinic ID
         doctorUserId: doctor.id,
-        assigneeId: session.userId,
-        patientAlias: data.patientAlias,
+        assigneeId: session.userId, 
+        patientAlias: uniqueAlias,
         doctorName: doctor.name ?? null,
         toothCodes: data.toothCodes,
-        orderDate: data.orderDate,
-        dueDate,
+        orderDate: new Date(data.orderDate),
+        dueDate: dueDate, 
         product: data.product,
         material: data.material || null,
+        serviceLevel: data.serviceLevel, 
         shade: data.shade || null,
         designPreferences: data.designPreferences || null,
         status: "IN_DESIGN",
         stage: "DESIGN",
         units: unitCount,
         cost,
-        billingType: data.billingType,
+        billingType: "BILLABLE",
         invoiced: false,
       },
       select: { id: true },
     });
 
-    // 7. Save Files
-    if (data.scanHtml.size > MAX_FILE_BYTES) return NextResponse.json({ error: "Scan file too large." }, { status: 400 });
     await saveCaseFile(data.scanHtml, created.id, "scan_html");
-
-    if (data.rxPdf.size > MAX_FILE_BYTES) return NextResponse.json({ error: "RX file too large." }, { status: 400 });
     await saveCaseFile(data.rxPdf, created.id, "rx_pdf");
 
     if (data.constructionInfo) await saveCaseFile(data.constructionInfo, created.id, "construction_info");

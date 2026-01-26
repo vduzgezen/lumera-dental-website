@@ -1,4 +1,4 @@
-//portal/app/api/users/[id]/route.ts
+// portal/app/api/users/[id]/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -6,10 +6,11 @@ import { getSession } from "@/lib/auth";
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
+  
   const { id } = await params;
   const data = await req.json();
 
+  // Address Logic
   const addr = data.address || {};
   let addressConfig = undefined;
   if (addr.id) {
@@ -25,6 +26,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     };
   }
 
+  // Primary Clinic Logic
   let clinicConfig = undefined;
   if (data.clinicId) {
     clinicConfig = { connect: { id: data.clinicId } };
@@ -32,11 +34,18 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     clinicConfig = { disconnect: true };
   }
 
+  // ✅ Secondary Clinics Logic
+  const secondaryIds = Array.isArray(data.secondaryClinicIds) ? data.secondaryClinicIds : [];
+  const secondaryConfig = {
+     set: secondaryIds.map((cid: string) => ({ id: cid })) // Replaces existing list with new selection
+  };
+
   const updateData: any = {
     name: data.name,
     email: data.email,
     role: data.role,
     clinic: clinicConfig,
+    secondaryClinics: secondaryConfig, // ✅ Apply Update
     phoneNumber: data.phoneNumber || null,
     preferenceNote: data.preferenceNote || null,
     address: addressConfig
@@ -50,15 +59,12 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
   return NextResponse.json(user);
 }
 
-// NEW: Delete User
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await getSession();
   if (!session || session.role !== "admin") return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { id } = await params;
 
   try {
-    // Delete user (cascade logic depends on schema, but usually safe for users unless they own critical records)
     await prisma.user.delete({ where: { id } });
     return NextResponse.json({ ok: true });
   } catch (e: any) {

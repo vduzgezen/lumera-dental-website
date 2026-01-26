@@ -8,18 +8,18 @@ export default async function UsersPage() {
   // 1. Get Totals
   const totalUsers = await prisma.user.count();
 
-  // 2. Fetch recent Users (Limit 50)
+  // 2. Fetch Users (Include Secondary Clinics)
   const users = await prisma.user.findMany({ 
     orderBy: { createdAt: "desc" },
-    take: 50, // ✅ LIMIT
+    take: 50, 
     include: { 
       clinic: { select: { id: true, name: true } },
+      secondaryClinics: { select: { id: true, name: true } }, // ✅ FETCH THIS
       address: true 
     }
   });
 
-  // 3. Fetch all clinics (Dropdowns need all options, usually acceptable if <500)
-  // If clinics grow >500, we should convert the dropdown to a search-as-you-type.
+  // 3. Fetch all clinics
   const clinics = await prisma.clinic.findMany({ 
     select: { id: true, name: true }, 
     orderBy: { name: "asc" } 
@@ -29,7 +29,6 @@ export default async function UsersPage() {
     <div className="flex flex-col h-full space-y-4">
       <UserListClient users={users} clinics={clinics} />
       
-      {/* Footer Info */}
       <div className="flex-none text-center text-xs text-white/30 pt-2 border-t border-white/5">
         {totalUsers > users.length 
             ? `Showing recent ${users.length} of ${totalUsers} users.` 
