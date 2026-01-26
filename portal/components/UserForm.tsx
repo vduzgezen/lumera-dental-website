@@ -59,7 +59,6 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
     return clinics.map(c => ({ id: c.id, label: c.name }));
   }, [clinics]);
 
-  // ✅ SORTED & FILTERED: Checked items always at the top
   const filteredSecondaryClinics = useMemo(() => {
     const q = secondarySearch.toLowerCase();
     
@@ -126,11 +125,18 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
     }
   }
 
+  // ✅ PREVENT ENTER KEY SUBMISSION
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+      e.preventDefault();
+    }
+  };
+
   return (
     <>
       <div className="w-full max-w-lg bg-[#111b2d] rounded-xl border border-white/10 shadow-2xl flex flex-col max-h-[85vh]">
         
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
+        <form onSubmit={handleSubmit} onKeyDown={handleKeyDown} className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
           <div className="flex items-center justify-between">
              <h3 className="text-lg font-medium text-white">{isEdit ? "Edit User" : "New User"}</h3>
              <span className="text-[10px] uppercase font-bold text-white/30 tracking-wider">Admin Console</span>
@@ -199,7 +205,6 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
                 <div className="bg-black/20 rounded-lg p-4 border border-white/10 space-y-3">
                     <label className="block text-xs font-medium text-white/60 uppercase">Additional Clinics</label>
                     
-                    {/* Search Input */}
                     <div className="relative">
                       <input 
                         className="w-full bg-black/40 border border-white/10 rounded-lg pl-8 pr-3 py-2 text-sm text-white focus:border-accent/50 outline-none placeholder-white/30"
@@ -247,7 +252,6 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
           {msg && <p className="text-emerald-400 text-sm bg-emerald-500/10 p-2 rounded text-center">{msg}</p>}
         </form>
 
-        {/* Fixed Footer */}
         <div className="p-4 border-t border-white/10 bg-[#111b2d] flex justify-end gap-3 rounded-b-xl shrink-0">
           {onClose && <button type="button" onClick={onClose} className="px-4 py-2 text-white/60 hover:text-white transition">Cancel</button>}
           <button onClick={handleSubmit} disabled={loading} className="px-6 py-2 bg-accent text-background font-bold rounded-lg hover:bg-white transition-colors">

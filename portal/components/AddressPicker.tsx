@@ -20,7 +20,7 @@ type Props = {
 export default function AddressPicker({ value, onChange }: Props) {
   const [existing, setExisting] = useState<any[]>([]);
   const [selectedId, setSelectedId] = useState<string>("");
-
+  
   // Debounce logic for search
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -38,16 +38,14 @@ export default function AddressPicker({ value, onChange }: Props) {
     }
   }, []);
 
-  // Initial load
-  useEffect(() => {
-    fetchAddresses("");
-  }, [fetchAddresses]);
-
   // Debounced search handler
   useEffect(() => {
     const timer = setTimeout(() => {
-        if (searchTerm) fetchAddresses(searchTerm);
+        // ✅ FIX: Removed "if (searchTerm)" check. 
+        // Now it fetches ALL addresses if searchTerm is empty (resetting the list).
+        fetchAddresses(searchTerm); 
     }, 400); // 400ms delay
+    
     return () => clearTimeout(timer);
   }, [searchTerm, fetchAddresses]);
 
@@ -63,9 +61,7 @@ export default function AddressPicker({ value, onChange }: Props) {
       subLabel: `${addr.state || ""} ${addr.zipCode || ""}`
     }));
 
-    // CRITICAL FIX:
-    // If the currently selected address (value.id) is NOT in the fetched list (because of pagination/filtering),
-    // we must manually add it to the options so the dropdown displays the label correctly instead of "Select...".
+    // Inject current value if missing from list (preserves display when paging/filtering)
     if (value.id && !list.find(o => o.id === value.id)) {
         list.unshift({
             id: value.id,
@@ -78,7 +74,6 @@ export default function AddressPicker({ value, onChange }: Props) {
   }, [existing, value]);
 
   function handleSelectExisting(id: string) {
-    // Check both existing list AND the potentially injected current value
     const match = existing.find((a) => a.id === id) 
                || (id === value.id ? { ...value } : null);
 

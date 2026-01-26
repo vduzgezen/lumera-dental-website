@@ -1,4 +1,4 @@
-// components/SearchableSelect.tsx
+// portal/components/SearchableSelect.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -10,7 +10,7 @@ type Props = {
   options: Option[];
   value: string;
   onChange: (val: string) => void;
-  onSearch?: (term: string) => void; // NEW: Callback for server-side search
+  onSearch?: (term: string) => void;
   placeholder?: string;
   disabled?: boolean;
 };
@@ -33,17 +33,28 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Handle Search Input
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setSearch(val);
     if (onSearch) {
-      onSearch(val); // Trigger server search
+      onSearch(val);
     }
   };
 
-  // Filter Logic: If onSearch is provided, we assume parent handles filtering (server-side).
-  // Otherwise, we filter locally.
+  const handleToggle = () => {
+    if (disabled) return;
+    
+    const nextState = !isOpen;
+    setIsOpen(nextState);
+    
+    if (nextState) {
+        // ✅ FIX: Reset search when opening
+        setSearch(""); 
+        // ✅ CRITICAL FIX: Tell parent to reset server-side search too
+        if (onSearch) onSearch(""); 
+    }
+  };
+
   const displayedOptions = onSearch 
     ? options 
     : options.filter((o) =>
@@ -59,14 +70,7 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
       <button
         type="button"
         disabled={disabled}
-        onClick={() => {
-          if (!disabled) {
-            setIsOpen(!isOpen);
-            // Don't clear search immediately so they can keep typing if they re-open? 
-            // Standard behavior usually clears or selects text. Let's clear for now.
-            if (!isOpen) setSearch(""); 
-          }
-        }}
+        onClick={handleToggle}
         className={`
           w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-left flex items-center justify-between transition
           ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-white/30 focus:border-blue-500/50"}

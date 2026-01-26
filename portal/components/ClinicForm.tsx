@@ -41,17 +41,28 @@ export default function ClinicForm({ initialData, onClose }: { initialData?: any
     }
   }
 
-  // Helper to update form fields
+  // ✅ PREVENT ENTER SUBMISSION
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
+      e.preventDefault();
+    }
+  };
+
   const set = (field: string, val: any) => setForm((prev: any) => ({ ...prev, [field]: val }));
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      {/* FIX: Changed bg-[#1e1e1e] to bg-[#111b2d] (Midnight Surface) */}
-      <div className="w-full max-w-2xl bg-[#111b2d] border border-white/10 rounded-xl p-6 max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl">
-        <h2 className="text-xl font-semibold mb-6 text-white">{initialData ? "Edit Clinic" : "New Clinic"}</h2>
-        <form onSubmit={save} className="space-y-6">
+      {/* Layout Container: Flex column to manage scrolling vs fixed footer */}
+      <div className="w-full max-w-2xl bg-[#111b2d] border border-white/10 rounded-xl shadow-2xl flex flex-col max-h-[90vh]">
+        
+        {/* Header */}
+        <div className="p-6 border-b border-white/10 shrink-0">
+           <h2 className="text-xl font-semibold text-white">{initialData ? "Edit Clinic" : "New Clinic"}</h2>
+        </div>
+
+        {/* Scrollable Body */}
+        <form onSubmit={save} onKeyDown={handleKeyDown} className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6">
           
-          {/* 1. Details */}
           <div className="space-y-4">
             <h3 className="text-xs font-bold text-accent uppercase tracking-wider">Details</h3>
             <div className="grid grid-cols-2 gap-4">
@@ -62,10 +73,8 @@ export default function ClinicForm({ initialData, onClose }: { initialData?: any
             </div>
           </div>
 
-          {/* 2. Address (New Picker) */}
           <AddressPicker value={address} onChange={setAddress} />
 
-          {/* 3. Financials */}
           <div className="space-y-4 pt-2 border-t border-white/5">
             <h3 className="text-xs font-bold text-accent uppercase tracking-wider">Billing & Financials</h3>
             <div className="grid grid-cols-3 gap-4">
@@ -80,14 +89,13 @@ export default function ClinicForm({ initialData, onClose }: { initialData?: any
                  value={form.paymentTerms} onChange={e => set("paymentTerms", e.target.value)} />
             </div>
             
-            {/* Banking */}
             <div className="grid grid-cols-2 gap-4">
                <input placeholder="Bank Name" className="p-2 bg-black/30 border border-white/10 rounded text-white focus:border-accent/50 outline-none" 
                  value={form.bankName || ""} onChange={e => set("bankName", e.target.value)} />
                <input placeholder="Tax ID" className="p-2 bg-black/30 border border-white/10 rounded text-white focus:border-accent/50 outline-none" 
                  value={form.taxId || ""} onChange={e => set("taxId", e.target.value)} />
             </div>
-          
+           
             <div className="grid grid-cols-2 gap-4">
                <input placeholder="Routing Number" className="p-2 bg-black/30 border border-white/10 rounded text-white focus:border-accent/50 outline-none" 
                  value={form.routingNumber || ""} onChange={e => set("routingNumber", e.target.value)} />
@@ -95,14 +103,15 @@ export default function ClinicForm({ initialData, onClose }: { initialData?: any
                  value={form.bankLast4 || ""} onChange={e => set("bankLast4", e.target.value)} />
             </div>
           </div>
+        </form>
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-white/10">
+        {/* Footer */}
+        <div className="p-4 border-t border-white/10 bg-[#111b2d] flex justify-end gap-3 rounded-b-xl shrink-0">
             <button type="button" onClick={onClose} className="px-4 py-2 text-white/60 hover:text-white">Cancel</button>
-            <button type="submit" disabled={busy} className="px-6 py-2 bg-accent text-background font-bold rounded hover:bg-white transition">
+            <button onClick={save} disabled={busy} className="px-6 py-2 bg-accent text-background font-bold rounded hover:bg-white transition">
               {busy ? "Saving..." : "Save Clinic"}
             </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );
