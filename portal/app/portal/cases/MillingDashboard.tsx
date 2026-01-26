@@ -1,207 +1,219 @@
-// app/portal/cases/MillingDashboard.tsx
+// portal/app/portal/cases/MillingDashboard.tsx
 "use client";
-import { useState } from "react";
-import CopyableId from "@/components/CopyableId";
 
-type MillingCase = {
+import { useState, useMemo } from "react";
+
+// ✅ Type Definition (Localized to prevent circular dependency)
+export interface CaseRow {
   id: string;
   patientAlias: string;
   toothCodes: string;
   status: string;
-  dueDate: Date | string | null;
+  dueDate: Date | null;
+  updatedAt: Date;
+  createdAt: Date;
+  doctorName: string | null;
+  clinic: { name: string };
+  // New Fields
   product: string;
-  shade: string | null;
-};
-
-// FIX: Helper to distinguish status colors
-function getStatusColor(s: string) {
-  if (s === "APPROVED") return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"; // Green = Ready
-  if (s === "IN_MILLING") return "bg-purple-500/10 text-purple-400 border-purple-500/20"; // Purple = Active
-  return "bg-white/5 text-white/50 border-white/10";
+  material: string | null;
+  serviceLevel: string | null;
+  doctorUser: {
+    name: string | null;
+    address: {
+      zipCode: string | null;
+      city: string | null;
+      state: string | null;
+    } | null;
+  } | null;
 }
 
-export default function MillingDashboard({ cases }: { cases: MillingCase[] }) {
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [shippingMode, setShippingMode] = useState(false);
-  const [tracking, setTracking] = useState("");
-  const [carrier, setCarrier] = useState("UPS");
-  const [busy, setBusy] = useState(false);
+interface MillingDashboardProps {
+  cases: CaseRow[];
+}
 
-  function toggle(id: string) {
-    const next = new Set(selected);
-    if (next.has(id)) next.delete(id);
-    else next.add(id);
-    setSelected(next);
-  }
+export default function MillingDashboard({ cases }: MillingDashboardProps) {
+  // State
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [doctorFilter, setDoctorFilter] = useState("ALL");
+  const [zipFilter, setZipFilter] = useState("ALL");
 
-  function toggleAll() {
-    if (selected.size === cases.length) setSelected(new Set());
-    else setSelected(new Set(cases.map((c) => c.id)));
-  }
+  // Helper: Format Date
+  const fmtDate = (d?: Date | null) => {
+    if (!d) return "—";
+    return new Date(d).toLocaleDateString();
+  };
 
-  async function handleDownload() {
-    if (selected.size === 0) return;
-    setBusy(true);
-    try {
-      const res = await fetch("/api/cases/batch/download", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: Array.from(selected) }),
-      });
-      if (!res.ok) throw new Error("Download failed");
-      
-      // Trigger download blob
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `milling_batch_${new Date().toISOString().slice(0, 10)}.zip`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+  // --- DYNAMIC FILTERS ---
+  const uniqueDoctors = useMemo(() => {
+    const doctors = new Set(
+      cases
+        .map(c => c.doctorUser?.name || c.doctorName)
+        .filter((name): name is string => !!name)
+    );
+    return Array.from(doctors).sort();
+  }, [cases]);
 
-      // FIX: Reload to show status update (Approved -> In Milling)
-      window.location.reload();
-    } catch (e) {
-      alert("Download failed. See console.");
-      console.error(e);
-    } finally {
-      setBusy(false);
+  const uniqueZips = useMemo(() => {
+    const zips = new Set(
+      cases
+        .map(c => c.doctorUser?.address?.zipCode)
+        .filter((zip): zip is string => !!zip)
+    );
+    return Array.from(zips).sort();
+  }, [cases]);
+
+  // --- FILTERING ---
+  const filteredCases = cases.filter(c => {
+    if (statusFilter !== "ALL") {
+       if (statusFilter === "ALLOWED" && c.status !== "APPROVED") return false;
+       if (statusFilter === "IN_MILLING" && c.status !== "IN_MILLING") return false;
     }
-  }
-
-  async function handleShip() {
-    if (selected.size === 0) return;
-    if (!tracking.trim()) {
-        alert("Please enter a tracking number.");
-        return;
+    if (doctorFilter !== "ALL") {
+      const docName = c.doctorUser?.name || c.doctorName;
+      if (docName !== doctorFilter) return false;
     }
-    setBusy(true);
-    try {
-        const res = await fetch("/api/cases/batch/ship", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-                ids: Array.from(selected),
-                tracking,
-                carrier
-            }),
-        });
-        if (res.ok) {
-            window.location.reload();
-        } else {
-            throw new Error("Ship failed");
-        }
-    } catch(e) {
-        alert("Failed to update status.");
-        setBusy(false);
+    if (zipFilter !== "ALL") {
+      const zip = c.doctorUser?.address?.zipCode;
+      if (zip !== zipFilter) return false;
     }
-  }
+    return true;
+  });
 
   return (
-    <section className="h-screen w-full flex flex-col p-6 overflow-hidden bg-background">
-      <div className="flex-none mb-6 flex items-center justify-between">
-        <div>
-            <h1 className="text-2xl font-semibold text-white">Milling Center</h1>
-            <p className="text-white/50 text-sm">Active cases ready for production.</p>
-        </div>
-        <div className="flex items-center gap-3">
-            <span className="text-sm text-white/40">{selected.size} selected</span>
+    <section className="flex flex-col h-full w-full p-6 overflow-hidden">
+      
+      {/* HEADER & FILTERS */}
+      <div className="flex-none space-y-4 mb-4">
+        <header className="flex items-center justify-between">
+          <div className="flex items-baseline gap-3">
+             <h1 className="text-2xl font-semibold text-white">Milling Dashboard</h1>
+             <span className="text-sm text-white/40">Queue: {filteredCases.length}</span>
+          </div>
+        </header>
+
+        {/* Filter Bar - Matches CasesPage Aesthetics */}
+        <div className="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
+          <select 
+            className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-blue-500 transition-colors"
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="ALLOWED">Allowed (Ready)</option>
+            <option value="IN_MILLING">In Milling</option>
+          </select>
+
+          <select 
+            className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-blue-500 transition-colors"
+            value={doctorFilter}
+            onChange={(e) => setDoctorFilter(e.target.value)}
+          >
+            <option value="ALL">All Doctors</option>
+            {uniqueDoctors.map((d) => (
+              <option key={d} value={d}>{d}</option>
+            ))}
+          </select>
+
+          <select 
+            className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-blue-500 transition-colors"
+            value={zipFilter}
+            onChange={(e) => setZipFilter(e.target.value)}
+          >
+            <option value="ALL">All Zip Codes</option>
+            {uniqueZips.map((z) => (
+              <option key={z} value={z}>{z}</option>
+            ))}
+          </select>
+
+          {(statusFilter !== "ALL" || doctorFilter !== "ALL" || zipFilter !== "ALL") && (
             <button 
-                onClick={handleDownload}
-                disabled={selected.size === 0 || busy}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-medium disabled:opacity-50 transition"
+              onClick={() => { setStatusFilter("ALL"); setDoctorFilter("ALL"); setZipFilter("ALL"); }}
+              className="px-3 py-1.5 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition"
             >
-                {busy ? "Processing..." : "Download Files (ZIP)"}
+              Clear
             </button>
-            <button 
-                onClick={() => setShippingMode(true)}
-                disabled={selected.size === 0 || busy}
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-black rounded-lg font-bold disabled:opacity-50 transition"
-            >
-                Ship Selected
-            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col">
+      {/* TABLE CONTAINER - Exact match to CasesPage layout */}
+      <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <table className="w-full text-sm text-left border-collapse">
-                <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
-                    <tr>
-                        <th className="p-4 w-10">
-                            <input type="checkbox" checked={selected.size > 0 && selected.size === cases.length} onChange={toggleAll} 
-                                className="rounded border-white/30 bg-black/50" />
-                        </th>
-                        <th className="p-4 font-medium">Case ID</th>
-                        <th className="p-4 font-medium">Patient</th>
-                        <th className="p-4 font-medium">Tooth</th>
-                        <th className="p-4 font-medium">Product</th>
-                        <th className="p-4 font-medium">Shade</th>
-                        <th className="p-4 font-medium">Status</th>
-                        <th className="p-4 font-medium">Due</th>
-                    </tr>
-                </thead>
-                <tbody className="divide-y divide-white/5">
-                    {cases.map(c => (
-                        <tr key={c.id} className={`hover:bg-white/5 transition-colors ${selected.has(c.id) ? "bg-blue-500/10" : ""}`}>
-                            <td className="p-4">
-                                <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} 
-                                    className="rounded border-white/30 bg-black/50" />
-                            </td>
-                            <td className="p-4"><CopyableId id={c.id} truncate /></td>
-                            <td className="p-4 font-medium text-white">{c.patientAlias}</td>
-                            <td className="p-4 text-white/70">{c.toothCodes}</td>
-                            <td className="p-4 text-white/70">{c.product.replace(/_/g, " ")}</td>
-                            <td className="p-4 text-white/70">{c.shade || "-"}</td>
-                            <td className="p-4">
-                                {/* FIX: Use helper function instead of hardcoded purple */}
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border ${getStatusColor(c.status)}`}>
-                                    {c.status.replace(/_/g, " ")}
-                                </span>
-                            </td>
-                            <td className="p-4 text-white/50">{c.dueDate ? new Date(c.dueDate).toLocaleDateString() : "-"}</td>
-                        </tr>
-                    ))}
-                    {cases.length === 0 && (
-                        <tr><td colSpan={8} className="p-12 text-center text-white/40">No cases waiting for milling.</td></tr>
-                    )}
-                </tbody>
-            </table>
+          <table className="w-full text-sm text-left border-collapse">
+            <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
+              <tr>
+                <th className="p-4 font-medium">Case ID</th>
+                <th className="p-4 font-medium">Doctor</th>
+                <th className="p-4 font-medium">Zip Code</th>
+                <th className="p-4 font-medium">Product Details</th>
+                <th className="p-4 font-medium">Status</th>
+                <th className="p-4 font-medium">Due Date</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {filteredCases.map((c) => (
+                <tr key={c.id} className="hover:bg-white/5 transition-colors">
+                  {/* ID (Non-clickable) */}
+                  <td className="p-4 font-mono text-blue-400 select-all">
+                    #{c.id.slice(-6)}
+                  </td>
+                  
+                  {/* Doctor */}
+                  <td className="p-4 font-medium text-white">
+                    {c.doctorUser?.name || c.doctorName || <span className="text-white/30 italic">Unknown</span>}
+                  </td>
+
+                  {/* Zip Code */}
+                  <td className="p-4 text-white/70 font-mono">
+                     {c.doctorUser?.address?.zipCode || <span className="text-white/30">-</span>}
+                  </td>
+
+                  {/* Product */}
+                  <td className="p-4">
+                    <div className="flex flex-col">
+                      <span className="text-white font-medium">{c.product}</span>
+                      <span className="text-xs text-white/50">
+                        {c.material ? `${c.material} • ` : ""}
+                        {c.serviceLevel?.replace(/_/g, " ") || "Standard"}
+                      </span>
+                    </div>
+                  </td>
+
+                  {/* Status */}
+                  <td className="p-4">
+                     <span className={`px-2 py-1 rounded text-xs font-semibold tracking-wide border
+                       ${c.status === 'APPROVED' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 
+                         c.status === 'IN_MILLING' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 
+                         'bg-white/5 text-white/50 border-white/10'}`}>
+                       {c.status.replace(/_/g, " ")}
+                     </span>
+                  </td>
+
+                  {/* Date */}
+                  <td className="p-4 text-white/50">
+                     {fmtDate(c.dueDate)}
+                  </td>
+                </tr>
+              ))}
+              
+              {/* Empty State */}
+              {filteredCases.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="p-12 text-center text-white/40">
+                    No cases found.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Footer */}
+        <div className="flex-none p-2 border-t border-white/5 bg-white/[0.02] text-center text-xs text-white/30">
+          Showing {filteredCases.length} production cases.
         </div>
       </div>
-
-      {/* Shipping Modal */}
-      {shippingMode && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-            <div className="bg-[#1e1e1e] border border-white/10 rounded-xl p-6 w-full max-w-md shadow-2xl">
-                <h3 className="text-xl font-semibold text-white mb-4">Ship {selected.size} Cases</h3>
-                <div className="space-y-4">
-                    <div>
-                        <label className="text-xs font-medium text-white/60 uppercase">Carrier</label>
-                        <select value={carrier} onChange={e => setCarrier(e.target.value)}
-                            className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white">
-                            <option value="UPS">UPS</option>
-                            <option value="FedEx">FedEx</option>
-                            <option value="USPS">USPS</option>
-                            <option value="DHL">DHL</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label className="text-xs font-medium text-white/60 uppercase">Tracking Number</label>
-                        <input value={tracking} onChange={e => setTracking(e.target.value)} placeholder="1Z..."
-                            className="w-full mt-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white focus:border-accent/50 outline-none" />
-                    </div>
-                </div>
-                <div className="flex justify-end gap-3 mt-6">
-                    <button onClick={() => { setShippingMode(false); setTracking(""); }} className="px-4 py-2 text-white/60 hover:text-white">Cancel</button>
-                    <button onClick={handleShip} disabled={busy} className="px-6 py-2 bg-emerald-500 text-black font-bold rounded-lg hover:bg-emerald-400">
-                        {busy ? "Updating..." : "Confirm Shipment"}
-                    </button>
-                </div>
-            </div>
-        </div>
-      )}
     </section>
   );
 }

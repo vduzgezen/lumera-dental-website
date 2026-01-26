@@ -35,34 +35,34 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
   }
 
   return (
-    // FIX: Changed 'h-full' to 'flex-1 min-h-0' so it shares space with the footer in page.tsx
+    // Standard layout matching Cases Dashboard
     <div className="flex-1 min-h-0 flex flex-col space-y-4">
       {/* Header */}
       <div className="flex-none flex items-center justify-between">
          <div className="flex items-center gap-4">
-            <h1 className="text-xl font-semibold text-white hidden sm:block">Admin</h1>
+            <h1 className="text-2xl font-semibold text-white hidden sm:block">Admin</h1>
             <div className="h-6 w-px bg-white/10 hidden sm:block" />
             <AdminTabs />
          </div>
         
         <button 
           onClick={() => setIsCreating(true)} 
-          className="px-4 py-2 bg-white text-black text-sm font-bold rounded-lg hover:bg-gray-200 transition shadow-lg shadow-white/5"
+          className="px-3 py-1.5 rounded-lg bg-white text-black text-sm hover:bg-gray-200 transition font-medium"
         >
-          + Add User
+          + New User
         </button>
       </div>
 
-      {/* Table Container */}
-      <div className="flex-1 min-h-0 overflow-hidden rounded-xl border border-white/10 bg-[#111b2d] shadow-2xl flex flex-col">
+      {/* Table Container - Matches Cases Aesthetics Exactly */}
+      <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left text-sm min-w-[600px]">
-            <thead className="bg-[#0a1020] text-white/50 sticky top-0 backdrop-blur-md z-10 border-b border-white/5">
+            <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
               <tr>
                 <th className="p-4 font-medium">Name</th>
                 <th className="p-4 font-medium">Email</th>
                 <th className="p-4 font-medium">Role</th>
-                <th className="p-4 font-medium">Clinic</th>
+                <th className="p-4 font-medium">Primary Clinic</th>
                 <th className="p-4 font-medium text-right">Action</th>
               </tr>
             </thead>
@@ -72,20 +72,27 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
                   <td className="p-4 font-medium text-white">{u.name || "—"}</td>
                   <td className="p-4 text-white/60">{u.email}</td>
                   <td className="p-4">
-                    <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold tracking-wider ${
-                      u.role === "admin" ? "bg-red-500/20 text-red-300" :
-                      u.role === "lab" ? "bg-blue-500/20 text-blue-300" :
-                      u.role === "milling" ? "bg-yellow-500/20 text-yellow-300" :
-                      "bg-emerald-500/20 text-emerald-300"
+                    <span className={`px-2 py-1 rounded text-xs font-semibold tracking-wide border ${
+                      u.role === "admin" ? "bg-red-500/10 text-red-400 border-red-500/20" :
+                      u.role === "lab" ? "bg-blue-500/10 text-blue-400 border-blue-500/20" :
+                      u.role === "milling" ? "bg-purple-500/10 text-purple-400 border-purple-500/20" :
+                      "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
                     }`}>
-                      {u.role}
+                      {u.role.toUpperCase()}
                     </span>
                   </td>
-                  <td className="p-4 text-white/60">{u.clinic?.name || "—"}</td>
+                  <td className="p-4 text-white/60">
+                    {u.clinic?.name || <span className="text-white/20 italic">None</span>}
+                    {u.secondaryClinics && u.secondaryClinics.length > 0 && (
+                        <span className="ml-2 text-[10px] text-white/40 border border-white/10 px-1 rounded">
+                            +{u.secondaryClinics.length} more
+                        </span>
+                    )}
+                  </td>
                   <td className="p-4 text-right">
                     <div className="flex justify-end gap-3 opacity-60 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => setEditingUser(u)} className="text-accent hover:text-white transition-colors">Edit</button>
-                      <button onClick={() => requestDelete(u.id)} className="text-red-400 hover:text-red-300 transition-colors">Delete</button>
+                      <button onClick={() => setEditingUser(u)} className="text-accent hover:text-white transition-colors font-medium">Edit</button>
+                      <button onClick={() => requestDelete(u.id)} className="text-red-400 hover:text-red-300 transition-colors font-medium">Delete</button>
                     </div>
                   </td>
                 </tr>
