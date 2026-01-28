@@ -23,12 +23,19 @@ const FileInput = ({
   onChange: (f: File | null) => void 
 }) => (
   <div className="space-y-1">
-    <div className="flex justify-between items-baseline">
-      <label className="text-xs font-medium text-white/70 uppercase tracking-wider">
+    <div className="flex justify-between items-end gap-2 overflow-hidden">
+      <label className="text-xs font-medium text-white/70 uppercase tracking-wider shrink-0">
         {label} {req && <span className="text-blue-400">*</span>}
       </label>
-      {file && <span className="text-[10px] text-emerald-400 font-mono">✓ {file.name.slice(0, 20)}...</span>}
+      
+      {/* ✅ FIX: CSS Truncation ensures this never breaks layout */}
+      {file && (
+        <span className="text-[10px] text-emerald-400 font-mono truncate min-w-0" title={file.name}>
+          ✓ {file.name}
+        </span>
+      )}
     </div>
+    
     <div className="relative group">
       <input
           type="file"
@@ -84,7 +91,7 @@ export default function ProductionFiles({ data, update }: ProductionFilesProps) 
                 <FileInput 
                   label="Construction Info" 
                   file={data.constructionInfo} 
-                  accept=".pdf,.xml,.txt" 
+                  accept=".pdf,.xml,.txt,.constructionInfo" 
                   onChange={(f) => update({ constructionInfo: f })} 
                 />
                 <FileInput 

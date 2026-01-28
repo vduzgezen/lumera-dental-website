@@ -8,20 +8,17 @@ import CaseViewerTabs from "@/components/CaseViewerTabs";
 import { CaseFile } from "@prisma/client";
 import CopyableId from "@/components/CopyableId";
 import CaseDetailSidebar from "@/components/CaseDetailSidebar";
+import AutoRefresh from "@/components/AutoRefresh"; // ✅ Import
 
 export const dynamic = "force-dynamic";
-type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
 
+type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
 type Params = Promise<{ id: string }>;
 
-function normalizeSlot(
-  label: string | null,
-): "scan" | "design_with_model" | "design_only" | null {
+function normalizeSlot(label: string | null): "scan" | "design_with_model" | "design_only" | null {
   const lower = String(label ?? "").toLowerCase();
   if (lower === "scan") return "scan";
-  if (lower === "design_with_model" || lower === "model_plus_design") {
-    return "design_with_model";
-  }
+  if (lower === "design_with_model" || lower === "model_plus_design") return "design_with_model";
   if (lower === "design_only") return "design_only";
   return null;
 }
@@ -32,16 +29,11 @@ function is3DUrl(url: string | null | undefined): boolean {
   return u.endsWith(".stl") || u.endsWith(".ply") || u.endsWith(".obj");
 }
 
-export default async function CaseDetailPage({
-  params,
-}: {
-  params: Params;
-}) {
+export default async function CaseDetailPage({ params }: { params: Params }) {
   const { id } = await params;
   const session = await getSession();
   if (!session) return notFound();
 
-  // Fetch the case + assignee info
   const item = await prisma.dentalCase.findUnique({
     where: { id },
     include: {
@@ -61,7 +53,6 @@ export default async function CaseDetailPage({
     return notFound();
   }
 
-  // Fetch Authors for Comments
   const authorIds = Array.from(new Set(item.comments.map(c => c.authorId)));
   const authors = await prisma.user.findMany({
     where: { id: { in: authorIds } },
@@ -129,10 +120,11 @@ export default async function CaseDetailPage({
     "text-white";
 
   return (
-    // FIX: 'h-full' instead of 'h-screen' to fit inside the layout without scrolling the window
-    // FIX: Reduced padding to p-4 for a tighter fit
     <section className="h-full w-full flex flex-col p-4 overflow-hidden">
       
+      {/* ✅ Auto-Refresh every 60s */}
+      <AutoRefresh intervalMs={60000} />
+
       {/* Header Section */}
       <div className="flex-none space-y-3 mb-2">
         <CaseProcessBar
@@ -169,17 +161,13 @@ export default async function CaseDetailPage({
             </div>
           </div>
           
-          {/* FIX: Shortened Text */}
           <Link href="/portal/cases" className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-xs font-medium text-white/80">
             ← Cases
           </Link>
         </div>
       </div>
 
-      {/* Main Content: Flex-1 to fill remaining height */}
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4">
-        
-        {/* Sidebar (Chat/Files) */}
         <div className="flex-none w-full lg:w-[350px] xl:w-[400px] h-full min-h-0">
           <CaseDetailSidebar 
             caseId={item.id}
@@ -194,7 +182,6 @@ export default async function CaseDetailPage({
           />
         </div>
 
-        {/* Viewer (3D/HTML) */}
         <div className="flex-1 h-full min-h-0">
           <CaseViewerTabs
             caseId={item.id}

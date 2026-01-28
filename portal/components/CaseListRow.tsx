@@ -7,10 +7,13 @@ import CopyableId from "@/components/CopyableId";
 type CaseRowData = {
   id: string;
   patientAlias: string;
+  patientFirstName: string | null;
+  patientLastName: string | null;
   toothCodes: string;
   status: string;
   dueDate: Date | null;
   updatedAt: Date;
+  createdAt: Date; 
   doctorName: string | null;
   clinic: { name: string };
   assigneeUser: { name: string | null; email: string } | null;
@@ -30,9 +33,9 @@ function getInitials(name: string | null, email: string) {
   return email.slice(0, 2).toUpperCase();
 }
 
-// Updated props definition to include 'role'
 export default function CaseListRow({ data, role }: { data: CaseRowData, role: string }) {
   const router = useRouter();
+  
   const handleRowClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("button, a")) return;
     router.push(`/portal/cases/${data.id}`);
@@ -60,15 +63,24 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
         {data.patientAlias}
       </td>
       <td className="p-3 text-white/70">{data.clinic.name}</td>
-      <td className="p-3 text-white/70">{data.doctorName ?? "—"}</td>
       
-      {/* CONDITIONAL RENDER: Must match the header logic in page.tsx */}
+      {/* ✅ CONDITIONAL COLUMN: Patient Name for Customers, Doctor Name for others */}
+      {role === "customer" ? (
+        <td className="p-3 text-white/90">
+            {data.patientLastName && data.patientFirstName 
+                ? `${data.patientLastName}, ${data.patientFirstName}` 
+                : <span className="text-white/30 italic">No name</span>}
+        </td>
+      ) : (
+        <td className="p-3 text-white/70">{data.doctorName ?? "—"}</td>
+      )}
+      
       {role !== "customer" && (
         <td className="p-3">
             {data.assigneeUser ? (
             <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center text-[10px] font-bold border border-blue-500/30">
-                {getInitials(data.assigneeUser.name, data.assigneeUser.email)}
+                 {getInitials(data.assigneeUser.name, data.assigneeUser.email)}
                 </div>
                 <span className="text-white/70 text-xs truncate max-w-[100px]">
                 {data.assigneeUser.name || data.assigneeUser.email.split("@")[0]}
@@ -91,7 +103,7 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
         </span>
       </td>
       <td className="p-3 text-white/70">{fmtDate(data.dueDate)}</td>
-      <td className="p-3 text-white/50">{fmtDate(data.updatedAt)}</td>
+      <td className="p-3 text-white/50">{fmtDate(data.createdAt)}</td> 
     </tr>
   );
 }

@@ -1,0 +1,170 @@
+// portal/app/portal/cases/milling/MillingTable.tsx
+"use client";
+
+import { CaseRow } from "../page";
+
+type SortConfig = {
+  key: string | null;
+  direction: "asc" | "desc" | null;
+};
+
+interface Props {
+  cases: CaseRow[];
+  selectedIds: Set<string>;
+  sortConfig: SortConfig;
+  onSort: (key: string) => void;
+  onSelect: (id: string) => void;
+  onSelectAll: () => void;
+}
+
+const fmtDate = (d?: Date | string | null) => {
+  if (!d) return "—";
+  return new Date(d).toLocaleDateString();
+};
+
+// ✅ FIX: Component defined OUTSIDE
+const SortableHeader = ({ 
+  label, 
+  colKey, 
+  align = "left",
+  sortConfig, 
+  onSort 
+}: { 
+  label: string, 
+  colKey: string, 
+  align?: string,
+  sortConfig: SortConfig, 
+  onSort: (k: string) => void 
+}) => {
+  const isActive = sortConfig.key === colKey;
+  return (
+    <th 
+      className={`
+        p-4 font-medium cursor-pointer transition-colors select-none text-${align} group border-b-2 outline-none
+        ${isActive 
+          ? "text-white border-accent" 
+          : "text-white/70 border-transparent hover:text-white hover:bg-white/5"
+        }
+      `}
+      onClick={() => onSort(colKey)}
+    >
+      <div className={`flex items-center ${align === "right" ? "justify-end" : ""}`}>
+        {label}
+        {isActive && (
+          <span className="text-accent ml-2 text-xs">
+            {sortConfig.direction === "asc" ? "▲" : "▼"}
+          </span>
+        )}
+      </div>
+    </th>
+  );
+};
+
+export default function MillingTable({ 
+  cases, 
+  selectedIds, 
+  sortConfig, 
+  onSort, 
+  onSelect, 
+  onSelectAll 
+}: Props) {
+  const allSelected = cases.length > 0 && selectedIds.size === cases.length;
+
+  return (
+    <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
+      <div className="flex-1 overflow-y-auto custom-scrollbar">
+        <table className="w-full text-sm text-left border-collapse">
+          <thead className="bg-black/60 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
+            <tr>
+              <th className="p-4 w-10 border-b-2 border-transparent">
+                <input
+                  type="checkbox"
+                  onChange={onSelectAll}
+                  checked={allSelected}
+                  className="accent-blue-500"
+                />
+              </th>
+              
+              <SortableHeader label="Case ID" colKey="id" sortConfig={sortConfig} onSort={onSort} />
+              <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={onSort} />
+              <SortableHeader label="Zip Code" colKey="zip" sortConfig={sortConfig} onSort={onSort} />
+              <SortableHeader label="Product Details" colKey="product" sortConfig={sortConfig} onSort={onSort} />
+              <SortableHeader label="Status" colKey="status" sortConfig={sortConfig} onSort={onSort} />
+              <SortableHeader label="Date Approved" colKey="approved" sortConfig={sortConfig} onSort={onSort} />
+              <SortableHeader label="Due Date" colKey="due" sortConfig={sortConfig} onSort={onSort} />
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {cases.map((c) => (
+              <tr
+                key={c.id}
+                className={`hover:bg-white/5 transition-colors ${selectedIds.has(c.id) ? "bg-white/5" : ""}`}
+              >
+                <td className="p-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(c.id)}
+                    onChange={() => onSelect(c.id)}
+                    className="accent-blue-500"
+                  />
+                </td>
+
+                <td className="p-4 font-mono text-blue-400 select-all">#{c.id.slice(-6)}</td>
+
+                <td className="p-4 font-medium text-white">
+                  {c.doctorUser?.name || c.doctorName || <span className="text-white/30 italic">Unknown</span>}
+                </td>
+
+                <td className="p-4 text-white/70 font-mono">
+                  {c.doctorUser?.address?.zipCode || <span className="text-white/30">-</span>}
+                </td>
+
+                <td className="p-4">
+                  <div className="flex flex-col">
+                    <span className="text-white font-medium">{c.product}</span>
+                    <span className="text-xs text-white/50">
+                      {c.material ? `${c.material} • ` : ""}
+                      {c.serviceLevel?.replace(/_/g, " ") || "Standard"}
+                    </span>
+                  </div>
+                </td>
+
+                <td className="p-4">
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-semibold tracking-wide border
+                       ${
+                         c.status === "APPROVED"
+                           ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                           : c.status === "IN_MILLING"
+                           ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                           : c.status === "SHIPPED"
+                           ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
+                           : "bg-white/5 text-white/50 border-white/10"
+                       }`}
+                  >
+                    {c.status.replace(/_/g, " ")}
+                  </span>
+                </td>
+
+                <td className="p-4 text-white/50">{fmtDate(c.updatedAt)}</td>
+                <td className="p-4 text-white/50">{fmtDate(c.dueDate)}</td>
+              </tr>
+            ))}
+
+            {cases.length === 0 && (
+              <tr>
+                <td colSpan={8} className="p-12 text-center text-white/40">
+                  No cases found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex-none p-2 border-t border-white/5 bg-white/[0.02] text-center text-xs text-white/30">
+        Showing {cases.length} production cases.
+      </div>
+    </div>
+  );
+}

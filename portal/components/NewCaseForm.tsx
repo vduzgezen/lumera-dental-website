@@ -81,6 +81,8 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     try {
       const fd = new FormData();
       fd.append("patientAlias", data.patientAlias);
+      fd.append("patientFirstName", data.patientFirstName); // ✅ Ensure this is here
+      fd.append("patientLastName", data.patientLastName);
       fd.append("doctorUserId", data.doctorUserId);
       fd.append("clinicId", data.clinicId); // ✅ Send Clinic ID
       fd.append("toothCodes", data.toothCodes.join(",")); 

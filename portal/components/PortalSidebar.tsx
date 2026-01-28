@@ -3,9 +3,8 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Logo from "./Logo";
-
 // Icons
 import { 
   LayoutDashboard, 
@@ -14,20 +13,36 @@ import {
   LogOut,
   ChevronRight,
   ChevronLeft,
-  ShieldCheck // New Icon for unified Admin
+  ShieldCheck 
 } from "lucide-react";
 
 export default function PortalSidebar({ userRole }: { userRole: string }) {
   const pathname = usePathname();
+  
+  // Initialize with a function to avoid hydration mismatch, or handle in useEffect
+  // We start 'true' to match server render, then sync with local storage
   const [expanded, setExpanded] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // FIX: Reduced to 4 key icons (Dashboard, New Case, Billing, Admin)
+  // ✅ FIX: Load preference on mount
+  useEffect(() => {
+    const saved = window.localStorage.getItem("lumera_sidebar");
+    if (saved !== null) {
+      setExpanded(saved === "true");
+    }
+  }, []);
+
+  // ✅ FIX: Save preference on toggle
+  const toggleSidebar = () => {
+    const next = !expanded;
+    setExpanded(next);
+    window.localStorage.setItem("lumera_sidebar", String(next));
+  };
+
   const navItems = [
     { label: "Dashboard", href: "/portal/cases", icon: LayoutDashboard, roles: ["customer", "lab", "admin", "milling"] },
     { label: "New Case", href: "/portal/cases/new", icon: FolderOpen, roles: ["lab", "admin"] },
     { label: "Billing", href: "/portal/billing", icon: CreditCard, roles: ["customer", "admin"] },
-    // Unified Admin Link
     { label: "Admin", href: "/portal/admin/users", icon: ShieldCheck, roles: ["admin"] },
   ];
 
@@ -62,7 +77,6 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto custom-scrollbar flex flex-col items-center">
         {filteredNav.map((item) => {
-          // Highlight "Admin" if we are on ANY /portal/admin route
           const isActive = item.label === "Admin" 
             ? pathname.startsWith("/portal/admin")
             : pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -133,7 +147,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
         </button>
 
         <button
-          onClick={() => setExpanded(!expanded)}
+          onClick={toggleSidebar}
           className="mt-2 w-full flex justify-center py-2 text-white/20 hover:text-accent transition-colors"
         >
           {expanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}

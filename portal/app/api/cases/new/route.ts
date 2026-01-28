@@ -6,13 +6,17 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { z } from "zod";
 
-const MAX_FILE_BYTES = 500 * 1024 * 1024; // 500MB
+const MAX_FILE_BYTES = 500 * 1024 * 1024; 
 
-// --- ZOD SCHEMA ---
+// --- 1. UPDATE ZOD SCHEMA ---
 const CreateCaseSchema = z.object({
+  // ✅ NEW: Add name fields here
+  patientFirstName: z.string().min(1, "First Name is required"),
+  patientLastName: z.string().min(1, "Last Name is required"),
+  
   patientAlias: z.string().min(1, "Patient Alias is required"),
   doctorUserId: z.string().min(1, "Doctor is required"),
-  clinicId: z.string().min(1, "Clinic is required"), // ✅ Required
+  clinicId: z.string().min(1, "Clinic is required"),
   toothCodes: z.string().min(1, "Tooth selection is required"),
   
   orderDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid Order Date"),
@@ -32,6 +36,7 @@ const CreateCaseSchema = z.object({
   modelBottom: z.instanceof(File).optional(),
 });
 
+// ... (Keep existing helpers: addDays, sanitizeFileName, saveCaseFile, getUniqueAlias, calculateEstimate) ...
 function addDays(d: string | Date, n: number) {
   const x = new Date(d);
   x.setDate(x.getDate() + n);
@@ -118,9 +123,13 @@ export async function POST(req: Request) {
     };
 
     const rawData = {
+      // ✅ NEW: Extract names from form
+      patientFirstName: form.get("patientFirstName"),
+      patientLastName: form.get("patientLastName"),
+      
       patientAlias: form.get("patientAlias"),
       doctorUserId: form.get("doctorUserId"),
-      clinicId: form.get("clinicId"), // ✅ Validated
+      clinicId: form.get("clinicId"),
       toothCodes: form.get("toothCodes"),
       orderDate: form.get("orderDate"),
       dueDate: form.get("dueDate"),
@@ -169,10 +178,15 @@ export async function POST(req: Request) {
 
     const created = await prisma.dentalCase.create({
       data: {
-        clinicId: clinic.id, // ✅ Using the validated Clinic ID
+        clinicId: clinic.id,
         doctorUserId: doctor.id,
         assigneeId: session.userId, 
+        
+        // ✅ NEW: Save Names (Now available in data because of Zod schema)
+        patientFirstName: data.patientFirstName,
+        patientLastName: data.patientLastName,
         patientAlias: uniqueAlias,
+        
         doctorName: doctor.name ?? null,
         toothCodes: data.toothCodes,
         orderDate: new Date(data.orderDate),

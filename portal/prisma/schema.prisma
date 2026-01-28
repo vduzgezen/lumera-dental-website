@@ -121,6 +121,8 @@ model DentalCase {
   assigneeUser   User?    @relation("WorkingCases", fields: [assigneeId], references: [id])
 
   patientAlias   String
+  patientFirstName String? 
+  patientLastName  String?
   doctorName     String?
   toothCodes     String
 
