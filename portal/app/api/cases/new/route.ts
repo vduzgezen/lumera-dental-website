@@ -2,18 +2,15 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import path from "node:path";
-import fs from "node:fs/promises";
 import { z } from "zod";
+import { uploadFile } from "@/lib/storage"; 
 
 const MAX_FILE_BYTES = 500 * 1024 * 1024; 
 
-// --- 1. UPDATE ZOD SCHEMA ---
+// --- ZOD SCHEMA ---
 const CreateCaseSchema = z.object({
-  // ✅ NEW: Add name fields here
   patientFirstName: z.string().min(1, "First Name is required"),
   patientLastName: z.string().min(1, "Last Name is required"),
-  
   patientAlias: z.string().min(1, "Patient Alias is required"),
   doctorUserId: z.string().min(1, "Doctor is required"),
   clinicId: z.string().min(1, "Clinic is required"),
@@ -36,7 +33,6 @@ const CreateCaseSchema = z.object({
   modelBottom: z.instanceof(File).optional(),
 });
 
-// ... (Keep existing helpers: addDays, sanitizeFileName, saveCaseFile, getUniqueAlias, calculateEstimate) ...
 function addDays(d: string | Date, n: number) {
   const x = new Date(d);
   x.setDate(x.getDate() + n);
@@ -44,48 +40,46 @@ function addDays(d: string | Date, n: number) {
   return x;
 }
 
-function sanitizeFileName(original: string, fallbackBase: string): string {
-  const baseName = (original || fallbackBase).replace(/\s+/g, "_");
-  return baseName.replace(/[^a-zA-Z0-9_.-]/g, "");
-}
-
+// ✅ UPDATED: S3-Aware Save Function
 async function saveCaseFile(file: File, caseId: string, label: string) {
-  const uploadsRoot = path.join(process.cwd(), "public", "uploads", caseId);
-  await fs.mkdir(uploadsRoot, { recursive: true });
-
-  const originalName = file.name || `${label}.bin`;
-  const safeName = sanitizeFileName(originalName, label);
   const buf = Buffer.from(await file.arrayBuffer());
-  const fullPath = path.join(uploadsRoot, safeName);
-  await fs.writeFile(fullPath, buf);
+  
+  // Sanitize filename
+  const originalName = file.name || `${label}.bin`;
+  const safeName = originalName.replace(/[^a-zA-Z0-9_.-]/g, "_");
+  
+  // Create a clean path: cases/{id}/{label}_{filename}
+  const key = `cases/${caseId}/${label}_${safeName}`;
 
-  const publicUrl = `/uploads/${caseId}/${safeName}`;
+  // Upload to Cloud
+  await uploadFile(buf, key, file.type);
+
+  // Determine kind
   let kind = "OTHER";
   const lower = safeName.toLowerCase();
   if (lower.endsWith(".stl")) kind = "STL";
   else if (lower.endsWith(".ply")) kind = "PLY";
   else if (lower.endsWith(".obj")) kind = "OBJ";
   else if (lower.endsWith(".pdf")) kind = "PDF";
-  else if (lower.endsWith(".html") || lower.endsWith(".htm")) kind = "OTHER";
 
+  // ✅ Store the S3 Key in the 'url' field.
   await prisma.caseFile.create({
     data: {
       caseId,
       label,
       kind,
-      url: publicUrl,
+      url: key, // Storing the KEY now, not a public URL
       sizeBytes: buf.length,
     },
   });
 }
 
 async function getUniqueAlias(baseAlias: string) {
-  const root = baseAlias.slice(0, -2); 
+  const root = baseAlias.slice(0, -2);
   const existing = await prisma.dentalCase.findMany({
     where: { patientAlias: { startsWith: root } },
     select: { patientAlias: true }
   });
-
   if (existing.length === 0) return baseAlias;
 
   let maxSuffix = -1;
@@ -95,7 +89,6 @@ async function getUniqueAlias(baseAlias: string) {
       maxSuffix = suffix;
     }
   });
-
   const nextSuffix = (maxSuffix + 1).toString().padStart(2, "0");
   return `${root}${nextSuffix}`;
 }
@@ -116,17 +109,14 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
 
     const form = await req.formData();
-    
     const getFile = (key: string) => {
       const f = form.get(key);
       return f instanceof File ? f : undefined;
     };
 
     const rawData = {
-      // ✅ NEW: Extract names from form
       patientFirstName: form.get("patientFirstName"),
       patientLastName: form.get("patientLastName"),
-      
       patientAlias: form.get("patientAlias"),
       doctorUserId: form.get("doctorUserId"),
       clinicId: form.get("clinicId"),
@@ -181,12 +171,9 @@ export async function POST(req: Request) {
         clinicId: clinic.id,
         doctorUserId: doctor.id,
         assigneeId: session.userId, 
-        
-        // ✅ NEW: Save Names (Now available in data because of Zod schema)
         patientFirstName: data.patientFirstName,
         patientLastName: data.patientLastName,
         patientAlias: uniqueAlias,
-        
         doctorName: doctor.name ?? null,
         toothCodes: data.toothCodes,
         orderDate: new Date(data.orderDate),
@@ -206,6 +193,7 @@ export async function POST(req: Request) {
       select: { id: true },
     });
 
+    // ✅ UPDATED FILE SAVING to use S3
     await saveCaseFile(data.scanHtml, created.id, "scan_html");
     await saveCaseFile(data.rxPdf, created.id, "rx_pdf");
 
@@ -215,7 +203,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, id: created.id });
 
-  } catch (err) {
+  } catch (err: any) { 
     console.error("Create case error:", err);
     return NextResponse.json(
       { error: "Something went wrong creating the case." },

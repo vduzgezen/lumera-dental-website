@@ -78,6 +78,9 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
       switch (sortConfig.key) {
         case "id":
           aVal = a.id; bVal = b.id; break;
+        // ✅ NEW: Sort by Alias
+        case "alias":
+          aVal = a.patientAlias; bVal = b.patientAlias; break;
         case "doctor":
           aVal = a.doctorUser?.name || a.doctorName || ""; bVal = b.doctorUser?.name || b.doctorName || ""; break;
         case "zip":
