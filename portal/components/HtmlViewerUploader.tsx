@@ -3,7 +3,6 @@
 
 import { useState } from "react";
 
-// FIX: Added "milling" to Role type
 type Role = "customer" | "lab" | "admin" | "milling";
 
 export default function HtmlViewerUploader({
@@ -33,31 +32,55 @@ export default function HtmlViewerUploader({
   }
 
   async function send() {
-    if (!file) {
-      return setErr("Please choose a file first.");
-    }
+    if (!file) return setErr("Please choose a file first.");
 
     setBusy(true);
     setErr(undefined);
     setOk(undefined);
 
     try {
-      const fd = new FormData();
-      fd.append("label", label);
-      fd.append("file", file);
-
-      const r = await fetch(`/api/cases/${caseId}/files`, {
+      // 1. Get Permission (Presigned URL)
+      const urlRes = await fetch(`/api/cases/${caseId}/files/upload-url`, {
         method: "POST",
-        body: fd,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          filename: file.name, 
+          contentType: file.type || "text/html",
+          label: label
+        }),
       });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        throw new Error(j.error || "Upload failed");
-      }
+      
+      if (!urlRes.ok) throw new Error("Failed to get upload permission");
+      const { url, key } = await urlRes.json();
+
+      // 2. Upload Direct to Cloud
+      const uploadRes = await fetch(url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "text/html" },
+      });
+
+      if (!uploadRes.ok) throw new Error("Upload to cloud failed");
+
+      // 3. Save Record to DB
+      const dbRes = await fetch(`/api/cases/${caseId}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key,
+          label: label,
+          size: file.size,
+          filename: file.name
+        }),
+      });
+
+      if (!dbRes.ok) throw new Error("Failed to save record");
 
       setOk("Viewer uploaded.");
       setTimeout(() => window.location.reload(), 600);
+
     } catch (e: any) {
+      console.error(e);
       setErr(e?.message || "Upload failed");
     } finally {
       setBusy(false);
@@ -68,7 +91,7 @@ export default function HtmlViewerUploader({
     <div className="space-y-2">
       <div className="text-xs text-white/60">{description}</div>
 
-      <label className="flex items-center justify-between gap-3 rounded-lg p-2 bg-black/40 border border-white/10 cursor-pointer">
+      <label className="flex items-center justify-between gap-3 rounded-lg p-2 bg-black/40 border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
         <div className="flex-1 min-w-0 text-white/80">
           {file ? (
             <>
@@ -85,7 +108,7 @@ export default function HtmlViewerUploader({
             </div>
           )}
         </div>
-        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs">
+        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs font-medium">
           Browse
         </div>
         <input
@@ -100,11 +123,11 @@ export default function HtmlViewerUploader({
         <button
           onClick={send}
           disabled={busy || !file}
-          className="rounded-lg px-3 py-1.5 bg-white text-black text-xs disabled:opacity-50"
+          className="rounded-lg px-3 py-1.5 bg-white text-black text-xs font-bold disabled:opacity-50 hover:bg-gray-200 transition-colors"
         >
           {busy ? "Uploading…" : "Upload viewer"}
         </button>
-        {ok && <span className="text-emerald-400 text-xs">{ok}</span>}
+        {ok && <span className="text-emerald-400 text-xs animate-pulse">{ok}</span>}
         {err && <span className="text-red-400 text-xs">{err}</span>}
       </div>
     </div>

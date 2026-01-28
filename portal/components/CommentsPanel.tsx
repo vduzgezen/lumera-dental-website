@@ -19,8 +19,12 @@ type Comment = {
   attachments?: Attachment[];
 };
 
+// Fix for absolute URLs
 function fixUrl(url: string) {
   if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
   let clean = url.replace(/^public\//, "");
   if (!clean.startsWith("/")) clean = "/" + clean;
   return clean;
@@ -101,18 +105,47 @@ export default function CommentsPanel({
     setPosting(true);
     try {
       const file = new File([blob], "annotation.png", { type: "image/png" });
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("label", "Photo"); 
+      const label = "Photo";
 
+      // 1. Get Permission
+      const urlRes = await fetch(`/api/cases/${caseId}/files/upload-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          filename: file.name, 
+          contentType: file.type,
+          label: label
+        }),
+      });
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { url, key } = await urlRes.json();
+
+      // 2. Upload to Cloud
+      const uploadRes = await fetch(url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+      if (!uploadRes.ok) throw new Error("Failed to upload image");
+
+      // 3. Save Record
       const upRes = await fetch(`/api/cases/${caseId}/files`, {
         method: "POST",
-        body: fd,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key,
+          label: label,
+          size: file.size,
+          filename: file.name
+        }),
       });
-      if (!upRes.ok) throw new Error("Failed to upload annotation");
+
+      if (!upRes.ok) throw new Error("Failed to save image record");
       const upData = await upRes.json();
       
+      // 4. Post Comment linking the image
       await handlePost(upData.id);
+
     } catch (e) {
       console.error(e);
       alert("Failed to upload annotation");
@@ -120,7 +153,6 @@ export default function CommentsPanel({
     }
   }
 
-  // --- NEW: Spacing & Inline Image Fix ---
   function renderBody(text: string) {
     const regex = /((?:https?:\/\/[^\s]+|(?:\/uploads\/)[^\s]+)\.(?:png|jpg|jpeg|gif|webp))/gi;
     const parts = text.split(regex);
@@ -129,7 +161,6 @@ export default function CommentsPanel({
       if (part.match(regex)) {
         const safeSrc = fixUrl(part);
         return (
-          // FIX: Standardized spacing (my-3)
           <div key={i} className="my-3">
              {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -152,7 +183,6 @@ export default function CommentsPanel({
         Discussion
       </h3>
 
-      {/* FIX: Added space-y-reverse to handle bottom-up stacking correctly */}
       <div className="flex-1 overflow-y-auto min-h-0 space-y-4 space-y-reverse pr-2 custom-scrollbar flex flex-col-reverse">
         {comments.length === 0 ? (
           <p className="text-white/40 text-sm text-center py-4">No comments yet.</p>
@@ -199,8 +229,8 @@ export default function CommentsPanel({
                   {c.attachments && c.attachments.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {c.attachments.map((att) => {
-                        const safeSrc = fixUrl(att.url);
-                        return (
+                          const safeSrc = fixUrl(att.url);
+                          return (
                           <div 
                             key={att.id}
                             onClick={() => setZoomImg(safeSrc)} 

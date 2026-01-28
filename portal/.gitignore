@@ -38,3 +38,6 @@ yarn-error.log*
 
 # uploads (user-generated content)
 public/uploads/
+
+# Sentry Config File
+.env.sentry-build-plugin

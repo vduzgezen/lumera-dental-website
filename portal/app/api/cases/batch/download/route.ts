@@ -2,10 +2,12 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import fs from "node:fs";
-import path from "node:path";
+import { getFileStream } from "@/lib/storage"; // ✅ Import cloud stream
 import archiver from "archiver";
+import path from "node:path";
+import { Readable } from "stream";
 
+// Helper: Format Date for folder name
 function getFormattedDate() {
   const d = new Date();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -14,9 +16,7 @@ function getFormattedDate() {
   return `${mm}-${dd}-${yyyy}`;
 }
 
-// ✅ FIX: Allow 'undefined' in the type definition
 function sanitize(str: string | null | undefined) {
-  // If null, undefined, or empty, return empty string
   if (!str) return "";
   return str.replace(/[^a-zA-Z0-9]/g, "");
 }
@@ -40,23 +40,35 @@ function getOutputSuffix(dbLabel: string): string {
   return "_File";
 }
 
-function zipFiles(files: { diskPath: string; archivePath: string }[]): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    const archive = archiver("zip", { zlib: { level: 9 } });
+// ✅ NEW: Zip Cloud Streams instead of Local Files
+async function zipCloudFiles(files: { key: string; archivePath: string }[]): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  const archive = archiver("zip", { zlib: { level: 9 } });
 
+  // Create a promise that resolves when the zip is fully built
+  const streamPromise = new Promise<Buffer>((resolve, reject) => {
     archive.on("error", reject);
     archive.on("data", (chunk) => chunks.push(chunk));
     archive.on("end", () => resolve(Buffer.concat(chunks)));
-
-    files.forEach((f) => {
-      if (fs.existsSync(f.diskPath)) {
-        archive.file(f.diskPath, { name: f.archivePath });
-      }
-    });
-
-    archive.finalize();
   });
+
+  // Iterate through requested files and pull them from Cloudflare
+  for (const f of files) {
+    try {
+      // 1. Get stream from R2
+      const s3Stream = await getFileStream(f.key);
+      
+      // 2. Pipe into Zip
+      // 'as Readable' is safe here for Node.js runtime
+      archive.append(s3Stream as Readable, { name: f.archivePath });
+    } catch (e) {
+      console.warn(`[Batch Download] Skipping missing file key: ${f.key}`, e);
+      // We skip missing files so the zip still succeeds with what we have
+    }
+  }
+
+  await archive.finalize();
+  return streamPromise;
 }
 
 export async function POST(req: Request) {
@@ -79,14 +91,12 @@ export async function POST(req: Request) {
       }
     });
 
-    const fileList: { diskPath: string; archivePath: string }[] = [];
+    const fileList: { key: string; archivePath: string }[] = [];
     const rootFolder = `Download_${getFormattedDate()}`;
 
     for (const c of cases) {
       // 1. Routing Folder
       const clinicName = sanitize(c.clinic.name) || "UnknownClinic";
-      
-      // ✅ FIX: Safe access with optional chaining now works because sanitize accepts undefined
       const zip = sanitize(c.clinic.address?.zipCode) || "NoZip";
       const routingFolder = `${clinicName}_${zip}`;
 
@@ -94,40 +104,39 @@ export async function POST(req: Request) {
       const last = sanitize(c.patientLastName);
       const first = sanitize(c.patientFirstName);
       
-      // CamelCase Conversion
       const type = toCamelCase(c.product); 
-      let material = toCamelCase(c.material); 
+      let material = toCamelCase(c.material);
       const shade = sanitize(c.shade); 
 
-      // Exception Logic
       if (type === "Emax" || type === "InlayOnlay") {
-        material = ""; 
+        material = "";
       }
       
-      // Build Folder Name: LastNameFirstNameShadeTypeMaterial
+      // Build Folder Name
       const caseFolderName = `${last}${first}${shade}${type}${material}`;
 
+      // 3. Select Relevant Files
       const relevantLabels = ["model_top", "model_bottom", "rx_pdf", "design_only", "design_with_model", "construction_info"];
       
       for (const file of c.files) {
         if (!file.label || !relevantLabels.includes(file.label)) continue;
 
-        const relativePath = file.url.replace(/^\//, "");
-        const diskPath = path.join(process.cwd(), "public", relativePath);
+        // ✅ KEY CHANGE: file.url IS the S3 Key now (e.g. cases/123/file.stl)
+        const key = file.url; 
         
-        // Naming
+        // Naming logic
         const alias = sanitize(c.patientAlias) || "UnknownAlias";
         const suffix = getOutputSuffix(file.label);
         
-        let ext = path.extname(diskPath);
-        if (file.label === "construction_info") {
-            ext = ".constructionInfo"; 
-        }
+        // Determine extension
+        let ext = path.extname(key); // Extracts .stl from the key
+        if (!ext && file.kind === "STL") ext = ".stl";
+        if (file.label === "construction_info") ext = ".constructionInfo";
 
         const finalFileName = `${alias}${suffix}${ext}`;
         const archivePath = path.join(rootFolder, routingFolder, caseFolderName, finalFileName);
 
-        fileList.push({ diskPath, archivePath });
+        fileList.push({ key, archivePath });
       }
     }
 
@@ -135,8 +144,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No production files found for selected cases" }, { status: 404 });
     }
 
-    const buffer = await zipFiles(fileList);
+    // ✅ Generate Zip from Cloud Streams
+    const buffer = await zipCloudFiles(fileList);
 
+    // Auto-update status
     await prisma.dentalCase.updateMany({
       where: { 
         id: { in: ids },

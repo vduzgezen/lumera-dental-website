@@ -86,3 +86,20 @@ export async function getFileStream(key: string) {
   const response = await s3.send(command);
   return response.Body;
 }
+
+/**
+ * Generates a signed URL for UPLOADING directly from the browser.
+ * Valid for 10 minutes.
+ */
+export async function getPresignedUploadUrl(
+  key: string, 
+  contentType: string
+): Promise<string> {
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    ContentType: contentType,
+  });
+  // URL expires in 600 seconds (10 minutes)
+  return await getSignedUrl(s3, command, { expiresIn: 600 });
+}
