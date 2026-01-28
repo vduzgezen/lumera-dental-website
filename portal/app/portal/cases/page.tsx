@@ -4,27 +4,29 @@ import { getSession } from "@/lib/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Prisma } from "@prisma/client";
-import CaseListRow from "@/components/CaseListRow";
 import StatusFilter from "@/components/StatusFilter";
-import MillingDashboard from "./MillingDashboard"; 
+import MillingDashboard from "./milling/MillingDashboard"; 
+import AutoRefresh from "@/components/AutoRefresh"; 
+import CaseListClient from "./CaseListClient"; 
 
 export const dynamic = "force-dynamic";
 
-// ✅ UPDATED: Added new fields (product, material, serviceLevel, doctorUser)
-// This ensures TypeScript allows us to fetch/pass this data.
 export type CaseRow = {
   id: string;
   patientAlias: string;
+  // ✅ NEW FIELDS
+  patientFirstName: string | null;
+  patientLastName: string | null;
+  
   toothCodes: string;
   status: string;
   dueDate: Date | null;
   updatedAt: Date;
-  createdAt: Date; // Added for sorting consistency
+  createdAt: Date;
   doctorName: string | null;
   clinic: { name: string };
   assigneeUser: { name: string | null; email: string } | null;
   
-  // New Fields for Logic/Dashboard
   product: string;
   material: string | null;
   serviceLevel: string | null;
@@ -49,27 +51,27 @@ export default async function CasesPage({
   const sp = await searchParams;
   const role = session.role;
 
-  // --- MILLING VIEW (Optimized) ---
+  // --- MILLING VIEW ---
   if (role === "milling") {
-    // LOGIC CHANGE: Milling sees "APPROVED" (Waiting) and "IN_MILLING" (Active/Milling)
     const whereMilling: Prisma.DentalCaseWhereInput = {
         OR: [
             { status: "APPROVED" },
             { stage: "MILLING_GLAZING" },
-            { status: "IN_MILLING" } // Explicitly include IN_MILLING status
+            { status: "IN_MILLING" },
+            { status: "SHIPPED" } 
         ]
     };
 
-    const totalMilling = await prisma.dentalCase.count({ where: whereMilling });
-    
-    // ✅ INJECTED: Fetching address/material/serviceLevel for Dashboard Filters
     const millingCases = await prisma.dentalCase.findMany({
         where: whereMilling,
         orderBy: { dueDate: "asc" },
-        take: 200, 
+        take: 300, 
         select: {
             id: true, 
-            patientAlias: true, 
+            patientAlias: true,
+            // Milling doesn't strictly need names in the table view, but good to have if we expand
+            patientFirstName: true,
+            patientLastName: true, 
             toothCodes: true, 
             status: true,
             dueDate: true, 
@@ -77,12 +79,11 @@ export default async function CasesPage({
             shade: true,
             updatedAt: true,
             createdAt: true,
-            // New Fields
             material: true,
             serviceLevel: true,
             doctorName: true,
-            clinic: { select: { name: true } }, // Required by type
-            assigneeUser: { select: { name: true, email: true } }, // Required by type
+            clinic: { select: { name: true } }, 
+            assigneeUser: { select: { name: true, email: true } }, 
             doctorUser: {
                 select: {
                     name: true,
@@ -94,16 +95,14 @@ export default async function CasesPage({
         }
     });
 
-    // Cast to any to bypass strict serialization checks for the dashboard component if needed
-    // or keep your existing map logic if MillingDashboard expects strings.
-    // Assuming new MillingDashboard accepts Date or string, we pass as is or map.
     const safeMillingCases = millingCases.map(c => ({
         ...c, 
-        dueDate: c.dueDate ? c.dueDate : null // Passing Date object to match Component Interface
-    })) as unknown as any[]; 
+        dueDate: c.dueDate ? c.dueDate : null 
+    })) as unknown as any[];
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
+            <AutoRefresh intervalMs={60000} />
             <MillingDashboard cases={safeMillingCases} />
         </div>
     );
@@ -142,6 +141,9 @@ export default async function CasesPage({
       where.OR = [
         { patientAlias: { contains: aliasFilter.trim() } },
         { toothCodes: { contains: aliasFilter.trim() } },
+        // Allow doctors to search by patient name too
+        { patientFirstName: { contains: aliasFilter.trim() } },
+        { patientLastName: { contains: aliasFilter.trim() } }
       ];
     }
   } else {
@@ -158,7 +160,6 @@ export default async function CasesPage({
     }
   }
 
-  // ✅ INJECTED: Fetching new fields here too for consistency
   const [totalCount, rows] = await Promise.all([
     prisma.dentalCase.count({ where }),
     prisma.dentalCase.findMany({
@@ -167,7 +168,10 @@ export default async function CasesPage({
         take: 50,
         select: {
             id: true, 
-            patientAlias: true, 
+            patientAlias: true,
+            // ✅ FETCH THESE
+            patientFirstName: true,
+            patientLastName: true, 
             toothCodes: true,
             status: true, 
             dueDate: true, 
@@ -176,17 +180,16 @@ export default async function CasesPage({
             doctorName: true,
             clinic: { select: { name: true } },
             assigneeUser: { select: { name: true, email: true } },
-            // New Fields
             product: true,
             material: true,
             serviceLevel: true,
             doctorUser: {
-                select: {
+              select: {
                     name: true,
                     address: {
                         select: { zipCode: true, city: true, state: true }
                     }
-                }
+              }
             }
         },
     })
@@ -194,6 +197,8 @@ export default async function CasesPage({
 
   return (
     <section className="flex flex-col h-full w-full p-6 overflow-hidden">
+      <AutoRefresh intervalMs={60000} />
+
       <div className="flex-none space-y-4 mb-4">
         <header className="flex items-center justify-between">
           <div className="flex items-baseline gap-3">
@@ -221,7 +226,7 @@ export default async function CasesPage({
             </>
           )}
           {isDoctor && (
-            <input name="alias" placeholder="Search patient alias..." defaultValue={aliasFilter ?? ""} className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white flex-1 min-w-[200px] outline-none" />
+            <input name="alias" placeholder="Search patient, ID, or name..." defaultValue={aliasFilter ?? ""} className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white flex-1 min-w-[200px] outline-none" />
           )}
           <button type="submit" className="bg-white text-black rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-gray-200 transition">Search</button>
           {(clinicFilter || doctorFilter || caseIdFilter || dateFilter || aliasFilter || statusFilter.length > 0) && (
@@ -230,38 +235,17 @@ export default async function CasesPage({
         </form>
       </div>
 
-      <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
-        <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
-              <tr>
-                <th className="p-4 font-medium">Case ID</th>
-                <th className="p-4 font-medium">Alias</th>
-                <th className="p-4 font-medium">Clinic</th>
-                <th className="p-4 font-medium">Doctor</th>
-                {!isDoctor && <th className="p-4 font-medium">Designer</th>}
-                <th className="p-4 font-medium">Tooth</th>
-                <th className="p-4 font-medium">Status</th>
-                <th className="p-4 font-medium">Due Date</th>
-                <th className="p-4 font-medium">Last Update</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-white/5">
-              {(rows as CaseRow[]).map((c) => (
-                <CaseListRow key={c.id} data={c} role={role} />
-              ))}
-              {rows.length === 0 && (
-                 <tr><td className="p-12 text-center text-white/40" colSpan={9}>No cases found.</td></tr>
-              )}
-            </tbody>
-          </table>
+      <CaseListClient 
+        cases={rows as CaseRow[]} 
+        role={role} 
+        isDoctor={isDoctor} 
+      />
+      
+      {totalCount > rows.length && (
+        <div className="flex-none p-2 text-center text-xs text-white/30">
+            Showing recent {rows.length} of {totalCount} cases. Use filters to find older records.
         </div>
-        <div className="flex-none p-2 border-t border-white/5 bg-white/[0.02] text-center text-xs text-white/30">
-            {totalCount > rows.length 
-                ? `Showing recent ${rows.length} of ${totalCount} cases. Use filters to find older records.` 
-                : `Showing all ${rows.length} cases.`}
-        </div>
-      </div>
+      )}
     </section>
   );
 }
