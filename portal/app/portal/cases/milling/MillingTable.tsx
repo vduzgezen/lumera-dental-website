@@ -3,6 +3,7 @@
 
 import { CaseRow } from "../page";
 
+// Redefine locally to avoid circular imports
 type SortConfig = {
   key: string | null;
   direction: "asc" | "desc" | null;
@@ -22,7 +23,11 @@ const fmtDate = (d?: Date | string | null) => {
   return new Date(d).toLocaleDateString();
 };
 
-// ✅ FIX: Component defined OUTSIDE
+// ✅ VISUAL FIX: No icon when inactive
+const SortIcon = ({ colKey }: { colKey: string }) => {
+  return null; // The header itself manages the icon via props now if needed, but for simplicity we rely on the component below
+};
+
 const SortableHeader = ({ 
   label, 
   colKey, 
@@ -40,7 +45,7 @@ const SortableHeader = ({
   return (
     <th 
       className={`
-        p-4 font-medium cursor-pointer transition-colors select-none text-${align} group border-b-2 outline-none
+        p-4 font-medium cursor-pointer transition-all select-none text-${align} group border-b-2 outline-none
         ${isActive 
           ? "text-white border-accent" 
           : "text-white/70 border-transparent hover:text-white hover:bg-white/5"
@@ -86,6 +91,10 @@ export default function MillingTable({
               </th>
               
               <SortableHeader label="Case ID" colKey="id" sortConfig={sortConfig} onSort={onSort} />
+              
+              {/* ✅ NEW: Alias Column */}
+              <SortableHeader label="Alias" colKey="alias" sortConfig={sortConfig} onSort={onSort} />
+              
               <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={onSort} />
               <SortableHeader label="Zip Code" colKey="zip" sortConfig={sortConfig} onSort={onSort} />
               <SortableHeader label="Product Details" colKey="product" sortConfig={sortConfig} onSort={onSort} />
@@ -110,6 +119,9 @@ export default function MillingTable({
                 </td>
 
                 <td className="p-4 font-mono text-blue-400 select-all">#{c.id.slice(-6)}</td>
+
+                {/* ✅ NEW: Alias Data */}
+                <td className="p-4 font-medium text-white">{c.patientAlias}</td>
 
                 <td className="p-4 font-medium text-white">
                   {c.doctorUser?.name || c.doctorName || <span className="text-white/30 italic">Unknown</span>}
@@ -153,7 +165,7 @@ export default function MillingTable({
 
             {cases.length === 0 && (
               <tr>
-                <td colSpan={8} className="p-12 text-center text-white/40">
+                <td colSpan={9} className="p-12 text-center text-white/40">
                   No cases found.
                 </td>
               </tr>

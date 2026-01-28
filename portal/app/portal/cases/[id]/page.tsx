@@ -8,7 +8,8 @@ import CaseViewerTabs from "@/components/CaseViewerTabs";
 import { CaseFile } from "@prisma/client";
 import CopyableId from "@/components/CopyableId";
 import CaseDetailSidebar from "@/components/CaseDetailSidebar";
-import AutoRefresh from "@/components/AutoRefresh"; // ✅ Import
+import AutoRefresh from "@/components/AutoRefresh";
+import { getSignedFileUrl } from "@/lib/storage"; // ✅ NEW IMPORT
 
 export const dynamic = "force-dynamic";
 
@@ -47,11 +48,41 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
       assigneeUser: { select: { id: true, name: true, email: true } }
     },
   });
+
   if (!item) return notFound();
 
   if (session.role === "customer" && session.clinicId !== item.clinicId) {
     return notFound();
   }
+
+  // ✅ HYDRATE FILES: Generate Signed URLs
+  const hydratedFiles = await Promise.all(item.files.map(async (f) => {
+    // Keep backward compatibility for old local files
+    if (f.url.startsWith("/") || f.url.startsWith("http")) return f;
+    
+    try {
+        const signed = await getSignedFileUrl(f.url);
+        return { ...f, url: signed };
+    } catch (e) {
+        console.error(`Failed to sign URL for ${f.url}`, e);
+        return f; 
+    }
+  }));
+  item.files = hydratedFiles as any;
+
+  // ✅ HYDRATE COMMENT ATTACHMENTS
+  const hydratedComments = await Promise.all(item.comments.map(async (c) => {
+      const attachments = await Promise.all(c.attachments.map(async (a) => {
+          if (a.url.startsWith("/") || a.url.startsWith("http")) return a;
+          try {
+              const signed = await getSignedFileUrl(a.url);
+              return { ...a, url: signed };
+          } catch (e) {
+              return a;
+          }
+      }));
+      return { ...c, attachments };
+  }));
 
   const authorIds = Array.from(new Set(item.comments.map(c => c.authorId)));
   const authors = await prisma.user.findMany({
@@ -66,7 +97,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
   });
   const currentUserName = currentUser?.name || currentUser?.email || "Unknown";
 
-  const uiComments = item.comments.map(c => {
+  const uiComments = hydratedComments.map(c => {
     const author = authorMap.get(c.authorId);
     return {
       id: c.id,
@@ -121,17 +152,17 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
 
   return (
     <section className="h-full w-full flex flex-col p-4 overflow-hidden">
-      
-      {/* ✅ Auto-Refresh every 60s */}
       <AutoRefresh intervalMs={60000} />
 
-      {/* Header Section */}
       <div className="flex-none space-y-3 mb-2">
+        {/* ✅ Updated CaseProcessBar with Tracking Info */}
         <CaseProcessBar
           caseId={item.id}
           stage={item.stage as ProductionStage}
           status={item.status}
           role={session.role}
+          carrier={item.shippingCarrier}
+          tracking={item.trackingNumber}
         />
         <div className="flex items-center justify-between">
           <div>
