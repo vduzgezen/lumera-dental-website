@@ -9,7 +9,7 @@ import { CaseFile } from "@prisma/client";
 import CopyableId from "@/components/CopyableId";
 import CaseDetailSidebar from "@/components/CaseDetailSidebar";
 import AutoRefresh from "@/components/AutoRefresh";
-import { getSignedFileUrl } from "@/lib/storage"; // ✅ NEW IMPORT
+import { getSignedFileUrl } from "@/lib/storage"; 
 
 export const dynamic = "force-dynamic";
 
@@ -24,10 +24,12 @@ function normalizeSlot(label: string | null): "scan" | "design_with_model" | "de
   return null;
 }
 
+// ✅ FIX: Split by '?' to ignore the signature token when checking extension
 function is3DUrl(url: string | null | undefined): boolean {
   if (!url) return false;
-  const u = url.toLowerCase();
-  return u.endsWith(".stl") || u.endsWith(".ply") || u.endsWith(".obj");
+  // Remove query params before checking extension
+  const clean = url.split("?")[0].toLowerCase(); 
+  return clean.endsWith(".stl") || clean.endsWith(".ply") || clean.endsWith(".obj");
 }
 
 export default async function CaseDetailPage({ params }: { params: Params }) {
@@ -55,7 +57,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
     return notFound();
   }
 
-  // ✅ HYDRATE FILES: Generate Signed URLs
+  // HYDRATE FILES: Generate Signed URLs
   const hydratedFiles = await Promise.all(item.files.map(async (f) => {
     // Keep backward compatibility for old local files
     if (f.url.startsWith("/") || f.url.startsWith("http")) return f;
@@ -70,7 +72,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
   }));
   item.files = hydratedFiles as any;
 
-  // ✅ HYDRATE COMMENT ATTACHMENTS
+  // HYDRATE COMMENT ATTACHMENTS
   const hydratedComments = await Promise.all(item.comments.map(async (c) => {
       const attachments = await Promise.all(c.attachments.map(async (a) => {
           if (a.url.startsWith("/") || a.url.startsWith("http")) return a;
@@ -155,7 +157,6 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
       <AutoRefresh intervalMs={60000} />
 
       <div className="flex-none space-y-3 mb-2">
-        {/* ✅ Updated CaseProcessBar with Tracking Info */}
         <CaseProcessBar
           caseId={item.id}
           stage={item.stage as ProductionStage}

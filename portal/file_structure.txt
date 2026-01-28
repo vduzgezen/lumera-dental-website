@@ -1,6 +1,8 @@
 .
 ./middleware.ts
 ./app
+./app/sentry-example-page
+./app/sentry-example-page/page.tsx
 ./app/contact
 ./app/contact/page.tsx
 ./app/favicon.ico
@@ -78,6 +80,8 @@
 ./app/api/clinics/route.ts
 ./app/api/clinics/[id]
 ./app/api/clinics/[id]/route.ts
+./app/api/sentry-example-api
+./app/api/sentry-example-api/route.ts
 ./app/api/addresses
 ./app/api/addresses/route.ts
 ./app/api/addresses/[id]
@@ -91,6 +95,7 @@
 ./app/globals.css
 ./app/login
 ./app/login/page.tsx
+./app/global-error.tsx
 ./postcss.config.mjs
 ./prisma
 ./prisma/seed.mjs
@@ -102,6 +107,7 @@
 ./prisma/dev.backup.20251030-153514.db
 ./prisma/dev.db
 ./prisma/seed2.mjs
+./sentry.server.config.ts
 ./next-env.d.ts
 ./README.md
 ./tailwind.config.ts
@@ -151,8 +157,10 @@
 ./components/ImageAnnotator.tsx
 ./components/BillingToolbar.tsx
 ./public
+./sentry.edge.config.ts
 ./package-lock.json
 ./package.json
+./instrumentation-client.ts
 ./lib
 ./lib/prisma.ts
 ./lib/pricing.ts
@@ -162,5 +170,6 @@
 ./lib/auth.ts
 ./file_structure.txt
 ./tsconfig.json
+./instrumentation.ts
 ./eslint.config.mjs
 ./next.config.ts

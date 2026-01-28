@@ -10,7 +10,7 @@ export default function FileUploader({
   role,
   label,
   slot,
-  accept, // We will default this smarter now
+  accept,
   description,
 }: {
   caseId: string;
@@ -29,9 +29,7 @@ export default function FileUploader({
 
   const activeLabel = label || slot || "file";
   const labelText = description || activeLabel.replace(/_/g, " ");
-
-  // ✅ FIX: Smarter defaults if 'accept' isn't passed
-  // If label is construction_info, explicitly allow weird extensions
+  
   const finalAccept = accept || (activeLabel === "construction_info" 
     ? ".pdf,.xml,.txt,.constructionInfo" 
     : ".stl,.ply,.obj");
@@ -51,21 +49,48 @@ export default function FileUploader({
     setOk(undefined);
 
     try {
-      const fd = new FormData();
-      fd.append("label", activeLabel);
-      fd.append("files", file); // Using 'files' to match route logic
-
-      const r = await fetch(`/api/cases/${caseId}/files`, {
+      // 1. Get the Presigned URL
+      const urlRes = await fetch(`/api/cases/${caseId}/files/upload-url`, {
         method: "POST",
-        body: fd,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          filename: file.name, 
+          contentType: file.type || "application/octet-stream",
+          label: activeLabel
+        }),
       });
-      const j = await r.json().catch(() => ({}));
       
-      if (!r.ok) throw new Error(j.error || "Upload failed");
+      if (!urlRes.ok) throw new Error("Failed to get upload permission");
+      const { url, key } = await urlRes.json();
+
+      // 2. Upload directly to Cloudflare R2
+      const uploadRes = await fetch(url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+      });
+
+      if (!uploadRes.ok) throw new Error("Upload to cloud failed");
+
+      // 3. Save the record in the Database
+      const dbRes = await fetch(`/api/cases/${caseId}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key,
+          label: activeLabel,
+          size: file.size,
+          filename: file.name
+        }),
+      });
+
+      if (!dbRes.ok) throw new Error("Failed to save file record");
 
       setOk("Uploaded successfully.");
       setTimeout(() => window.location.reload(), 600);
+
     } catch (e: any) {
+      console.error(e);
       setErr(e?.message || "Upload failed");
     } finally {
       setBusy(false);
@@ -80,28 +105,15 @@ export default function FileUploader({
         <div className="flex-1 min-w-0 text-white/80">
           {file ? (
             <>
-              <div className="font-medium text-xs truncate" title={file.name}>
-                {file.name}
-              </div>
-              <div className="text-[10px] text-white/60">
-                {(file.size / (1024 * 1024)).toFixed(2)} MB
-              </div>
+              <div className="font-medium text-xs truncate" title={file.name}>{file.name}</div>
+              <div className="text-[10px] text-white/60">{(file.size / (1024 * 1024)).toFixed(2)} MB</div>
             </>
           ) : (
-            <div className="text-xs text-white/60 truncate">
-              Choose file…
-            </div>
+            <div className="text-xs text-white/60 truncate">Choose file…</div>
           )}
         </div>
-        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs font-medium">
-          Browse
-        </div>
-        <input
-          type="file"
-          accept={finalAccept}
-          onChange={onFileChange}
-          className="hidden"
-        />
+        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs font-medium">Browse</div>
+        <input type="file" accept={finalAccept} onChange={onFileChange} className="hidden" />
       </label>
 
       <div className="flex items-center gap-2">

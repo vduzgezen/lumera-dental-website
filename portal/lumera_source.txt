@@ -20,6 +20,247 @@ export function middleware(req: NextRequest) {
 
 --- END OF FILE ---
 
+FILE: ./app/sentry-example-page/page.tsx
+"use client";
+
+import * as Sentry from "@sentry/nextjs";
+import Head from "next/head";
+import { useEffect, useState } from "react";
+
+class SentryExampleFrontendError extends Error {
+  constructor(message: string | undefined) {
+    super(message);
+    this.name = "SentryExampleFrontendError";
+  }
+}
+
+export default function Page() {
+  const [hasSentError, setHasSentError] = useState(false);
+  const [isConnected, setIsConnected] = useState(true);
+
+  useEffect(() => {
+    Sentry.logger.info("Sentry example page loaded");
+    async function checkConnectivity() {
+      const result = await Sentry.diagnoseSdkConnectivity();
+      setIsConnected(result !== "sentry-unreachable");
+    }
+    checkConnectivity();
+  }, []);
+
+  return (
+    <div>
+      <Head>
+        <title>sentry-example-page</title>
+        <meta name="description" content="Test Sentry for your Next.js app!" />
+      </Head>
+
+      <main>
+        <div className="flex-spacer" />
+        <svg
+          height="40"
+          width="40"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-label="Sentry logo"
+        >
+          <path
+            d="M21.85 2.995a3.698 3.698 0 0 1 1.353 1.354l16.303 28.278a3.703 3.703 0 0 1-1.354 5.053 3.694 3.694 0 0 1-1.848.496h-3.828a31.149 31.149 0 0 0 0-3.09h3.815a.61.61 0 0 0 .537-.917L20.523 5.893a.61.61 0 0 0-1.057 0l-3.739 6.494a28.948 28.948 0 0 1 9.63 10.453 28.988 28.988 0 0 1 3.499 13.78v1.542h-9.852v-1.544a19.106 19.106 0 0 0-2.182-8.85 19.08 19.08 0 0 0-6.032-6.829l-1.85 3.208a15.377 15.377 0 0 1 6.382 12.484v1.542H3.696A3.694 3.694 0 0 1 0 34.473c0-.648.17-1.286.494-1.849l2.33-4.074a8.562 8.562 0 0 1 2.689 1.536L3.158 34.17a.611.611 0 0 0 .538.917h8.448a12.481 12.481 0 0 0-6.037-9.09l-1.344-.772 4.908-8.545 1.344.77a22.16 22.16 0 0 1 7.705 7.444 22.193 22.193 0 0 1 3.316 10.193h3.699a25.892 25.892 0 0 0-3.811-12.033 25.856 25.856 0 0 0-9.046-8.796l-1.344-.772 5.269-9.136a3.698 3.698 0 0 1 3.2-1.849c.648 0 1.285.17 1.847.495Z"
+            fill="currentcolor"
+          />
+        </svg>
+        <h1>sentry-example-page</h1>
+
+        <p className="description">
+          Click the button below, and view the sample error on the Sentry{" "}
+          <a
+            target="_blank"
+            rel="noopener"
+            href="https://lumera-lab.sentry.io/issues/?project=4510789486116864"
+          >
+            Issues Page
+          </a>
+          . For more details about setting up Sentry,{" "}
+          <a
+            target="_blank"
+            rel="noopener"
+            href="https://docs.sentry.io/platforms/javascript/guides/nextjs/"
+          >
+            read our docs
+          </a>
+          .
+        </p>
+
+        <button
+          type="button"
+          onClick={async () => {
+            Sentry.logger.info("User clicked the button, throwing a sample error");
+            await Sentry.startSpan(
+              {
+                name: "Example Frontend/Backend Span",
+                op: "test",
+              },
+              async () => {
+                const res = await fetch("/api/sentry-example-api");
+                if (!res.ok) {
+                  setHasSentError(true);
+                }
+              },
+            );
+            throw new SentryExampleFrontendError(
+              "This error is raised on the frontend of the example page.",
+            );
+          }}
+          disabled={!isConnected}
+        >
+          <span>Throw Sample Error</span>
+        </button>
+
+        {hasSentError ? (
+          <p className="success">Error sent to Sentry.</p>
+        ) : !isConnected ? (
+          <div className="connectivity-error">
+            <p>
+              It looks like network requests to Sentry are being blocked, which
+              will prevent errors from being captured. Try disabling your
+              ad-blocker to complete the test.
+            </p>
+          </div>
+        ) : (
+          <div className="success_placeholder" />
+        )}
+
+        <div className="flex-spacer" />
+      </main>
+
+      <style>{`
+        main {
+          display: flex;
+          min-height: 100vh;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          gap: 16px;
+          padding: 16px;
+          font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        }
+
+        h1 {
+          padding: 0px 4px;
+          border-radius: 4px;
+          background-color: rgba(24, 20, 35, 0.03);
+          font-family: monospace;
+          font-size: 20px;
+          line-height: 1.2;
+        }
+
+        p {
+          margin: 0;
+          font-size: 20px;
+        }
+
+        a {
+          color: #6341F0;
+          text-decoration: underline;
+          cursor: pointer;
+
+          @media (prefers-color-scheme: dark) {
+            color: #B3A1FF;
+          }
+        }
+
+        button {
+          border-radius: 8px;
+          color: white;
+          cursor: pointer;
+          background-color: #553DB8;
+          border: none;
+          padding: 0;
+          margin-top: 4px;
+
+          & > span {
+            display: inline-block;
+            padding: 12px 16px;
+            border-radius: inherit;
+            font-size: 20px;
+            font-weight: bold;
+            line-height: 1;
+            background-color: #7553FF;
+            border: 1px solid #553DB8;
+            transform: translateY(-4px);
+          }
+
+          &:hover > span {
+            transform: translateY(-8px);
+          }
+
+          &:active > span {
+            transform: translateY(0);
+          }
+
+          &:disabled {
+	            cursor: not-allowed;
+	            opacity: 0.6;
+
+	            & > span {
+	              transform: translateY(0);
+	              border: none
+	            }
+	          }
+        }
+
+        .description {
+          text-align: center;
+          color: #6E6C75;
+          max-width: 500px;
+          line-height: 1.5;
+          font-size: 20px;
+
+          @media (prefers-color-scheme: dark) {
+            color: #A49FB5;
+          }
+        }
+
+        .flex-spacer {
+          flex: 1;
+        }
+
+        .success {
+          padding: 12px 16px;
+          border-radius: 8px;
+          font-size: 20px;
+          line-height: 1;
+          background-color: #00F261;
+          border: 1px solid #00BF4D;
+          color: #181423;
+        }
+
+        .success_placeholder {
+          height: 46px;
+        }
+
+        .connectivity-error {
+          padding: 12px 16px;
+          background-color: #E50045;
+          border-radius: 8px;
+          width: 500px;
+          color: #FFFFFF;
+          border: 1px solid #A80033;
+          text-align: center;
+          margin: 0;
+        }
+
+        .connectivity-error a {
+          color: #FFFFFF;
+          text-decoration: underline;
+        }
+      `}</style>
+    </div>
+  );
+}
+
+--- END OF FILE ---
+
 FILE: ./app/contact/page.tsx
 // portal/app/contact/page.tsx
 import PublicNavbar from "@/components/PublicNavbar";
@@ -1613,7 +1854,7 @@ import { CaseFile } from "@prisma/client";
 import CopyableId from "@/components/CopyableId";
 import CaseDetailSidebar from "@/components/CaseDetailSidebar";
 import AutoRefresh from "@/components/AutoRefresh";
-import { getSignedFileUrl } from "@/lib/storage"; // ✅ NEW IMPORT
+import { getSignedFileUrl } from "@/lib/storage"; 
 
 export const dynamic = "force-dynamic";
 
@@ -1628,10 +1869,12 @@ function normalizeSlot(label: string | null): "scan" | "design_with_model" | "de
   return null;
 }
 
+// ✅ FIX: Split by '?' to ignore the signature token when checking extension
 function is3DUrl(url: string | null | undefined): boolean {
   if (!url) return false;
-  const u = url.toLowerCase();
-  return u.endsWith(".stl") || u.endsWith(".ply") || u.endsWith(".obj");
+  // Remove query params before checking extension
+  const clean = url.split("?")[0].toLowerCase(); 
+  return clean.endsWith(".stl") || clean.endsWith(".ply") || clean.endsWith(".obj");
 }
 
 export default async function CaseDetailPage({ params }: { params: Params }) {
@@ -1659,7 +1902,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
     return notFound();
   }
 
-  // ✅ HYDRATE FILES: Generate Signed URLs
+  // HYDRATE FILES: Generate Signed URLs
   const hydratedFiles = await Promise.all(item.files.map(async (f) => {
     // Keep backward compatibility for old local files
     if (f.url.startsWith("/") || f.url.startsWith("http")) return f;
@@ -1674,7 +1917,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
   }));
   item.files = hydratedFiles as any;
 
-  // ✅ HYDRATE COMMENT ATTACHMENTS
+  // HYDRATE COMMENT ATTACHMENTS
   const hydratedComments = await Promise.all(item.comments.map(async (c) => {
       const attachments = await Promise.all(c.attachments.map(async (a) => {
           if (a.url.startsWith("/") || a.url.startsWith("http")) return a;
@@ -1759,7 +2002,6 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
       <AutoRefresh intervalMs={60000} />
 
       <div className="flex-none space-y-3 mb-2">
-        {/* ✅ Updated CaseProcessBar with Tracking Info */}
         <CaseProcessBar
           caseId={item.id}
           stage={item.stage as ProductionStage}
@@ -2985,10 +3227,12 @@ FILE: ./app/api/cases/batch/download/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import fs from "node:fs";
-import path from "node:path";
+import { getFileStream } from "@/lib/storage"; // ✅ Import cloud stream
 import archiver from "archiver";
+import path from "node:path";
+import { Readable } from "stream";
 
+// Helper: Format Date for folder name
 function getFormattedDate() {
   const d = new Date();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -2997,9 +3241,7 @@ function getFormattedDate() {
   return `${mm}-${dd}-${yyyy}`;
 }
 
-// ✅ FIX: Allow 'undefined' in the type definition
 function sanitize(str: string | null | undefined) {
-  // If null, undefined, or empty, return empty string
   if (!str) return "";
   return str.replace(/[^a-zA-Z0-9]/g, "");
 }
@@ -3023,23 +3265,35 @@ function getOutputSuffix(dbLabel: string): string {
   return "_File";
 }
 
-function zipFiles(files: { diskPath: string; archivePath: string }[]): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: Buffer[] = [];
-    const archive = archiver("zip", { zlib: { level: 9 } });
+// ✅ NEW: Zip Cloud Streams instead of Local Files
+async function zipCloudFiles(files: { key: string; archivePath: string }[]): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  const archive = archiver("zip", { zlib: { level: 9 } });
 
+  // Create a promise that resolves when the zip is fully built
+  const streamPromise = new Promise<Buffer>((resolve, reject) => {
     archive.on("error", reject);
     archive.on("data", (chunk) => chunks.push(chunk));
     archive.on("end", () => resolve(Buffer.concat(chunks)));
-
-    files.forEach((f) => {
-      if (fs.existsSync(f.diskPath)) {
-        archive.file(f.diskPath, { name: f.archivePath });
-      }
-    });
-
-    archive.finalize();
   });
+
+  // Iterate through requested files and pull them from Cloudflare
+  for (const f of files) {
+    try {
+      // 1. Get stream from R2
+      const s3Stream = await getFileStream(f.key);
+      
+      // 2. Pipe into Zip
+      // 'as Readable' is safe here for Node.js runtime
+      archive.append(s3Stream as Readable, { name: f.archivePath });
+    } catch (e) {
+      console.warn(`[Batch Download] Skipping missing file key: ${f.key}`, e);
+      // We skip missing files so the zip still succeeds with what we have
+    }
+  }
+
+  await archive.finalize();
+  return streamPromise;
 }
 
 export async function POST(req: Request) {
@@ -3062,14 +3316,12 @@ export async function POST(req: Request) {
       }
     });
 
-    const fileList: { diskPath: string; archivePath: string }[] = [];
+    const fileList: { key: string; archivePath: string }[] = [];
     const rootFolder = `Download_${getFormattedDate()}`;
 
     for (const c of cases) {
       // 1. Routing Folder
       const clinicName = sanitize(c.clinic.name) || "UnknownClinic";
-      
-      // ✅ FIX: Safe access with optional chaining now works because sanitize accepts undefined
       const zip = sanitize(c.clinic.address?.zipCode) || "NoZip";
       const routingFolder = `${clinicName}_${zip}`;
 
@@ -3077,40 +3329,39 @@ export async function POST(req: Request) {
       const last = sanitize(c.patientLastName);
       const first = sanitize(c.patientFirstName);
       
-      // CamelCase Conversion
       const type = toCamelCase(c.product); 
-      let material = toCamelCase(c.material); 
+      let material = toCamelCase(c.material);
       const shade = sanitize(c.shade); 
 
-      // Exception Logic
       if (type === "Emax" || type === "InlayOnlay") {
-        material = ""; 
+        material = "";
       }
       
-      // Build Folder Name: LastNameFirstNameShadeTypeMaterial
+      // Build Folder Name
       const caseFolderName = `${last}${first}${shade}${type}${material}`;
 
+      // 3. Select Relevant Files
       const relevantLabels = ["model_top", "model_bottom", "rx_pdf", "design_only", "design_with_model", "construction_info"];
       
       for (const file of c.files) {
         if (!file.label || !relevantLabels.includes(file.label)) continue;
 
-        const relativePath = file.url.replace(/^\//, "");
-        const diskPath = path.join(process.cwd(), "public", relativePath);
+        // ✅ KEY CHANGE: file.url IS the S3 Key now (e.g. cases/123/file.stl)
+        const key = file.url; 
         
-        // Naming
+        // Naming logic
         const alias = sanitize(c.patientAlias) || "UnknownAlias";
         const suffix = getOutputSuffix(file.label);
         
-        let ext = path.extname(diskPath);
-        if (file.label === "construction_info") {
-            ext = ".constructionInfo"; 
-        }
+        // Determine extension
+        let ext = path.extname(key); // Extracts .stl from the key
+        if (!ext && file.kind === "STL") ext = ".stl";
+        if (file.label === "construction_info") ext = ".constructionInfo";
 
         const finalFileName = `${alias}${suffix}${ext}`;
         const archivePath = path.join(rootFolder, routingFolder, caseFolderName, finalFileName);
 
-        fileList.push({ diskPath, archivePath });
+        fileList.push({ key, archivePath });
       }
     }
 
@@ -3118,8 +3369,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No production files found for selected cases" }, { status: 404 });
     }
 
-    const buffer = await zipFiles(fileList);
+    // ✅ Generate Zip from Cloud Streams
+    const buffer = await zipCloudFiles(fileList);
 
+    // Auto-update status
     await prisma.dentalCase.updateMany({
       where: { 
         id: { in: ids },
@@ -3411,6 +3664,28 @@ FILE: ./app/api/cases/[id]/comments/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { getSignedFileUrl } from "@/lib/storage"; // ✅ Import this
+
+// Helper to sign attachments in a comment list
+async function signCommentAttachments(comment: any) {
+  if (!comment || !comment.attachments) return comment;
+
+  const signedAttachments = await Promise.all(
+    comment.attachments.map(async (att: any) => {
+      // If it's already a full URL (legacy), leave it. Otherwise, sign it.
+      if (att.url.startsWith("http")) return att;
+      try {
+        const signed = await getSignedFileUrl(att.url);
+        return { ...att, url: signed };
+      } catch (e) {
+        console.error("Failed to sign URL:", att.url);
+        return att;
+      }
+    })
+  );
+
+  return { ...comment, attachments: signedAttachments };
+}
 
 export async function POST(
   request: Request,
@@ -3426,8 +3701,8 @@ export async function POST(
     const json = await request.json();
     const { body, attachmentFileId } = json;
 
-    if (!body || !body.trim()) {
-      return NextResponse.json({ error: "Body required" }, { status: 400 });
+    if (!body && !attachmentFileId) {
+      return NextResponse.json({ error: "Body or attachment required" }, { status: 400 });
     }
 
     // 1. Create the comment
@@ -3435,13 +3710,11 @@ export async function POST(
       data: {
         caseId,
         authorId: session.userId,
-        body,
+        body: body || "",
       },
     });
 
-    // 2. Link the attachment
-    // We cast 'as any' because the Prisma types in node_modules are stale
-    // and don't see 'commentId' yet, even though the DB has it.
+    // 2. Link the attachment if present
     if (attachmentFileId) {
       await prisma.caseFile.update({
         where: { id: attachmentFileId },
@@ -3452,7 +3725,6 @@ export async function POST(
     }
 
     // 3. Fetch result with attachments
-    // Casting 'as any' allows us to request 'attachments' despite the stale types.
     const finalComment = await prisma.caseComment.findUnique({
       where: { id: newComment.id },
       include: {
@@ -3460,7 +3732,11 @@ export async function POST(
       } as any,
     });
 
-    return NextResponse.json(finalComment);
+    // ✅ FIX: Sign the URLs before returning
+    const signedComment = await signCommentAttachments(finalComment);
+
+    return NextResponse.json(signedComment);
+
   } catch (error) {
     console.error("Comment error:", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
@@ -3479,10 +3755,13 @@ export async function GET(
     orderBy: { createdAt: "asc" },
     include: {
       attachments: true,
-    } as any, // Force TS to accept 'attachments'
+    } as any, 
   });
-  
-  return NextResponse.json(comments);
+
+  // ✅ FIX: Sign all URLs in the list
+  const signedComments = await Promise.all(comments.map(signCommentAttachments));
+
+  return NextResponse.json({ comments: signedComments });
 }
 --- END OF FILE ---
 
@@ -3727,12 +4006,41 @@ export async function POST(req: Request, { params }: Params) {
 }
 --- END OF FILE ---
 
+FILE: ./app/api/cases/[id]/files/upload-url/route.ts
+// portal/app/api/cases/[id]/files/upload-url/route.ts
+import { NextResponse } from "next/server";
+import { getSession } from "@/lib/auth";
+import { getPresignedUploadUrl } from "@/lib/storage";
+
+export async function POST(
+  req: Request,
+  props: { params: Promise<{ id: string }> }
+) {
+  const session = await getSession();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // ✅ FIX: In Next.js 15, params is a Promise. You MUST await it.
+  const params = await props.params;
+  const { id } = params;
+
+  const { filename, contentType, label } = await req.json();
+
+  // 1. Create a clean file path
+  const safeName = (filename || "file").replace(/[^a-zA-Z0-9_.-]/g, "_");
+  const key = `cases/${id}/${label}_${Date.now()}_${safeName}`;
+
+  // 2. Generate the URL
+  const url = await getPresignedUploadUrl(key, contentType);
+
+  return NextResponse.json({ url, key });
+}
+--- END OF FILE ---
+
 FILE: ./app/api/cases/[id]/files/route.ts
 // portal/app/api/cases/[id]/files/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { uploadFile } from "@/lib/storage"; // ✅ NEW
 
 const FileKind = {
   STL: "STL",
@@ -3741,6 +4049,8 @@ const FileKind = {
   PDF: "PDF", 
   OTHER: "OTHER"
 } as const;
+
+// This defines the union type: "STL" | "PLY" | "OBJ" | "PDF" | "OTHER"
 type FileKindType = typeof FileKind[keyof typeof FileKind];
 
 const ProductionStage = {
@@ -3749,9 +4059,7 @@ const ProductionStage = {
   SHIPPING: "SHIPPING"
 } as const;
 
-type Params = Promise<{ id: string }>;
-
-function normalizeSlotLabel(raw: FormDataEntryValue | null): string {
+function normalizeSlotLabel(raw: string | null): string {
   const lower = (raw ?? "").toString().trim().toLowerCase();
   if (!lower) return "other";
   if (lower === "scan") return "scan";
@@ -3760,71 +4068,41 @@ function normalizeSlotLabel(raw: FormDataEntryValue | null): string {
   return lower;
 }
 
-function chooseExtAndKind(
-  originalName: string,
-  slot: string,
-): { ext: string; kind: FileKindType } {
-  const lower = originalName.toLowerCase();
-  if (lower.endsWith(".html")) return { ext: ".html", kind: FileKind.OTHER };
-  if (lower.endsWith(".htm")) return { ext: ".htm", kind: FileKind.OTHER };
-  if (lower.endsWith(".stl")) return { ext: ".stl", kind: FileKind.STL };
-  if (lower.endsWith(".ply")) return { ext: ".ply", kind: FileKind.PLY };
-  if (lower.endsWith(".obj")) return { ext: ".obj", kind: FileKind.OBJ };
-  if (lower.endsWith(".pdf")) return { ext: ".pdf", kind: FileKind.PDF };
-  if (lower.endsWith(".constructioninfo")) return { ext: ".constructionInfo", kind: FileKind.OTHER };
-  if (lower.endsWith(".xml")) return { ext: ".xml", kind: FileKind.OTHER };
-  if (lower.endsWith(".txt")) return { ext: ".txt", kind: FileKind.OTHER };
-  if (lower.endsWith(".png")) return { ext: ".png", kind: FileKind.OTHER };
-  if (lower.endsWith(".jpg")) return { ext: ".jpg", kind: FileKind.OTHER };
-  if (lower.endsWith(".jpeg")) return { ext: ".jpeg", kind: FileKind.OTHER };
-  if (slot === "scan" || slot === "design_with_model" || slot === "design_only") {
-    return { ext: ".stl", kind: FileKind.STL };
-  }
-  return { ext: ".bin", kind: FileKind.OTHER };
-}
-
-export async function POST(req: Request, props: { params: Params }) {
+export async function POST(
+  req: Request,
+  props: { params: Promise<{ id: string }> }
+) {
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await props.params;
-    let form: FormData;
-    try {
-        form = await req.formData();
-    } catch (e) {
-        console.error("FormData parse error:", e);
-        return NextResponse.json({ error: "Failed to upload. File might be too large." }, { status: 400 });
+    
+    const body = await req.json(); 
+    const { key, label: rawLabel, size, filename } = body;
+
+    if (!key || !rawLabel) {
+      return NextResponse.json({ error: "Missing file metadata" }, { status: 400 });
     }
 
-    const slotLabel = normalizeSlotLabel(form.get("label"));
+    const slotLabel = normalizeSlotLabel(rawLabel);
 
-    if (session.role === "customer") {
-        if (session.clinicId) {
-            const check = await prisma.dentalCase.findFirst({
-                where: { id, clinicId: session.clinicId }
-            });
-            if (!check) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-        }
-        const allowed = ["scan", "photo", "other"];
-        if (!allowed.includes(slotLabel) && slotLabel !== "other") { 
-            // Block logic if needed
-        }
-    }
-
-    const incomingFiles: File[] = [
-      ...(form.getAll("file") as File[]),
-      ...(form.getAll("files") as File[]),
-    ].filter((f): f is File => f instanceof File);
-
-    if (!incomingFiles.length) return NextResponse.json({ error: "No files uploaded." }, { status: 400 });
-
+    // Case Existence & Stage Check
     const dentalCase = await prisma.dentalCase.findUnique({
       where: { id },
-      select: { id: true, stage: true },
+      select: { id: true, stage: true, clinicId: true },
     });
+
     if (!dentalCase) return NextResponse.json({ error: "Case not found." }, { status: 404 });
 
+    // Doctor Ownership Validation
+    if (session.role === "customer") {
+        if (session.clinicId && dentalCase.clinicId !== session.clinicId) {
+            return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+        }
+    }
+
+    // Stage Validation (Scan only in DESIGN)
     if (slotLabel === "scan" && dentalCase.stage !== ProductionStage.DESIGN) {
       return NextResponse.json(
         { error: "Scan files can only be uploaded while the case is in the DESIGN stage." },
@@ -3832,49 +4110,40 @@ export async function POST(req: Request, props: { params: Params }) {
       );
     }
 
-    const created: any[] = [];
-    const REPLACE_SLOTS = ["scan", "design_with_model", "design_only", "scan_html", "design_with_model_html"];
+    // Determine File Kind
+    const ext = filename.split('.').pop()?.toLowerCase();
     
+    // ✅ FIX: Explicitly tell TS this variable can be ANY FileKindType
+    let kind: FileKindType = FileKind.OTHER; 
+    
+    if (ext === 'stl') kind = FileKind.STL;
+    else if (ext === 'ply') kind = FileKind.PLY;
+    else if (ext === 'obj') kind = FileKind.OBJ;
+    else if (ext === 'pdf') kind = FileKind.PDF;
+
+    // Replacement Logic (Delete old DB record for this slot)
+    const REPLACE_SLOTS = ["scan", "design_with_model", "design_only", "scan_html", "design_with_model_html", "rx_pdf"];
     if (REPLACE_SLOTS.includes(slotLabel)) {
       await prisma.caseFile.deleteMany({
         where: { caseId: id, label: slotLabel },
       });
     }
 
-    for (const file of incomingFiles) {
-      const buf = Buffer.from(await file.arrayBuffer());
-      const originalName = (file.name || "file").replace(/\s+/g, "_");
-      
-      const { ext, kind } = chooseExtAndKind(originalName, slotLabel);
-      const hasExt = originalName.toLowerCase().endsWith(ext.toLowerCase());
-      const base = hasExt ? originalName.slice(0, originalName.length - ext.length) : originalName;
-      
-      const uniqueSuffix = (!REPLACE_SLOTS.includes(slotLabel)) ? `_${Date.now()}` : "";
-      const safeName = `${base}${uniqueSuffix}${ext}`;
-      
-      // ✅ S3 Key Pattern
-      const key = `cases/${id}/${slotLabel}_${safeName}`;
+    // Create the DB record
+    const record = await prisma.caseFile.create({
+      data: {
+        caseId: id,
+        label: slotLabel,
+        kind: kind, 
+        url: key, // The Cloudflare key provided by frontend
+        sizeBytes: size,
+      },
+    });
 
-      // ✅ Upload to S3
-      await uploadFile(buf, key, file.type || "application/octet-stream");
-
-      const rec = await prisma.caseFile.create({
-        data: {
-          caseId: id,
-          label: slotLabel,
-          kind: kind,
-          url: key, // Store KEY
-          sizeBytes: buf.length,
-        },
-        select: { id: true, url: true, label: true, kind: true },
-      });
-      created.push(rec);
-    }
-
-    return NextResponse.json({ ok: true, id: created[0]?.id, files: created });
+    return NextResponse.json({ ok: true, id: record.id });
 
   } catch (error) {
-    console.error("Upload error:", error);
+    console.error("File record error:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -4144,6 +4413,27 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     return NextResponse.json({ error: "Cannot delete clinic. It likely has users or cases linked." }, { status: 500 });
   }
 }
+--- END OF FILE ---
+
+FILE: ./app/api/sentry-example-api/route.ts
+import * as Sentry from "@sentry/nextjs";
+export const dynamic = "force-dynamic";
+
+class SentryExampleAPIError extends Error {
+  constructor(message: string | undefined) {
+    super(message);
+    this.name = "SentryExampleAPIError";
+  }
+}
+
+// A faulty API route to test Sentry's error monitoring
+export function GET() {
+  Sentry.logger.info("Sentry example API called");
+  throw new SentryExampleAPIError(
+    "This error is raised on the backend called by the example page.",
+  );
+}
+
 --- END OF FILE ---
 
 FILE: ./app/api/addresses/route.ts
@@ -4781,6 +5071,37 @@ export default function LoginPage() {
 }
 --- END OF FILE ---
 
+FILE: ./app/global-error.tsx
+"use client";
+
+import * as Sentry from "@sentry/nextjs";
+import NextError from "next/error";
+import { useEffect } from "react";
+
+export default function GlobalError({
+  error,
+}: {
+  error: Error & { digest?: string };
+}) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
+  return (
+    <html lang="en">
+      <body>
+        {/* `NextError` is the default Next.js error page component. Its type
+        definition requires a `statusCode` prop. However, since the App Router
+        does not expose status codes for errors, we simply pass 0 to render a
+        generic error message. */}
+        <NextError statusCode={0} />
+      </body>
+    </html>
+  );
+}
+
+--- END OF FILE ---
+
 FILE: ./prisma/schema.prisma
 // portal/prisma/schema.prisma
 
@@ -5027,6 +5348,29 @@ model CaseComment {
 
   attachments CaseFile[]
 }
+--- END OF FILE ---
+
+FILE: ./sentry.server.config.ts
+// This file configures the initialization of Sentry on the server.
+// The config you add here will be used whenever the server handles a request.
+// https://docs.sentry.io/platforms/javascript/guides/nextjs/
+
+import * as Sentry from "@sentry/nextjs";
+
+Sentry.init({
+  dsn: "https://de29622c9fcbe4760c8e83f3467b3056@o4510789473665024.ingest.us.sentry.io/4510789486116864",
+
+  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
+  tracesSampleRate: 1,
+
+  // Enable logs to be sent to Sentry
+  enableLogs: true,
+
+  // Enable sending user PII (Personally Identifiable Information)
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
+  sendDefaultPii: true,
+});
+
 --- END OF FILE ---
 
 FILE: ./next-env.d.ts
@@ -8729,7 +9073,7 @@ export default function FileUploader({
   role,
   label,
   slot,
-  accept, // We will default this smarter now
+  accept,
   description,
 }: {
   caseId: string;
@@ -8748,9 +9092,7 @@ export default function FileUploader({
 
   const activeLabel = label || slot || "file";
   const labelText = description || activeLabel.replace(/_/g, " ");
-
-  // ✅ FIX: Smarter defaults if 'accept' isn't passed
-  // If label is construction_info, explicitly allow weird extensions
+  
   const finalAccept = accept || (activeLabel === "construction_info" 
     ? ".pdf,.xml,.txt,.constructionInfo" 
     : ".stl,.ply,.obj");
@@ -8770,21 +9112,48 @@ export default function FileUploader({
     setOk(undefined);
 
     try {
-      const fd = new FormData();
-      fd.append("label", activeLabel);
-      fd.append("files", file); // Using 'files' to match route logic
-
-      const r = await fetch(`/api/cases/${caseId}/files`, {
+      // 1. Get the Presigned URL
+      const urlRes = await fetch(`/api/cases/${caseId}/files/upload-url`, {
         method: "POST",
-        body: fd,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          filename: file.name, 
+          contentType: file.type || "application/octet-stream",
+          label: activeLabel
+        }),
       });
-      const j = await r.json().catch(() => ({}));
       
-      if (!r.ok) throw new Error(j.error || "Upload failed");
+      if (!urlRes.ok) throw new Error("Failed to get upload permission");
+      const { url, key } = await urlRes.json();
+
+      // 2. Upload directly to Cloudflare R2
+      const uploadRes = await fetch(url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "application/octet-stream" },
+      });
+
+      if (!uploadRes.ok) throw new Error("Upload to cloud failed");
+
+      // 3. Save the record in the Database
+      const dbRes = await fetch(`/api/cases/${caseId}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key,
+          label: activeLabel,
+          size: file.size,
+          filename: file.name
+        }),
+      });
+
+      if (!dbRes.ok) throw new Error("Failed to save file record");
 
       setOk("Uploaded successfully.");
       setTimeout(() => window.location.reload(), 600);
+
     } catch (e: any) {
+      console.error(e);
       setErr(e?.message || "Upload failed");
     } finally {
       setBusy(false);
@@ -8799,28 +9168,15 @@ export default function FileUploader({
         <div className="flex-1 min-w-0 text-white/80">
           {file ? (
             <>
-              <div className="font-medium text-xs truncate" title={file.name}>
-                {file.name}
-              </div>
-              <div className="text-[10px] text-white/60">
-                {(file.size / (1024 * 1024)).toFixed(2)} MB
-              </div>
+              <div className="font-medium text-xs truncate" title={file.name}>{file.name}</div>
+              <div className="text-[10px] text-white/60">{(file.size / (1024 * 1024)).toFixed(2)} MB</div>
             </>
           ) : (
-            <div className="text-xs text-white/60 truncate">
-              Choose file…
-            </div>
+            <div className="text-xs text-white/60 truncate">Choose file…</div>
           )}
         </div>
-        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs font-medium">
-          Browse
-        </div>
-        <input
-          type="file"
-          accept={finalAccept}
-          onChange={onFileChange}
-          className="hidden"
-        />
+        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs font-medium">Browse</div>
+        <input type="file" accept={finalAccept} onChange={onFileChange} className="hidden" />
       </label>
 
       <div className="flex items-center gap-2">
@@ -8997,7 +9353,6 @@ FILE: ./components/HtmlViewerUploader.tsx
 
 import { useState } from "react";
 
-// FIX: Added "milling" to Role type
 type Role = "customer" | "lab" | "admin" | "milling";
 
 export default function HtmlViewerUploader({
@@ -9027,31 +9382,55 @@ export default function HtmlViewerUploader({
   }
 
   async function send() {
-    if (!file) {
-      return setErr("Please choose a file first.");
-    }
+    if (!file) return setErr("Please choose a file first.");
 
     setBusy(true);
     setErr(undefined);
     setOk(undefined);
 
     try {
-      const fd = new FormData();
-      fd.append("label", label);
-      fd.append("file", file);
-
-      const r = await fetch(`/api/cases/${caseId}/files`, {
+      // 1. Get Permission (Presigned URL)
+      const urlRes = await fetch(`/api/cases/${caseId}/files/upload-url`, {
         method: "POST",
-        body: fd,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          filename: file.name, 
+          contentType: file.type || "text/html",
+          label: label
+        }),
       });
-      const j = await r.json().catch(() => ({}));
-      if (!r.ok) {
-        throw new Error(j.error || "Upload failed");
-      }
+      
+      if (!urlRes.ok) throw new Error("Failed to get upload permission");
+      const { url, key } = await urlRes.json();
+
+      // 2. Upload Direct to Cloud
+      const uploadRes = await fetch(url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type || "text/html" },
+      });
+
+      if (!uploadRes.ok) throw new Error("Upload to cloud failed");
+
+      // 3. Save Record to DB
+      const dbRes = await fetch(`/api/cases/${caseId}/files`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key,
+          label: label,
+          size: file.size,
+          filename: file.name
+        }),
+      });
+
+      if (!dbRes.ok) throw new Error("Failed to save record");
 
       setOk("Viewer uploaded.");
       setTimeout(() => window.location.reload(), 600);
+
     } catch (e: any) {
+      console.error(e);
       setErr(e?.message || "Upload failed");
     } finally {
       setBusy(false);
@@ -9062,7 +9441,7 @@ export default function HtmlViewerUploader({
     <div className="space-y-2">
       <div className="text-xs text-white/60">{description}</div>
 
-      <label className="flex items-center justify-between gap-3 rounded-lg p-2 bg-black/40 border border-white/10 cursor-pointer">
+      <label className="flex items-center justify-between gap-3 rounded-lg p-2 bg-black/40 border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
         <div className="flex-1 min-w-0 text-white/80">
           {file ? (
             <>
@@ -9079,7 +9458,7 @@ export default function HtmlViewerUploader({
             </div>
           )}
         </div>
-        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs">
+        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs font-medium">
           Browse
         </div>
         <input
@@ -9094,11 +9473,11 @@ export default function HtmlViewerUploader({
         <button
           onClick={send}
           disabled={busy || !file}
-          className="rounded-lg px-3 py-1.5 bg-white text-black text-xs disabled:opacity-50"
+          className="rounded-lg px-3 py-1.5 bg-white text-black text-xs font-bold disabled:opacity-50 hover:bg-gray-200 transition-colors"
         >
           {busy ? "Uploading…" : "Upload viewer"}
         </button>
-        {ok && <span className="text-emerald-400 text-xs">{ok}</span>}
+        {ok && <span className="text-emerald-400 text-xs animate-pulse">{ok}</span>}
         {err && <span className="text-red-400 text-xs">{err}</span>}
       </div>
     </div>
@@ -9128,8 +9507,12 @@ type Comment = {
   attachments?: Attachment[];
 };
 
+// Fix for absolute URLs
 function fixUrl(url: string) {
   if (!url) return "";
+  if (url.startsWith("http://") || url.startsWith("https://")) {
+    return url;
+  }
   let clean = url.replace(/^public\//, "");
   if (!clean.startsWith("/")) clean = "/" + clean;
   return clean;
@@ -9210,18 +9593,47 @@ export default function CommentsPanel({
     setPosting(true);
     try {
       const file = new File([blob], "annotation.png", { type: "image/png" });
-      const fd = new FormData();
-      fd.append("file", file);
-      fd.append("label", "Photo"); 
+      const label = "Photo";
 
+      // 1. Get Permission
+      const urlRes = await fetch(`/api/cases/${caseId}/files/upload-url`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          filename: file.name, 
+          contentType: file.type,
+          label: label
+        }),
+      });
+      if (!urlRes.ok) throw new Error("Failed to get upload URL");
+      const { url, key } = await urlRes.json();
+
+      // 2. Upload to Cloud
+      const uploadRes = await fetch(url, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": file.type },
+      });
+      if (!uploadRes.ok) throw new Error("Failed to upload image");
+
+      // 3. Save Record
       const upRes = await fetch(`/api/cases/${caseId}/files`, {
         method: "POST",
-        body: fd,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          key,
+          label: label,
+          size: file.size,
+          filename: file.name
+        }),
       });
-      if (!upRes.ok) throw new Error("Failed to upload annotation");
+
+      if (!upRes.ok) throw new Error("Failed to save image record");
       const upData = await upRes.json();
       
+      // 4. Post Comment linking the image
       await handlePost(upData.id);
+
     } catch (e) {
       console.error(e);
       alert("Failed to upload annotation");
@@ -9229,7 +9641,6 @@ export default function CommentsPanel({
     }
   }
 
-  // --- NEW: Spacing & Inline Image Fix ---
   function renderBody(text: string) {
     const regex = /((?:https?:\/\/[^\s]+|(?:\/uploads\/)[^\s]+)\.(?:png|jpg|jpeg|gif|webp))/gi;
     const parts = text.split(regex);
@@ -9238,7 +9649,6 @@ export default function CommentsPanel({
       if (part.match(regex)) {
         const safeSrc = fixUrl(part);
         return (
-          // FIX: Standardized spacing (my-3)
           <div key={i} className="my-3">
              {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -9261,7 +9671,6 @@ export default function CommentsPanel({
         Discussion
       </h3>
 
-      {/* FIX: Added space-y-reverse to handle bottom-up stacking correctly */}
       <div className="flex-1 overflow-y-auto min-h-0 space-y-4 space-y-reverse pr-2 custom-scrollbar flex flex-col-reverse">
         {comments.length === 0 ? (
           <p className="text-white/40 text-sm text-center py-4">No comments yet.</p>
@@ -9308,8 +9717,8 @@ export default function CommentsPanel({
                   {c.attachments && c.attachments.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {c.attachments.map((att) => {
-                        const safeSrc = fixUrl(att.url);
-                        return (
+                          const safeSrc = fixUrl(att.url);
+                          return (
                           <div 
                             key={att.id}
                             onClick={() => setZoomImg(safeSrc)} 
@@ -10111,6 +10520,30 @@ export default function BillingToolbar({
 }
 --- END OF FILE ---
 
+FILE: ./sentry.edge.config.ts
+// This file configures the initialization of Sentry for edge features (middleware, edge routes, and so on).
+// The config you add here will be used whenever one of the edge features is loaded.
+// Note that this config is unrelated to the Vercel Edge Runtime and is also required when running locally.
+// https://docs.sentry.io/platforms/javascript/guides/nextjs/
+
+import * as Sentry from "@sentry/nextjs";
+
+Sentry.init({
+  dsn: "https://de29622c9fcbe4760c8e83f3467b3056@o4510789473665024.ingest.us.sentry.io/4510789486116864",
+
+  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
+  tracesSampleRate: 1,
+
+  // Enable logs to be sent to Sentry
+  enableLogs: true,
+
+  // Enable sending user PII (Personally Identifiable Information)
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
+  sendDefaultPii: true,
+});
+
+--- END OF FILE ---
+
 FILE: ./package.json
 {
   "name": "portal",
@@ -10126,6 +10559,7 @@ FILE: ./package.json
     "@aws-sdk/client-s3": "^3.975.0",
     "@aws-sdk/s3-request-presigner": "^3.975.0",
     "@prisma/client": "5.22.0",
+    "@sentry/nextjs": "^10.37.0",
     "archiver": "^7.0.1",
     "bcryptjs": "^2.4.3",
     "jsonwebtoken": "^9.0.2",
@@ -10169,6 +10603,41 @@ FILE: ./package.json
 
 --- END OF FILE ---
 
+FILE: ./instrumentation-client.ts
+// This file configures the initialization of Sentry on the client.
+// The added config here will be used whenever a users loads a page in their browser.
+// https://docs.sentry.io/platforms/javascript/guides/nextjs/
+
+import * as Sentry from "@sentry/nextjs";
+
+Sentry.init({
+  dsn: "https://de29622c9fcbe4760c8e83f3467b3056@o4510789473665024.ingest.us.sentry.io/4510789486116864",
+
+  // Add optional integrations for additional features
+  integrations: [Sentry.replayIntegration()],
+
+  // Define how likely traces are sampled. Adjust this value in production, or use tracesSampler for greater control.
+  tracesSampleRate: 1,
+  // Enable logs to be sent to Sentry
+  enableLogs: true,
+
+  // Define how likely Replay events are sampled.
+  // This sets the sample rate to be 10%. You may want this to be 100% while
+  // in development and sample at a lower rate in production
+  replaysSessionSampleRate: 0.1,
+
+  // Define how likely Replay events are sampled when an error occurs.
+  replaysOnErrorSampleRate: 1.0,
+
+  // Enable sending user PII (Personally Identifiable Information)
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/configuration/options/#sendDefaultPii
+  sendDefaultPii: true,
+});
+
+export const onRouterTransitionStart = Sentry.captureRouterTransitionStart;
+
+--- END OF FILE ---
+
 FILE: ./lib/prisma.ts
 // portal/lib/prisma.ts
 import { PrismaClient } from "@prisma/client";
@@ -10177,10 +10646,31 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
+// Function to add connection limit params if missing
+const getUrl = () => {
+  let url = process.env.DATABASE_URL;
+  if (!url) return undefined;
+  
+  // If it doesn't already have a connection_limit, add one.
+  // Limit to 10 connections to prevent exhausting the Neon pool in serverless/dev
+  if (!url.includes("connection_limit")) {
+    const separator = url.includes("?") ? "&" : "?";
+    url += `${separator}connection_limit=10`;
+  }
+  
+  // Set pool timeout to 20 seconds (give it more time to connect before crashing)
+  if (!url.includes("pool_timeout")) {
+    url += "&pool_timeout=20";
+  }
+  
+  return url;
+};
+
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    log: ["query", "error", "warn"], // Helpful logs for dev
+    datasourceUrl: getUrl(),
+    log: process.env.NODE_ENV === "development" ? ["error", "warn"] : ["error"],
   });
 
 if (process.env.NODE_ENV !== "production") {
@@ -10352,6 +10842,23 @@ export async function getFileStream(key: string) {
   const response = await s3.send(command);
   return response.Body;
 }
+
+/**
+ * Generates a signed URL for UPLOADING directly from the browser.
+ * Valid for 10 minutes.
+ */
+export async function getPresignedUploadUrl(
+  key: string, 
+  contentType: string
+): Promise<string> {
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    ContentType: contentType,
+  });
+  // URL expires in 600 seconds (10 minutes)
+  return await getSignedUrl(s3, command, { expiresIn: 600 });
+}
 --- END OF FILE ---
 
 FILE: ./lib/schemas.ts
@@ -10485,7 +10992,25 @@ export async function getSession(): Promise<Session | null> {
 }
 --- END OF FILE ---
 
+FILE: ./instrumentation.ts
+import * as Sentry from "@sentry/nextjs";
+
+export async function register() {
+  if (process.env.NEXT_RUNTIME === "nodejs") {
+    await import("./sentry.server.config");
+  }
+
+  if (process.env.NEXT_RUNTIME === "edge") {
+    await import("./sentry.edge.config");
+  }
+}
+
+export const onRequestError = Sentry.captureRequestError;
+
+--- END OF FILE ---
+
 FILE: ./next.config.ts
+import { withSentryConfig } from '@sentry/nextjs';
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -10500,6 +11025,43 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withSentryConfig(nextConfig, {
+  // For all available options, see:
+  // https://www.npmjs.com/package/@sentry/webpack-plugin#options
+
+  org: "lumera-lab",
+
+  project: "nextjs",
+
+  // Only print logs for uploading source maps in CI
+  silent: !process.env.CI,
+
+  // For all available options, see:
+  // https://docs.sentry.io/platforms/javascript/guides/nextjs/manual-setup/
+
+  // Upload a larger set of source maps for prettier stack traces (increases build time)
+  widenClientFileUpload: true,
+
+  // Route browser requests to Sentry through a Next.js rewrite to circumvent ad-blockers.
+  // This can increase your server load as well as your hosting bill.
+  // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
+  // side errors will fail.
+  tunnelRoute: "/monitoring",
+
+  webpack: {
+    // Enables automatic instrumentation of Vercel Cron Monitors. (Does not yet work with App Router route handlers.)
+    // See the following for more information:
+    // https://docs.sentry.io/product/crons/
+    // https://vercel.com/docs/cron-jobs
+    automaticVercelMonitors: true,
+
+    // Tree-shaking options for reducing bundle size
+    treeshake: {
+      // Automatically tree-shake Sentry logger statements to reduce bundle size
+      removeDebugLogging: true,
+    },
+  },
+});
+
 --- END OF FILE ---
 

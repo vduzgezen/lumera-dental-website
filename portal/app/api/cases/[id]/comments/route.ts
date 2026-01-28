@@ -2,6 +2,28 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { getSignedFileUrl } from "@/lib/storage"; // ✅ Import this
+
+// Helper to sign attachments in a comment list
+async function signCommentAttachments(comment: any) {
+  if (!comment || !comment.attachments) return comment;
+
+  const signedAttachments = await Promise.all(
+    comment.attachments.map(async (att: any) => {
+      // If it's already a full URL (legacy), leave it. Otherwise, sign it.
+      if (att.url.startsWith("http")) return att;
+      try {
+        const signed = await getSignedFileUrl(att.url);
+        return { ...att, url: signed };
+      } catch (e) {
+        console.error("Failed to sign URL:", att.url);
+        return att;
+      }
+    })
+  );
+
+  return { ...comment, attachments: signedAttachments };
+}
 
 export async function POST(
   request: Request,
@@ -17,8 +39,8 @@ export async function POST(
     const json = await request.json();
     const { body, attachmentFileId } = json;
 
-    if (!body || !body.trim()) {
-      return NextResponse.json({ error: "Body required" }, { status: 400 });
+    if (!body && !attachmentFileId) {
+      return NextResponse.json({ error: "Body or attachment required" }, { status: 400 });
     }
 
     // 1. Create the comment
@@ -26,13 +48,11 @@ export async function POST(
       data: {
         caseId,
         authorId: session.userId,
-        body,
+        body: body || "",
       },
     });
 
-    // 2. Link the attachment
-    // We cast 'as any' because the Prisma types in node_modules are stale
-    // and don't see 'commentId' yet, even though the DB has it.
+    // 2. Link the attachment if present
     if (attachmentFileId) {
       await prisma.caseFile.update({
         where: { id: attachmentFileId },
@@ -43,7 +63,6 @@ export async function POST(
     }
 
     // 3. Fetch result with attachments
-    // Casting 'as any' allows us to request 'attachments' despite the stale types.
     const finalComment = await prisma.caseComment.findUnique({
       where: { id: newComment.id },
       include: {
@@ -51,7 +70,11 @@ export async function POST(
       } as any,
     });
 
-    return NextResponse.json(finalComment);
+    // ✅ FIX: Sign the URLs before returning
+    const signedComment = await signCommentAttachments(finalComment);
+
+    return NextResponse.json(signedComment);
+
   } catch (error) {
     console.error("Comment error:", error);
     return NextResponse.json({ error: "Internal Error" }, { status: 500 });
@@ -70,8 +93,11 @@ export async function GET(
     orderBy: { createdAt: "asc" },
     include: {
       attachments: true,
-    } as any, // Force TS to accept 'attachments'
+    } as any, 
   });
-  
-  return NextResponse.json(comments);
+
+  // ✅ FIX: Sign all URLs in the list
+  const signedComments = await Promise.all(comments.map(signCommentAttachments));
+
+  return NextResponse.json({ comments: signedComments });
 }
