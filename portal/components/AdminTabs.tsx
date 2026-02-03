@@ -27,6 +27,7 @@ export function AdminTabs() {
       <Tab href="/portal/admin/clinics" label="Clinics" />
       <Tab href="/portal/admin/addresses" label="Addresses" />
       <Tab href="/portal/admin/requests" label="Requests" />
+      <Tab href="/portal/admin/financials" label="Financials" />
     </div>
   );
 }

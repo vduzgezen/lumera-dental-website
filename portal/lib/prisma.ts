@@ -10,16 +10,15 @@ const getUrl = () => {
   let url = process.env.DATABASE_URL;
   if (!url) return undefined;
   
-  // If it doesn't already have a connection_limit, add one.
-  // Limit to 10 connections to prevent exhausting the Neon pool in serverless/dev
+  // Limit to 10 connections (Standard for Serverless/Neon in Dev)
   if (!url.includes("connection_limit")) {
     const separator = url.includes("?") ? "&" : "?";
     url += `${separator}connection_limit=10`;
   }
   
-  // Set pool timeout to 20 seconds (give it more time to connect before crashing)
+  // ✅ UPDATE: Increase timeout to 60s (handles Neon "Cold Starts")
   if (!url.includes("pool_timeout")) {
-    url += "&pool_timeout=20";
+    url += "&pool_timeout=60";
   }
   
   return url;
