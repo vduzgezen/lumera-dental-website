@@ -13,10 +13,8 @@ type SortConfig = {
 interface Props {
   cases: CaseRow[];
   role: string;
-  isDoctor: boolean;
 }
 
-// Component defined OUTSIDE to prevent DOM thrashing
 const SortableHeader = ({ 
   label, 
   colKey, 
@@ -32,18 +30,18 @@ const SortableHeader = ({
   return (
     <th 
       className={`
-        p-4 font-medium cursor-pointer transition-all select-none group border-b-2 outline-none
+        p-4 font-medium cursor-pointer transition-colors duration-200 select-none group border-b-2 outline-none whitespace-nowrap
         ${isActive 
           ? "text-white border-accent" 
-          : "text-white/70 border-transparent hover:text-white hover:bg-white/5"
+          : "border-transparent hover:text-white"
         }
       `}
       onClick={() => onSort(colKey)}
     >
-      <div className="flex items-center">
+      <div className={`flex items-center gap-1 ${colKey === "status" ? "justify-center" : ""}`}>
         {label}
         {isActive && (
-          <span className="text-accent ml-2 text-xs">
+          <span className="text-accent text-[10px] leading-none">
             {sortConfig.direction === "asc" ? "▲" : "▼"}
           </span>
         )}
@@ -52,7 +50,9 @@ const SortableHeader = ({
   );
 };
 
-export default function CaseListClient({ cases, role, isDoctor }: Props) {
+export default function CaseListClient({ cases, role }: Props) {
+  const isDoctor = role === "customer";
+  
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
 
   // --- SORTING LOGIC ---
@@ -71,7 +71,6 @@ export default function CaseListClient({ cases, role, isDoctor }: Props) {
         case "clinic":
           aVal = a.clinic.name; bVal = b.clinic.name; break;
         
-        // ✅ SORTING FOR DOCTOR COLUMN vs PATIENT COLUMN
         case "doctor":
           aVal = a.doctorName || ""; bVal = b.doctorName || ""; break;
         case "patient":
@@ -110,18 +109,22 @@ export default function CaseListClient({ cases, role, isDoctor }: Props) {
   return (
     <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
-        <table className="w-full text-sm text-left border-collapse">
+        <table className="w-full text-sm text-left border-collapse min-w-[1000px]">
           <thead className="bg-black/60 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
             <tr>
               <SortableHeader label="Case ID" colKey="id" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader label="Alias" colKey="alias" sortConfig={sortConfig} onSort={handleSort} />
-              <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />
               
-              {/* ✅ CONDITIONAL HEADER: Patient for Doctors, Doctor for Admins */}
               {isDoctor ? (
-                <SortableHeader label="Patient" colKey="patient" sortConfig={sortConfig} onSort={handleSort} />
+                <>
+                    <SortableHeader label="Patient Name" colKey="patient" sortConfig={sortConfig} onSort={handleSort} />
+                    <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />
+                </>
               ) : (
-                <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={handleSort} />
+                <>
+                    <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={handleSort} />
+                    <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />
+                </>
               )}
               
               {!isDoctor && (
@@ -129,9 +132,12 @@ export default function CaseListClient({ cases, role, isDoctor }: Props) {
               )}
               
               <SortableHeader label="Tooth" colKey="tooth" sortConfig={sortConfig} onSort={handleSort} />
+              
+              {/* ✅ UPDATED: Now using SortableHeader for Status */}
               <SortableHeader label="Status" colKey="status" sortConfig={sortConfig} onSort={handleSort} />
+              
               <SortableHeader label="Due Date" colKey="due" sortConfig={sortConfig} onSort={handleSort} />
-              <SortableHeader label="Created On" colKey="created" sortConfig={sortConfig} onSort={handleSort} />
+              <SortableHeader label="Created" colKey="created" sortConfig={sortConfig} onSort={handleSort} />
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
@@ -139,7 +145,7 @@ export default function CaseListClient({ cases, role, isDoctor }: Props) {
               <CaseListRow key={c.id} data={c} role={role} />
             ))}
             {sortedCases.length === 0 && (
-               <tr><td className="p-12 text-center text-white/40" colSpan={9}>No cases found.</td></tr>
+               <tr><td className="p-12 text-center text-white/40" colSpan={isDoctor ? 8 : 9}>No cases found.</td></tr>
             )}
           </tbody>
         </table>

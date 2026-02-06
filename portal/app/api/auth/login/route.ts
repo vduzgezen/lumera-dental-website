@@ -5,11 +5,8 @@ export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
-
-const JWT_SECRET = process.env.JWT_SECRET || "dev-secret";
-const COOKIE_NAME = "lumera_session";
+import { signToken, COOKIE_OPTIONS } from "@/lib/auth"; // ✅ Import rules
 
 export async function POST(req: Request) {
   try {
@@ -18,55 +15,33 @@ export async function POST(req: Request) {
     const password = String(body.password ?? "");
 
     if (!email || !password) {
-      return NextResponse.json(
-        { error: "Email and password are required" },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-    });
-
+    const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
-      return NextResponse.json(
-        { error: "Invalid credentials" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        role: user.role,
-        clinicId: user.clinicId ?? null,
-      },
-      JWT_SECRET,
-      { expiresIn: "7d" }
-    );
-
-    const jar = await cookies();
-    jar.set(COOKIE_NAME, token, {
-      httpOnly: true,
-      sameSite: "lax",
-      path: "/",
-      // secure: true, // enable in production
+    // ✅ Generate Token
+    const token = signToken({
+      userId: user.id,
+      role: user.role,
+      clinicId: user.clinicId ?? null,
     });
+
+    // ✅ Set Secure Cookie
+    const jar = await cookies();
+    jar.set(COOKIE_OPTIONS.name, token, COOKIE_OPTIONS.options);
 
     return NextResponse.json({ ok: true });
   } catch (e) {
-    console.error(e);
-    return NextResponse.json(
-      { error: "Login failed" },
-      { status: 500 }
-    );
+    console.error("Login Error:", e);
+    return NextResponse.json({ error: "Login failed" }, { status: 500 });
   }
 }

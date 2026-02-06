@@ -38,15 +38,28 @@ export default function CaseDetailSidebar({
   designers = []
 }: Props) {
   const STORAGE_KEY = "lumera.sidebarTab";
-  const [activeTab, setActiveTab] = useState<"files" | "discussion" | "history" | "preferences">("discussion");
+  
   const isInternal = role === "lab" || role === "admin" || role === "milling";
+
+  // ✅ Initialize based on role to avoid flash of wrong content
+  const [activeTab, setActiveTab] = useState<"files" | "discussion" | "history" | "preferences">(
+    isInternal ? "files" : "discussion"
+  );
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const saved = window.localStorage.getItem(STORAGE_KEY);
+      
+      // ✅ SAFETY CHECK: If doctor has "files" saved in local storage, force "discussion"
+      if (!isInternal && (saved === "files" || saved === "preferences")) {
+        setActiveTab("discussion");
+        return;
+      }
+
       if (saved && ["files", "discussion", "history", "preferences"].includes(saved)) {
         setActiveTab(saved as any);
       } else {
+        // Default fallback if nothing saved
         setActiveTab(isInternal ? "files" : "discussion");
       }
     }
@@ -72,24 +85,25 @@ export default function CaseDetailSidebar({
     };
   }, [files]);
 
+  // ✅ UPDATED: Matches 3D Viewer Header Height (h-14) & Style
   const InternalNav = () => (
-    <div className="p-4 border-b border-white/10 bg-[#0a1020]">
-      <label className="text-xs font-bold text-accent uppercase tracking-wider mb-2 block">
-        View Section
+    <div className="h-14 flex items-center px-3 border-b border-white/10 bg-white/5 shrink-0 gap-3">
+      <label className="text-xs font-bold text-accent uppercase tracking-wider shrink-0 hidden sm:block">
+        View
       </label>
-      <div className="relative">
+      <div className="relative flex-1">
         <select
           value={activeTab}
           onChange={(e) => handleTabChange(e.target.value as any)}
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white appearance-none focus:border-accent/50 outline-none cursor-pointer"
+          className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white appearance-none focus:border-accent/50 outline-none cursor-pointer"
         >
-          <option value="files">📂 Manage Files</option>
+          <option value="files">📂 Files & Uploads</option>
           <option value="discussion">💬 Discussion ({comments.length})</option>
           <option value="history">📜 History</option>
           <option value="preferences">⭐ Preferences</option>
         </select>
         <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-white/40">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </div>
@@ -97,11 +111,12 @@ export default function CaseDetailSidebar({
     </div>
   );
 
+  // ✅ UPDATED: Matches 3D Viewer Header Height (h-14) & Style
   const CustomerNav = () => (
-    <div className="flex border-b border-white/10 bg-[#0a1020]">
+    <div className="h-14 flex items-center border-b border-white/10 bg-white/5 shrink-0 px-2">
       <button
         onClick={() => handleTabChange("discussion")}
-        className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+        className={`flex-1 h-full flex items-center justify-center text-sm font-medium border-b-2 transition-colors ${
           activeTab === "discussion" ? "border-accent text-white" : "border-transparent text-white/60 hover:text-white"
         }`}
       >
@@ -109,7 +124,7 @@ export default function CaseDetailSidebar({
       </button>
       <button
         onClick={() => handleTabChange("history")}
-        className={`flex-1 py-3 text-sm font-medium border-b-2 transition-colors ${
+        className={`flex-1 h-full flex items-center justify-center text-sm font-medium border-b-2 transition-colors ${
           activeTab === "history" ? "border-accent text-white" : "border-transparent text-white/60 hover:text-white"
         }`}
       >
@@ -122,8 +137,10 @@ export default function CaseDetailSidebar({
     <div className="flex flex-col h-full rounded-xl border border-white/10 bg-[#0a1020] overflow-hidden shadow-2xl">
       
       {role === "admin" && (
-        <div className="p-4 border-b border-white/5 bg-[#0a1020]">
-          <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider mb-2">Assigned Designer</div>
+        <div className="p-3 border-b border-white/5 bg-[#0a1020]">
+          <div className="flex items-center justify-between mb-1">
+             <div className="text-[10px] font-bold text-white/40 uppercase tracking-wider">Assigned Designer</div>
+          </div>
           <DesignerPicker caseId={caseId} currentAssigneeId={assigneeId || null} designers={designers} />
         </div>
       )}
@@ -148,7 +165,7 @@ export default function CaseDetailSidebar({
 
                     <div className="bg-white/5 p-3 rounded-lg border border-white/5">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-white/80">Design HTML</span>
+                             <span className="text-xs font-medium text-white/80">Design HTML</span>
                             {fileStatus.designHtml && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
                         <HtmlViewerUploader caseId={caseId} role={role} label="design_with_model_html" description="Exocad Web Viewer (Design)" />
@@ -156,7 +173,7 @@ export default function CaseDetailSidebar({
 
                     <div className="bg-white/5 p-3 rounded-lg border border-white/5">
                         <div className="flex items-center justify-between mb-2">
-                            <span className="text-xs font-medium text-white/80">Design STL</span>
+                             <span className="text-xs font-medium text-white/80">Design STL</span>
                             {fileStatus.designOnly && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
                         <FileUploader caseId={caseId} role={role} label="design_only" description="Final Design STL" />
@@ -179,7 +196,6 @@ export default function CaseDetailSidebar({
                              <span className="text-xs font-medium text-white/80">Construction Info</span>
                              {fileStatus.construction && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
-                        {/* FIX: Removed explicit 'accept' so it uses the FileUploader default (.pdf,.xml,.txt,.constructionInfo) */}
                         <FileUploader caseId={caseId} role={role} label="construction_info" description="Construction/Milling Params" />
                     </div>
 
@@ -203,10 +219,12 @@ export default function CaseDetailSidebar({
           </div>
         )}
 
+        {/* ✅ DISCUSSION TAB (Default for Doctors) */}
         <div className={`flex-1 flex flex-col min-h-0 p-4 animate-in fade-in duration-200 ${activeTab === "discussion" ? "flex" : "hidden"}`}>
              <CommentsPanel caseId={caseId} comments={comments} canPost={true} currentUserName={currentUserName} currentUserRole={role} />
         </div>
 
+        {/* HISTORY TAB */}
         <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 animate-in fade-in duration-200 ${activeTab === "history" ? "block" : "hidden"}`}>
             {events.length === 0 ? <p className="text-white/60 text-sm">No events yet.</p> : (
               <div className="relative border-l border-white/10 ml-2 space-y-6 pt-2">
@@ -221,6 +239,7 @@ export default function CaseDetailSidebar({
             )}
         </div>
 
+        {/* PREFERENCES TAB (Internal Only) */}
         {isInternal && (
           <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 animate-in fade-in duration-200 ${activeTab === "preferences" ? "block" : "hidden"}`}>
             {designPreferences ? (

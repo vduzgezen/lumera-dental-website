@@ -1,6 +1,7 @@
 // portal/components/new-case/TeethSelection.tsx
 "use client";
 
+import { useEffect } from "react"; // ✅ Added useEffect
 import { CaseData, ProductType, MaterialType, ServiceLevel } from "./types";
 import ToothSelector from "@/components/ToothSelector";
 
@@ -18,6 +19,22 @@ const PRICING = {
 
 export default function TeethSelection({ data, update }: TeethSelectionProps) {
   
+  const isNightguard = data.product === "NIGHTGUARD";
+
+  // ✅ AUTO-UPDATE: Set dummy tooth code when Nightguard is selected so validation passes
+  useEffect(() => {
+    if (isNightguard) {
+      if (data.toothCodes.length === 0 || data.toothCodes[0] !== "Full Arch") {
+         update({ toothCodes: ["Full Arch"], shade: "" }); // Clear shade, set Arch
+      }
+    } else {
+      // If switching BACK from Nightguard, clear the dummy value
+      if (data.toothCodes.includes("Full Arch")) {
+         update({ toothCodes: [] });
+      }
+    }
+  }, [isNightguard]);
+
   const handleProductChange = (type: ProductType) => {
     let defaultMaterial: MaterialType = null;
     if (type === "ZIRCONIA") defaultMaterial = "HT";
@@ -47,7 +64,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
         <div className="space-y-2">
           <label className="text-sm font-medium text-white/70">Product</label>
           <div className="grid grid-cols-2 gap-2">
-            {(["ZIRCONIA", "EMAX", "NIGHTGUARD", "INLAY_ONLAY"] as ProductType[]).map((type) => (
+             {(["ZIRCONIA", "EMAX", "NIGHTGUARD", "INLAY_ONLAY"] as ProductType[]).map((type) => (
                <button
                  key={type}
                  type="button"
@@ -79,7 +96,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
              </div>
            )}
            
-           {data.product === "NIGHTGUARD" && (
+           {isNightguard && (
              <div className="space-y-2">
                <label className="text-sm font-medium text-white/70">Material Hardness</label>
                <div className="flex gap-2">
@@ -93,19 +110,22 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
              </div>
            )}
 
-           <div className="space-y-2">
-              <label className="text-sm font-medium text-white/70">Shade</label>
-              <input
-                value={data.shade}
-                onChange={(e) => update({ shade: e.target.value })}
-                placeholder="e.g. A2"
-                className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-2 text-white outline-none focus:border-blue-500/50"
-              />
-           </div>
+           {/* ✅ HIDE SHADE IF NIGHTGUARD */}
+           {!isNightguard && (
+             <div className="space-y-2">
+                <label className="text-sm font-medium text-white/70">Shade</label>
+                <input
+                  value={data.shade}
+                  onChange={(e) => update({ shade: e.target.value })}
+                  placeholder="e.g. A2"
+                  className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-2 text-white outline-none focus:border-blue-500/50"
+                />
+             </div>
+           )}
         </div>
       </div>
 
-      {/* 2. PRICING TIER (Updated UI) */}
+      {/* 2. PRICING TIER */}
       <div className="p-4 rounded-lg bg-white/5 border border-white/10">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
            <div className="flex gap-4 w-full md:w-auto">
@@ -118,7 +138,6 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                     onChange={() => update({ serviceLevel: level })}
                     className="accent-blue-500"
                   />
-                  {/* ✅ REMOVED: Subtext descriptions */}
                   <span className={`text-sm font-bold ${data.serviceLevel === level ? "text-blue-400" : "text-white/60"}`}>
                     {level.replace("_", " ")}
                   </span>
@@ -132,22 +151,24 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
         </div>
       </div>
 
-      {/* 3. TOOTH SELECTOR */}
-      <div className="space-y-2">
-         <div className="flex justify-between items-center px-1">
-            <h3 className="text-sm font-medium text-white/70">Select Teeth <span className="text-blue-400">*</span></h3>
-            <span className="text-xs text-white/40">
-               {data.toothCodes.length > 0 ? `${data.toothCodes.length} selected` : "None"}
-            </span>
-         </div>
-         
-         <div className="bg-black/40 rounded-xl border border-white/10 p-4 flex justify-center">
-            <ToothSelector 
-              value={data.toothCodes.join(",")} 
-              onChange={(val) => update({ toothCodes: val.split(",").map(t => t.trim()).filter(Boolean) })} 
-            />
-         </div>
-      </div>
+      {/* 3. TOOTH SELECTOR (HIDDEN FOR NIGHTGUARD) */}
+      {!isNightguard && (
+        <div className="space-y-2">
+           <div className="flex justify-between items-center px-1">
+              <h3 className="text-sm font-medium text-white/70">Select Teeth <span className="text-blue-400">*</span></h3>
+              <span className="text-xs text-white/40">
+                 {data.toothCodes.length > 0 ? `${data.toothCodes.length} selected` : "None"}
+              </span>
+           </div>
+           
+           <div className="bg-black/40 rounded-xl border border-white/10 p-4 flex justify-center">
+              <ToothSelector 
+                value={data.toothCodes.join(",")} 
+                onChange={(val) => update({ toothCodes: val.split(",").map(t => t.trim()).filter(Boolean) })} 
+              />
+           </div>
+        </div>
+      )}
 
       {/* 4. DESIGN PREFERENCES */}
       <div className="space-y-2">

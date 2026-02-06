@@ -8,18 +8,21 @@ export interface DoctorRow {
   id: string;
   name: string | null;
   email: string;
-  // Primary Clinic
+  
+  // ✅ FIX: Allow clinic to be null (if doctor has no primary clinic)
   clinic: { 
     id: string; 
     name: string; 
     priceTier: string | null;
-  };
-  // ✅ NEW: Secondary Clinics
+  } | null;
+
+  // Secondary Clinics
   secondaryClinics: {
     id: string;
     name: string;
     priceTier: string | null;
   }[];
+  
   preferenceNote?: string | null;
   defaultDesignPreferences?: string | null;
 }
@@ -27,8 +30,6 @@ export interface DoctorRow {
 export interface CaseData {
   doctorUserId: string;
   doctorName: string;
-  
-  // ✅ NEW: Selected Clinic ID
   clinicId: string;
   
   patientFirstName: string;
@@ -37,7 +38,6 @@ export interface CaseData {
   
   orderDate: string; 
   dueDate: string;
-  
   product: ProductType;
   material: MaterialType;
   serviceLevel: ServiceLevel;
@@ -60,7 +60,7 @@ defaultDue.setDate(today.getDate() + 8);
 export const INITIAL_DATA: CaseData = {
   doctorUserId: "",
   doctorName: "",
-  clinicId: "", // Starts empty
+  clinicId: "", 
   
   patientFirstName: "",
   patientLastName: "",
