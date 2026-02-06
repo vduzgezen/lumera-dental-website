@@ -5,65 +5,141 @@ import bcrypt from "bcryptjs";
 const prisma = new PrismaClient();
 
 async function main() {
-  const clinics = await prisma.$transaction([
-    prisma.clinic.upsert({ where: { id: "seed-north" }, update: {}, create: { id: "seed-north", name: "North Dental" } }),
-    prisma.clinic.upsert({ where: { id: "seed-river" }, update: {}, create: { id: "seed-river", name: "River Smiles" } }),
-    prisma.clinic.upsert({ where: { id: "seed-harbor" }, update: {}, create: { id: "seed-harbor", name: "Harbor Family Dental" } }),
-  ]);
-  const [north, river, harbor] = clinics;
+  console.log("🌱 Starting seed...");
 
+  // 1. WIPE DATABASE (Order matters due to foreign keys)
+  // Delete dependent tables first
+  await prisma.caseFile.deleteMany();
+  await prisma.caseComment.deleteMany();
+  await prisma.statusEvent.deleteMany();
+  await prisma.dentalCase.deleteMany();
+  
+  // Delete users and core entities
+  await prisma.user.deleteMany();
+  await prisma.clinic.deleteMany();
+  await prisma.address.deleteMany();
+  await prisma.registrationRequest.deleteMany();
+  
+  console.log("🧹 Database cleared.");
+
+  // 2. GLOBAL PASSWORD
   const pw = await bcrypt.hash("password123", 10);
 
+  // 3. CREATE CLINICS
+  const north = await prisma.clinic.create({
+    data: { name: "North Dental", priceTier: "IN_HOUSE" }
+  });
+  
+  const river = await prisma.clinic.create({
+    data: { name: "River Smiles", priceTier: "STANDARD" }
+  });
+  
+  const harbor = await prisma.clinic.create({
+    data: { name: "Harbor Family Dental", priceTier: "STANDARD" }
+  });
+
+  const hausMilling = await prisma.clinic.create({
+    data: { name: "Haus Milling Center", priceTier: "IN_HOUSE" }
+  });
+
+  // 4. CREATE USERS
   await prisma.$transaction([
-    prisma.user.upsert({
-      where: { email: "dr.north.1@example.com" },
-      update: {},
-      create: { email: "dr.north.1@example.com", name: "Dr. North One", password: pw, role: "customer", clinicId: north.id },
-    }),
-    prisma.user.upsert({
-      where: { email: "dr.north.2@example.com" },
-      update: {},
-      create: { email: "dr.north.2@example.com", name: "Dr. North Two", password: pw, role: "customer", clinicId: north.id },
-    }),
-    prisma.user.upsert({
-      where: { email: "dr.river.1@example.com" },
-      update: {},
-      create: { email: "dr.river.1@example.com", name: "Dr. River One", password: pw, role: "customer", clinicId: river.id },
-    }),
-    prisma.user.upsert({
-      where: { email: "dr.river.2@example.com" },
-      update: {},
-      create: { email: "dr.river.2@example.com", name: "Dr. River Two", password: pw, role: "customer", clinicId: river.id },
-    }),
-    prisma.user.upsert({
-      where: { email: "dr.harbor.1@example.com" },
-      update: {},
-      create: { email: "dr.harbor.1@example.com", name: "Dr. Harbor One", password: pw, role: "customer", clinicId: harbor.id },
-    }),
-    prisma.user.upsert({
-      where: { email: "dr.harbor.2@example.com" },
-      update: {},
-      create: { email: "dr.harbor.2@example.com", name: "Dr. Harbor Two", password: pw, role: "customer", clinicId: harbor.id },
+    // --- INTERNAL ROLES ---
+    
+    // Admin
+    prisma.user.create({
+      data: { 
+        email: "admin@test.com", 
+        name: "Lumera Admin", 
+        password: pw, 
+        role: "admin" 
+      },
     }),
 
-    prisma.user.upsert({
-      where: { email: "lab@lumera.test" },
-      update: {},
-      create: { email: "lab@lumera.test", name: "Lumera Lab", password: pw, role: "lab" },
+    // Lab Tech
+    prisma.user.create({
+      data: { 
+        email: "lab@test.com", 
+        name: "Lumera Lab Tech", 
+        password: pw, 
+        role: "lab" 
+      },
     }),
-    prisma.user.upsert({
-      where: { email: "admin@lumera.test" },
-      update: {},
-      create: { email: "admin@lumera.test", name: "Lumera Admin", password: pw, role: "admin" },
+
+    // Milling Center (Haus)
+    prisma.user.create({
+      data: { 
+        email: "haus@test.com", 
+        name: "Haus Milling", 
+        password: pw, 
+        role: "milling", 
+        clinicId: hausMilling.id 
+      },
+    }),
+
+    // ✅ NEW: Sales Rep
+    prisma.user.create({
+      data: { 
+        email: "sales@test.com", 
+        name: "Sales Rep One", 
+        password: pw, 
+        role: "sales" 
+      },
+    }),
+
+    // --- DOCTORS (CUSTOMERS) ---
+
+    // Dr. North (In-House Pricing)
+    prisma.user.create({
+      data: { 
+        email: "dr.north@test.com", 
+        name: "Dr. North", 
+        password: pw, 
+        role: "customer", 
+        clinicId: north.id 
+      },
+    }),
+
+    // Dr. River (Standard Pricing)
+    prisma.user.create({
+      data: { 
+        email: "dr.river@test.com", 
+        name: "Dr. River", 
+        password: pw, 
+        role: "customer", 
+        clinicId: river.id 
+      },
+    }),
+
+    // Dr. Harbor (Standard Pricing)
+    prisma.user.create({
+      data: { 
+        email: "dr.harbor@test.com", 
+        name: "Dr. Harbor", 
+        password: pw, 
+        role: "customer", 
+        clinicId: harbor.id 
+      },
     }),
   ]);
 
-  console.log("Seed complete. Password for all: password123");
+  console.log("✅ Seed complete!");
+  console.log("------------------------------------------------");
+  console.log("Admin:   admin@test.com");
+  console.log("Lab:     lab@test.com");
+  console.log("Milling: haus@test.com");
+  console.log("Sales:   sales@test.com");
+  console.log("Doctor:  dr.north@test.com (In-House)");
+  console.log("Doctor:  dr.river@test.com (Standard)");
+  console.log("Password for all: password123");
+  console.log("------------------------------------------------");
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(1);
-}).finally(async () => {
-  await prisma.$disconnect();
-});
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+  });

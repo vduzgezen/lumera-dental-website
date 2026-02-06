@@ -11,7 +11,6 @@ const FileKind = {
   OTHER: "OTHER"
 } as const;
 
-// This defines the union type: "STL" | "PLY" | "OBJ" | "PDF" | "OTHER"
 type FileKindType = typeof FileKind[keyof typeof FileKind];
 
 const ProductionStage = {
@@ -38,7 +37,6 @@ export async function POST(
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { id } = await props.params;
-    
     const body = await req.json(); 
     const { key, label: rawLabel, size, filename } = body;
 
@@ -49,16 +47,20 @@ export async function POST(
     const slotLabel = normalizeSlotLabel(rawLabel);
 
     // Case Existence & Stage Check
+    // ✅ ADDED: doctorUserId to the selection
     const dentalCase = await prisma.dentalCase.findUnique({
       where: { id },
-      select: { id: true, stage: true, clinicId: true },
+      select: { id: true, stage: true, clinicId: true, doctorUserId: true },
     });
 
     if (!dentalCase) return NextResponse.json({ error: "Case not found." }, { status: 404 });
 
-    // Doctor Ownership Validation
+    // ✅ FIXED: Doctor Ownership Validation
     if (session.role === "customer") {
-        if (session.clinicId && dentalCase.clinicId !== session.clinicId) {
+        const isOwner = dentalCase.doctorUserId === session.userId;
+        const isSameClinic = session.clinicId && dentalCase.clinicId === session.clinicId;
+
+        if (!isOwner && !isSameClinic) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
     }
@@ -73,10 +75,7 @@ export async function POST(
 
     // Determine File Kind
     const ext = filename.split('.').pop()?.toLowerCase();
-    
-    // ✅ FIX: Explicitly tell TS this variable can be ANY FileKindType
-    let kind: FileKindType = FileKind.OTHER; 
-    
+    let kind: FileKindType = FileKind.OTHER;
     if (ext === 'stl') kind = FileKind.STL;
     else if (ext === 'ply') kind = FileKind.PLY;
     else if (ext === 'obj') kind = FileKind.OBJ;
@@ -96,7 +95,7 @@ export async function POST(
         caseId: id,
         label: slotLabel,
         kind: kind, 
-        url: key, // The Cloudflare key provided by frontend
+        url: key, 
         sizeBytes: size,
       },
     });

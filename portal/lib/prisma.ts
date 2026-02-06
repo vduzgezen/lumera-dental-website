@@ -5,20 +5,29 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-// Function to add connection limit params if missing
+// Function to add connection parameters for resilience
 const getUrl = () => {
   let url = process.env.DATABASE_URL;
   if (!url) return undefined;
   
-  // Limit to 10 connections (Standard for Serverless/Neon in Dev)
+  const hasParams = url.includes("?");
+  const separator = hasParams ? "&" : "?";
+
+  // 1. Connection Limit: Serverless environments need lower limits per instance
   if (!url.includes("connection_limit")) {
-    const separator = url.includes("?") ? "&" : "?";
     url += `${separator}connection_limit=10`;
   }
   
-  // ✅ UPDATE: Increase timeout to 60s (handles Neon "Cold Starts")
+  // 2. ✅ CRITICAL FIX: Increase Pool Timeout
+  // Default is 10s. Neon cold starts can take 3-10s. 
+  // We set it to 60s to ensure we wait for the wake-up without crashing.
   if (!url.includes("pool_timeout")) {
-    url += "&pool_timeout=60";
+    url += `&pool_timeout=60`;
+  }
+
+  // 3. Connect Timeout (Socket timeout)
+  if (!url.includes("connect_timeout")) {
+    url += `&connect_timeout=60`;
   }
   
   return url;

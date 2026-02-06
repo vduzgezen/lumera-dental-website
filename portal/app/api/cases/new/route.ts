@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { z } from "zod";
-import { uploadFile } from "@/lib/storage"; 
+import { uploadFile } from "@/lib/storage";
 
 const MAX_FILE_BYTES = 500 * 1024 * 1024; 
 
@@ -40,21 +40,15 @@ function addDays(d: string | Date, n: number) {
   return x;
 }
 
-// ✅ UPDATED: S3-Aware Save Function
+// ✅ S3-Aware Save Function
 async function saveCaseFile(file: File, caseId: string, label: string) {
   const buf = Buffer.from(await file.arrayBuffer());
-  
-  // Sanitize filename
   const originalName = file.name || `${label}.bin`;
   const safeName = originalName.replace(/[^a-zA-Z0-9_.-]/g, "_");
-  
-  // Create a clean path: cases/{id}/{label}_{filename}
   const key = `cases/${caseId}/${label}_${safeName}`;
 
-  // Upload to Cloud
   await uploadFile(buf, key, file.type);
 
-  // Determine kind
   let kind = "OTHER";
   const lower = safeName.toLowerCase();
   if (lower.endsWith(".stl")) kind = "STL";
@@ -62,13 +56,12 @@ async function saveCaseFile(file: File, caseId: string, label: string) {
   else if (lower.endsWith(".obj")) kind = "OBJ";
   else if (lower.endsWith(".pdf")) kind = "PDF";
 
-  // ✅ Store the S3 Key in the 'url' field.
   await prisma.caseFile.create({
     data: {
       caseId,
       label,
       kind,
-      url: key, // Storing the KEY now, not a public URL
+      url: key,
       sizeBytes: buf.length,
     },
   });
@@ -147,14 +140,18 @@ export async function POST(req: Request) {
 
     const data = validation.data;
 
-    // Verify Doctor
+    // ✅ Verify Doctor (FETCH SALES REP HERE)
     const doctor = await prisma.user.findUnique({
       where: { id: data.doctorUserId },
-      select: { id: true, name: true },
+      select: { 
+        id: true, 
+        name: true,
+        salesRepId: true // <--- THIS MUST BE HERE, NOT IN CLINIC
+      },
     });
     if (!doctor) return NextResponse.json({ error: "Invalid doctor." }, { status: 400 });
 
-    // Verify Clinic
+    // ✅ Verify Clinic (NO SALES REP HERE)
     const clinic = await prisma.clinic.findUnique({
       where: { id: data.clinicId },
       select: { id: true, priceTier: true },
@@ -170,6 +167,10 @@ export async function POST(req: Request) {
       data: {
         clinicId: clinic.id,
         doctorUserId: doctor.id,
+        
+        // ✅ SNAPSHOT SALES REP
+        salesRepId: doctor.salesRepId,
+
         assigneeId: session.userId, 
         patientFirstName: data.patientFirstName,
         patientLastName: data.patientLastName,
@@ -193,10 +194,8 @@ export async function POST(req: Request) {
       select: { id: true },
     });
 
-    // ✅ UPDATED FILE SAVING to use S3
     await saveCaseFile(data.scanHtml, created.id, "scan_html");
     await saveCaseFile(data.rxPdf, created.id, "rx_pdf");
-
     if (data.constructionInfo) await saveCaseFile(data.constructionInfo, created.id, "construction_info");
     if (data.modelTop) await saveCaseFile(data.modelTop, created.id, "model_top");
     if (data.modelBottom) await saveCaseFile(data.modelBottom, created.id, "model_bottom");

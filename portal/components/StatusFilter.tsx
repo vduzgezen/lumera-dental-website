@@ -9,10 +9,20 @@ const ALL_STATUSES = [
   "APPROVED",
   "IN_MILLING",
   "SHIPPED",
-  "COMPLETED"
+  "COMPLETED",
+  "DELIVERED"
 ];
 
-export default function StatusFilter({ selected }: { selected: string[] }) {
+// ✅ Added onChange prop
+export default function StatusFilter({ 
+  selected, 
+  role, 
+  onChange 
+}: { 
+  selected: string[], 
+  role: string,
+  onChange?: (statuses: string[]) => void 
+}) {
   const [isOpen, setIsOpen] = useState(false);
   const [selection, setSelection] = useState<Set<string>>(new Set(selected));
   const containerRef = useRef<HTMLDivElement>(null);
@@ -27,41 +37,55 @@ export default function StatusFilter({ selected }: { selected: string[] }) {
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  // Helper: Is the filter in "Default Mode" (Active Only)?
+  // Sync internal state if parent prop changes (e.g. URL update)
+  useEffect(() => {
+    setSelection(new Set(selected));
+  }, [selected]);
+
   const isDefault = selection.size === 0;
+
+  const getDefaultSet = () => {
+    if (role === "customer") {
+        return new Set(ALL_STATUSES.filter(s => s !== "DELIVERED"));
+    } else {
+        return new Set(ALL_STATUSES.filter(s => s !== "COMPLETED" && s !== "DELIVERED"));
+    }
+  };
 
   const toggle = (status: string) => {
     let next: Set<string>;
-
     if (isDefault) {
-      // Transition from Default (Implicitly all active) to Custom
-      // 1. Start with all ACTIVE statuses (everything except COMPLETED)
-      next = new Set(ALL_STATUSES.filter(s => s !== "COMPLETED"));
-      
-      // 2. Apply the toggle
-      if (next.has(status)) next.delete(status); // Uncheck if already checked
-      else next.add(status); // Check if not checked (e.g. COMPLETED)
+      next = getDefaultSet();
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
     } else {
-      // Standard toggle
       next = new Set(selection);
       if (next.has(status)) next.delete(status);
       else next.add(status);
     }
-    
     setSelection(next);
+    // ✅ Notify Parent Immediately
+    if (onChange) onChange(Array.from(next));
+  };
+
+  const reset = () => {
+    const next = new Set<string>();
+    setSelection(next);
+    if (onChange) onChange([]);
   };
 
   const label = isDefault 
-    ? "Status (Current)" 
+    ? "Status (Active)" 
     : `Status (${selection.size})`;
 
   const getStatusColor = (s: string) => {
     if (s === "CHANGES_REQUESTED") return "text-red-400";
     if (s === "APPROVED") return "text-lime-300";
-    if (s === "IN_MILLING") return "text-purple-400";
+    if (s === "IN_MILLING") return "text-yellow-400"; 
     if (s === "SHIPPED") return "text-blue-400";
     if (s === "COMPLETED") return "text-emerald-400";
-    return "text-orange-400"; // IN_DESIGN
+    if (s === "DELIVERED") return "text-purple-400";
+    return "text-orange-400"; 
   };
 
   return (
@@ -82,25 +106,15 @@ export default function StatusFilter({ selected }: { selected: string[] }) {
         </svg>
       </button>
 
-      {/* FORM SUBMISSION LOGIC:
-        - If isDefault (Active Only), submit NO status inputs. Server defaults to { not: "COMPLETED" }.
-        - If !isDefault (Custom), submit the specific statuses.
-      */}
-      {!isDefault && Array.from(selection).map(s => (
-        <input key={s} type="hidden" name="status" value={s} />
-      ))}
-
       {isOpen && (
         <div className="absolute top-full left-0 mt-2 w-64 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 p-1">
           <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
-            {ALL_STATUSES.map((status) => {
-              // VISUAL LOGIC:
-              // If Default: Check everything except COMPLETED.
-              // If Custom: Check what's in the set.
+             {ALL_STATUSES.map((status) => {
+              const defaultSet = getDefaultSet();
               const isChecked = isDefault 
-                ? status !== "COMPLETED" 
+                ? defaultSet.has(status)
                 : selection.has(status);
-
+              
               const colorClass = getStatusColor(status);
               
               return (
@@ -111,9 +125,7 @@ export default function StatusFilter({ selected }: { selected: string[] }) {
                 >
                   <div className={`
                     w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0
-                    ${isChecked 
-                      ? "bg-blue-500 border-blue-500" 
-                      : "border-white/30 bg-transparent"}
+                    ${isChecked ? "bg-blue-500 border-blue-500" : "border-white/30 bg-transparent"}
                   `}>
                     {isChecked && (
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -126,15 +138,15 @@ export default function StatusFilter({ selected }: { selected: string[] }) {
                   </span>
                 </div>
               );
-            })}
+             })}
           </div>
           <div className="border-t border-white/10 mt-1 pt-1">
             <button
               type="button"
-              onClick={() => setSelection(new Set())}
+              onClick={reset}
               className="w-full text-left px-3 py-2 text-xs text-white/40 hover:text-white transition-colors"
             >
-              Reset to Current
+              Reset to Active
             </button>
           </div>
         </div>

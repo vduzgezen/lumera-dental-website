@@ -1,6 +1,8 @@
 // portal/components/BillingToolbar.tsx
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 
 const MONTHS = [
@@ -27,7 +29,53 @@ export default function BillingToolbar({
   isAdminOrLab,
   isFiltered,
 }: Props) {
-  // Logic: Start at 2024, end at Current Year (e.g., 2026).
+  const router = useRouter();
+  const searchParams = useSearchParams(); // Get current params to preserve others if needed
+
+  // Local state for debouncing
+  const [filters, setFilters] = useState({
+    year: selYear,
+    month: selMonth,
+    q: qFilter,
+    doctor: doctorFilter,
+    clinic: clinicFilter,
+  });
+
+  // Sync state if parent props change (e.g. via Reset link)
+  useEffect(() => {
+    setFilters({
+      year: selYear,
+      month: selMonth,
+      q: qFilter,
+      doctor: doctorFilter,
+      clinic: clinicFilter,
+    });
+  }, [selYear, selMonth, qFilter, doctorFilter, clinicFilter]);
+
+  // Debounced URL Update
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams();
+      
+      params.set("year", String(filters.year));
+      params.set("month", String(filters.month));
+      
+      if (filters.q) params.set("q", filters.q);
+      if (filters.doctor) params.set("doctor", filters.doctor);
+      if (filters.clinic) params.set("clinic", filters.clinic);
+
+      router.replace(`?${params.toString()}`, { scroll: false });
+    }, 400); // 400ms debounce
+
+    return () => clearTimeout(timer);
+  }, [filters, router]);
+
+  // Handle Immediate Changes (Selects)
+  const updateInstant = (key: string, val: string | number) => {
+    setFilters(prev => ({ ...prev, [key]: val }));
+  };
+
+  // Logic: Start at 2024, end at Current Year
   const currentYear = new Date().getFullYear();
   const startYear = 2024;
   const years = Array.from(
@@ -44,11 +92,11 @@ export default function BillingToolbar({
         </p>
       </header>
 
-      <form className="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
+      <div className="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
         {/* Year Select */}
         <select
-          name="year"
-          defaultValue={selYear}
+          value={filters.year}
+          onChange={(e) => updateInstant("year", Number(e.target.value))}
           className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none transition appearance-none cursor-pointer hover:bg-white/5"
         >
           {years.map((y) => (
@@ -60,8 +108,8 @@ export default function BillingToolbar({
 
         {/* Month Select */}
         <select
-          name="month"
-          defaultValue={selMonth}
+          value={filters.month}
+          onChange={(e) => updateInstant("month", Number(e.target.value))}
           className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none transition appearance-none cursor-pointer hover:bg-white/5"
         >
           {MONTHS.map((m, i) => (
@@ -73,9 +121,9 @@ export default function BillingToolbar({
 
         {/* Search */}
         <input
-          name="q"
+          value={filters.q}
+          onChange={(e) => updateInstant("q", e.target.value)}
           placeholder="Search Patient or Case ID..."
-          defaultValue={qFilter}
           className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-48 transition"
         />
 
@@ -83,26 +131,19 @@ export default function BillingToolbar({
         {isAdminOrLab && (
           <>
             <input
-              name="doctor"
+              value={filters.doctor}
+              onChange={(e) => updateInstant("doctor", e.target.value)}
               placeholder="Filter by Doctor..."
-              defaultValue={doctorFilter}
               className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-40 transition"
             />
             <input
-              name="clinic"
+              value={filters.clinic}
+              onChange={(e) => updateInstant("clinic", e.target.value)}
               placeholder="Filter by Clinic..."
-              defaultValue={clinicFilter}
               className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-40 transition"
             />
           </>
         )}
-
-        <button
-          type="submit"
-          className="bg-white text-black rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-gray-200 transition"
-        >
-          Filter
-        </button>
 
         {isFiltered && (
           <Link
@@ -112,7 +153,7 @@ export default function BillingToolbar({
             Reset
           </Link>
         )}
-      </form>
+      </div>
     </div>
   );
 }

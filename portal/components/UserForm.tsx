@@ -3,12 +3,23 @@
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AddressPicker, { AddressData } from "@/components/AddressPicker";
-import SearchableSelect from "@/components/SearchableSelect"; 
+import SearchableSelect from "@/components/SearchableSelect";
 import ClinicForm from "@/components/ClinicForm"; 
 
 type Clinic = { id: string; name: string };
+type UserOption = { id: string; name: string | null; email: string };
 
-export default function UserForm({ clinics, initialData, onClose }: { clinics: Clinic[], initialData?: any, onClose?: () => void }) {
+export default function UserForm({ 
+  clinics, 
+  salesReps = [], 
+  initialData, 
+  onClose 
+}: { 
+  clinics: Clinic[], 
+  salesReps?: UserOption[],
+  initialData?: any, 
+  onClose?: () => void 
+}) {
   const router = useRouter();
   
   // --- STATE ---
@@ -19,6 +30,7 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
     clinicId: initialData?.clinicId || "", 
     phoneNumber: initialData?.phoneNumber || "",
     preferenceNote: initialData?.preferenceNote || "",
+    salesRepId: initialData?.salesRepId || "", // ✅ STATE
   });
 
   const [address, setAddress] = useState<AddressData>({
@@ -31,7 +43,7 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
 
   const [secondaryIds, setSecondaryIds] = useState<Set<string>>(new Set());
   const [secondarySearch, setSecondarySearch] = useState(""); 
-  const [showClinicForm, setShowClinicForm] = useState(false); 
+  const [showClinicForm, setShowClinicForm] = useState(false);
 
   useEffect(() => {
     if (initialData?.secondaryClinics) {
@@ -59,6 +71,11 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
     return clinics.map(c => ({ id: c.id, label: c.name }));
   }, [clinics]);
 
+  // ✅ NEW: Rep Options
+  const repOptions = useMemo(() => {
+    return salesReps.map(r => ({ id: r.id, label: r.name || r.email }));
+  }, [salesReps]);
+
   const filteredSecondaryClinics = useMemo(() => {
     const q = secondarySearch.toLowerCase();
     
@@ -68,7 +85,6 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
         c.name.toLowerCase().includes(q)
       )
       .sort((a, b) => {
-        // Sort Logic: Checked First, then Alphabetical
         const aChecked = secondaryIds.has(a.id);
         const bChecked = secondaryIds.has(b.id);
         
@@ -109,7 +125,8 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
       if (!isEdit) {
         setFormData({
           name: "", email: "", role: "customer",
-          clinicId: "", phoneNumber: "", preferenceNote: ""
+          clinicId: "", phoneNumber: "", preferenceNote: "",
+          salesRepId: ""
         });
         setAddress({ id: null, street: "", city: "", state: "", zipCode: "" });
         setSecondaryIds(new Set());
@@ -125,7 +142,6 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
     }
   }
 
-  // ✅ PREVENT ENTER KEY SUBMISSION
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
       e.preventDefault();
@@ -151,11 +167,13 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
             <div>
               <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Role</label>
               <select className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
-                value={formData.role} onChange={(e) => setFormData({...formData, role: e.target.value})}>
+                value={formData.role} 
+                onChange={(e) => setFormData({...formData, role: e.target.value})}>
                 <option value="customer">Doctor (Customer)</option>
                 <option value="lab">Lab Tech</option>
                 <option value="admin">Admin</option>
                 <option value="milling">Milling Center</option>
+                <option value="sales">Sales Rep</option> {/* ✅ ADDED */}
               </select>
             </div>
           </div>
@@ -164,7 +182,7 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
             <div>
                 <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Email</label>
                 <input type="email" required className="w-full bg-black/30 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
-                value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="email@example.com" />
+                  value={formData.email} onChange={(e) => setFormData({...formData, email: e.target.value})} placeholder="email@example.com" />
             </div>
             <div>
                 <label className="block text-xs font-medium text-white/60 mb-1 uppercase">Phone</label>
@@ -197,6 +215,18 @@ export default function UserForm({ clinics, initialData, onClose }: { clinics: C
                   options={clinicOptions}
                   value={formData.clinicId}
                   onChange={(val) => setFormData({ ...formData, clinicId: val })}
+                />
+              </div>
+
+              {/* ✅ NEW: SALES REP SELECTION */}
+              <div className="bg-black/20 rounded-lg p-4 border border-white/10 space-y-3">
+                <label className="block text-xs font-medium text-white/60 uppercase">Sales Representative</label>
+                <SearchableSelect
+                  label=""
+                  placeholder="Assign a Sales Rep (Optional)..."
+                  options={repOptions}
+                  value={formData.salesRepId}
+                  onChange={(val) => setFormData({ ...formData, salesRepId: val })}
                 />
               </div>
 

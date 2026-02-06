@@ -5,14 +5,16 @@ import { getSession } from "@/lib/auth";
 import type { Prisma } from "@prisma/client";
 import type { CaseStatus, ProductionStage } from "@/lib/types";
 
-// FIX: 'APPROVED' now keeps the stage as 'DESIGN'.
-// This ensures the case waits in the Design bucket until the Milling Center downloads it.
 function stageForStatus(to: CaseStatus): ProductionStage {
   switch (to) {
     case "IN_MILLING":
       return "MILLING_GLAZING";
     case "SHIPPED":
       return "SHIPPING";
+    case "COMPLETED":
+      return "COMPLETED";
+    case "DELIVERED": // ✅ Final Stage
+      return "DELIVERED";
     case "APPROVED":
     default:
       return "DESIGN";
@@ -33,36 +35,41 @@ export async function POST(
 
   if (!to) return NextResponse.json({ error: "Missing 'to' status" }, { status: 400 });
 
-  // FETCH: Include files to check requirements
   const item = await prisma.dentalCase.findUnique({ 
     where: { id },
     include: { files: true }
   });
-  
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-  // Doctors: only APPROVED or CHANGES_REQUESTED on their own case
+  // ✅ DOCTOR PERMISSIONS
   if (session.role === "customer") {
-    const allowedForDoctor: CaseStatus[] = ["APPROVED", "CHANGES_REQUESTED"];
+    // Doctors can approve designs AND mark Delivered
+    const allowedForDoctor: CaseStatus[] = ["APPROVED", "CHANGES_REQUESTED", "DELIVERED"];
+    
     if (!allowedForDoctor.includes(to)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-    if (!session.userId || item.doctorUserId !== session.userId) {
+    
+    // Ownership Check
+    const isOwner = item.doctorUserId === session.userId;
+    const isSameClinic = session.clinicId && item.clinicId === session.clinicId;
+    if (!isOwner && !isSameClinic) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // ✅ LOGIC: Can only mark DELIVERED if it is currently COMPLETED (Arrived)
+    if (to === "DELIVERED" && item.status !== "COMPLETED") {
+        return NextResponse.json({ error: "Case must be marked Completed (Arrived at Clinic) before marking Delivered." }, { status: 400 });
     }
   }
 
-  // LOGIC CHANGE: Guard rail - Validations moved to Approval Step
+  // (Keep existing Lab/Admin guard logic for APPROVED...)
   if (to === "APPROVED") {
-    if (["APPROVED", "IN_MILLING", "SHIPPED"].includes(item.status)) {
-      return NextResponse.json({ error: "Case is already approved." }, { status: 400 });
+    if (["APPROVED", "IN_MILLING", "SHIPPED", "COMPLETED", "DELIVERED"].includes(item.status)) {
+      return NextResponse.json({ error: "Case is already approved/processed." }, { status: 400 });
     }
-
-    // CHECK: Ensure mandatory milling files exist BEFORE approval
     const labels = new Set(item.files.map((f) => f.label));
     const missing: string[] = [];
-    
-    // Check for mandatory production files
     if (!labels.has("construction_info")) missing.push("Construction Info");
     if (!labels.has("model_top")) missing.push("Model Top");
     if (!labels.has("model_bottom")) missing.push("Model Bottom");
@@ -86,6 +93,8 @@ export async function POST(
         designedAt: to === "READY_FOR_REVIEW" ? at : item.designedAt,
         milledAt: to === "IN_MILLING" ? at : item.milledAt,
         shippedAt: to === "SHIPPED" ? at : item.shippedAt,
+        // We could add a 'deliveredAt' field to DB later if needed, 
+        // for now statusEvent tracks the timestamp.
       },
     });
 

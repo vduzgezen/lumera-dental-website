@@ -65,11 +65,19 @@ model User {
   // ✅ SECONDARY CLINICS (Many-to-Many)
   secondaryClinics Clinic[] @relation("DoctorSecondaryClinics")
 
+  // If this User is a Doctor, they might have a Sales Rep
+  salesRepId      String?
+  salesRep        User?    @relation("DoctorSalesRep", fields: [salesRepId], references: [id])
+  // If this User is a Sales Rep, they have many Doctors
+  doctors         User[]   @relation("DoctorSalesRep")
+
   addressId       String?
   address         Address? @relation(fields: [addressId], references: [id])
 
   doctorCases     DentalCase[] @relation("DoctorCases")
   workingCases    DentalCase[] @relation("WorkingCases")
+
+  commissionedCases DentalCase[] @relation("CaseSalesRep")
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
@@ -115,6 +123,9 @@ model DentalCase {
   // Doctor is the user who owns the case
   doctorUserId   String?
   doctorUser     User?    @relation("DoctorCases", fields: [doctorUserId], references: [id])
+
+  salesRepId     String?
+  salesRep       User?    @relation("CaseSalesRep", fields: [salesRepId], references: [id])
 
   // Lab Assignee
   assigneeId     String?

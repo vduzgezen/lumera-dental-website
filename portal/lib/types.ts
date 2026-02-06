@@ -1,14 +1,7 @@
 // portal/lib/types.ts
-// Shared type definitions for the Dental Portal
 
-/**
- * User roles in the system
- */
-export type Role = "customer" | "lab" | "admin" | "milling";
+export type Role = "customer" | "lab" | "admin" | "milling" | "sales";
 
-/**
- * Case status values representing the workflow state
- */
 export type CaseStatus = 
   | "IN_DESIGN" 
   | "READY_FOR_REVIEW" 
@@ -16,9 +9,8 @@ export type CaseStatus =
   | "APPROVED" 
   | "IN_MILLING" 
   | "SHIPPED" 
-  | "COMPLETED";
+  | "COMPLETED"   // Arrived at Clinic
+  | "DELIVERED";  // Given to Patient
 
-/**
- * Production stage values representing physical manufacturing stages
- */
-export type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
+// ✅ DELIVERED is now the final stage
+export type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED" | "DELIVERED";

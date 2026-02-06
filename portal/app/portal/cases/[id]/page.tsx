@@ -24,10 +24,8 @@ function normalizeSlot(label: string | null): "scan" | "design_with_model" | "de
   return null;
 }
 
-// ✅ FIX: Split by '?' to ignore the signature token when checking extension
 function is3DUrl(url: string | null | undefined): boolean {
   if (!url) return false;
-  // Remove query params before checking extension
   const clean = url.split("?")[0].toLowerCase(); 
   return clean.endsWith(".stl") || clean.endsWith(".ply") || clean.endsWith(".obj");
 }
@@ -53,15 +51,22 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
 
   if (!item) return notFound();
 
-  if (session.role === "customer" && session.clinicId !== item.clinicId) {
-    return notFound();
+  // ✅ FIXED AUTHORIZATION
+  if (session.role === "customer") {
+    // Access granted if:
+    // 1. You are the Doctor who created the case (Owner)
+    // 2. OR the case belongs to your Primary Clinic (Colleague)
+    const isOwner = item.doctorUserId === session.userId;
+    const isPrimaryClinic = session.clinicId === item.clinicId;
+
+    if (!isOwner && !isPrimaryClinic) {
+        return notFound();
+    }
   }
 
   // HYDRATE FILES: Generate Signed URLs
   const hydratedFiles = await Promise.all(item.files.map(async (f) => {
-    // Keep backward compatibility for old local files
     if (f.url.startsWith("/") || f.url.startsWith("http")) return f;
-    
     try {
         const signed = await getSignedFileUrl(f.url);
         return { ...f, url: signed };
@@ -117,6 +122,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
 
   const isLabOrAdmin = session.role === "lab" || session.role === "admin";
   let designers: { id: string; name: string | null; email: string }[] = [];
+  
   if (session.role === "admin") {
     designers = await prisma.user.findMany({
       where: { role: { in: ["lab", "admin"] } },
@@ -149,7 +155,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
 
   const statusColor = 
     item.status === "CHANGES_REQUESTED" ? "text-red-400" :
-    item.status === "COMPLETED" ? "text-emerald-400" :
+    item.status === "COMPLETED" || item.status === "DELIVERED" ? "text-emerald-400" :
     "text-white";
 
   return (

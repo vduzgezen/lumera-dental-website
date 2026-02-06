@@ -10,6 +10,8 @@ export const PRODUCT_KEYS = {
 
 export type ProductKey = keyof typeof PRODUCT_KEYS;
 
+export const SALES_COMMISSION_PER_UNIT = 1.00;
+
 // 1. REVENUE: What we charge Clinics (Per Unit)
 export const CLIENT_PRICING = {
   IN_HOUSE: {
