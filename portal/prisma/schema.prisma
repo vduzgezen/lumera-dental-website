@@ -185,6 +185,7 @@ model DentalCase {
   @@index([doctorUserId])
   @@index([status])
   @@index([createdAt])
+  @@index([orderDate])
   @@map("Case")
 }
 

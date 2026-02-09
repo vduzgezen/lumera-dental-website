@@ -1,11 +1,12 @@
 // portal/components/CaseViewerTabs.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, memo } from "react";
 import dynamic from "next/dynamic";
 import CaseActions from "@/components/CaseActions";
 import type { Role, CaseStatus } from "@/lib/types";
 
+// Dynamic import for 3D Panel
 const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
   ssr: false, 
   loading: () => (
@@ -16,6 +17,58 @@ const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
 });
 
 type TabKey = "scan" | "design_with_model" | "design_only";
+
+// --- STABLE WRAPPERS (Prevent Reloads on AutoRefresh) ---
+
+// Helper: Check if URLs point to the same file (ignoring ?signature=...)
+const areUrlsEqual = (prev: { url: string | null }, next: { url: string | null }) => {
+  if (prev.url === next.url) return true; // Exact match
+  if (!prev.url || !next.url) return false; // One is missing
+  
+  // Compare only the base path (e.g. https://bucket/file.stl)
+  const prevBase = prev.url.split("?")[0];
+  const nextBase = next.url.split("?")[0];
+  return prevBase === nextBase;
+};
+
+// 1. Stable 3D Panel
+const Stable3D = memo(({ url }: { url: string | null }) => {
+  return <Case3DPanel url={url} />;
+}, areUrlsEqual);
+
+// 2. Stable Iframe (Exocad)
+const StableIframe = memo(({ url, title }: { url: string; title: string }) => {
+  const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement, Event>) => {
+    try {
+      const iframe = e.target as HTMLIFrameElement;
+      const doc = iframe.contentDocument;
+      if (doc) {
+        doc.body.style.backgroundColor = "#0a1020";
+        const style = doc.createElement("style");
+        style.textContent = `
+          body, html { background-color: #0a1020 !important; }
+          #background { background-color: #0a1020 !important; }
+          .webviewer-canvas-container { background-color: #0a1020 !important; }
+        `;
+        doc.head.appendChild(style);
+      }
+    } catch (err) {
+      console.warn("Could not inject styles into viewer (Cross-Origin blocking?)", err);
+    }
+  };
+
+  return (
+    <div className="w-full h-full bg-[#0a1020] rounded-lg overflow-hidden">
+      <iframe 
+        src={url} 
+        className="w-full h-full border-0 block" 
+        title={title}
+        onLoad={handleIframeLoad} 
+      />
+    </div>
+  );
+}, (prev, next) => areUrlsEqual({ url: prev.url }, { url: next.url }));
+
 
 export default function CaseViewerTabs({
   caseId,
@@ -37,6 +90,7 @@ export default function CaseViewerTabs({
   designHtmlUrl: string | null;
 }) {
   const [tab, setTab] = useState<TabKey>("scan");
+  
   const hasScanViewer = !!scanHtmlUrl || !!scan3DUrl;
   const hasDesignViewer = !!designHtmlUrl || !!designWithModel3DUrl;
   const hasDesignOnlyViewer = !!designOnly3DUrl;
@@ -74,29 +128,6 @@ export default function CaseViewerTabs({
     }
   }
 
-  // FIX: Inject Midnight Blue into the Iframe
-  const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement, Event>) => {
-    try {
-      const iframe = e.target as HTMLIFrameElement;
-      const doc = iframe.contentDocument;
-      if (doc) {
-        // 1. Force Body
-        doc.body.style.backgroundColor = "#0a1020";
-        
-        // 2. Inject Style Override (Stronger)
-        const style = doc.createElement("style");
-        style.textContent = `
-          body, html { background-color: #0a1020 !important; }
-          #background { background-color: #0a1020 !important; }
-          .webviewer-canvas-container { background-color: #0a1020 !important; }
-        `;
-        doc.head.appendChild(style);
-      }
-    } catch (err) {
-      console.warn("Could not inject styles into viewer (Cross-Origin blocking?)", err);
-    }
-  };
-
   const tabBtn = (key: TabKey, label: string, active: boolean, disabled: boolean) => (
     <button
       type="button"
@@ -106,7 +137,7 @@ export default function CaseViewerTabs({
         px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center
         ${
           active
-            ? "border-accent text-accent" // FIX: Use Accent (Purple) instead of White
+            ? "border-accent text-accent" 
             : disabled
             ? "border-transparent text-white/20 cursor-not-allowed"
             : "border-transparent text-white/60 hover:text-white"
@@ -120,37 +151,21 @@ export default function CaseViewerTabs({
   const renderContent = () => {
     if (tab === "scan") {
       if (scanHtmlUrl) {
-        return (
-          <div className="w-full h-full bg-[#0a1020] rounded-lg overflow-hidden">
-             <iframe 
-               src={scanHtmlUrl} 
-               className="w-full h-full border-0 block" 
-               title="Exocad Scan Viewer"
-               onLoad={handleIframeLoad} // Trigger color fix
-             />
-          </div>
-        );
+        // ✅ Use StableIframe
+        return <StableIframe url={scanHtmlUrl} title="Exocad Scan Viewer" />;
       }
-      return <Case3DPanel url={scan3DUrl} />;
+      // ✅ Use Stable3D
+      return <Stable3D url={scan3DUrl} />;
     }
 
     if (tab === "design_with_model") {
       if (designHtmlUrl) {
-        return (
-          <div className="w-full h-full bg-[#0a1020] rounded-lg overflow-hidden">
-             <iframe 
-               src={designHtmlUrl} 
-               className="w-full h-full border-0 block" 
-               title="Exocad Design Viewer"
-               onLoad={handleIframeLoad} // Trigger color fix
-             />
-          </div>
-        );
+        return <StableIframe url={designHtmlUrl} title="Exocad Design Viewer" />;
       }
-      return <Case3DPanel url={designWithModel3DUrl} />;
+      return <Stable3D url={designWithModel3DUrl} />;
     }
 
-    return <Case3DPanel url={designOnly3DUrl} />;
+    return <Stable3D url={designOnly3DUrl} />;
   };
 
   return (
