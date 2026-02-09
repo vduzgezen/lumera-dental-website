@@ -1,18 +1,21 @@
-// portal/middleware.ts
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const PROTECTED = /^\/portal(\/|$)/;
-
 export function middleware(req: NextRequest) {
-  // Only guard /portal/*
-  if (!PROTECTED.test(req.nextUrl.pathname)) return NextResponse.next();
-
-  // Edge runtime: don't verify here, just require the cookie to exist.
-  // (Verification happens server-side in your pages via getSession().)
+  // We can remove the manual regex check because the matcher handles it
   const has = req.cookies.has("lumera_session");
+  
   if (!has) {
-    return NextResponse.redirect(new URL("/login", req.url));
+    // Redirect to login if trying to access portal without session
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
   }
+  
   return NextResponse.next();
 }
+
+// ✅ PERFORMANCE: Only run on /portal routes
+export const config = {
+  matcher: "/portal/:path*",
+};

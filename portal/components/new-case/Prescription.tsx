@@ -1,10 +1,12 @@
+// portal/components/new-case/Prescription.tsx
 "use client";
 
-import { NewCaseState, ProductKind } from "./types";
+// ✅ FIX: Import 'CaseData' and 'ProductType' instead of 'NewCaseState'
+import { CaseData, ProductType } from "./types";
 
 interface Props {
-  data: NewCaseState;
-  onChange: (updates: Partial<NewCaseState>) => void;
+  data: CaseData;
+  onChange: (updates: Partial<CaseData>) => void;
 }
 
 const PRODUCTS = ["ZIRCONIA", "MULTILAYER_ZIRCONIA", "EMAX", "INLAY_ONLAY"];
@@ -21,8 +23,8 @@ export default function Prescription({ data, onChange }: Props) {
           <label className="text-sm font-medium text-white/70">Product</label>
           <select
             value={data.product}
-            // ✅ FIX: Force cast the string value to the ProductKind type
-            onChange={(e) => onChange({ product: e.target.value as ProductKind })}
+            // ✅ FIX: Cast to ProductType
+            onChange={(e) => onChange({ product: e.target.value as ProductType })}
             className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition appearance-none"
           >
             {PRODUCTS.map(p => (
@@ -46,8 +48,8 @@ export default function Prescription({ data, onChange }: Props) {
         <div className="space-y-2">
           <label className="text-sm font-medium text-white/70">Material (Optional)</label>
           <input
-            value={data.material}
-            onChange={(e) => onChange({ material: e.target.value })}
+            value={data.material || ""}
+            onChange={(e) => onChange({ material: e.target.value as any })}
             placeholder="e.g. Zirconia"
             className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition"
           />
@@ -60,7 +62,7 @@ export default function Prescription({ data, onChange }: Props) {
             <span className="text-[10px] text-white/40">Auto-filled from doctor profile</span>
         </div>
         <textarea
-          value={data.designPreferences}
+          value={data.designPreferences || ""}
           onChange={(e) => onChange({ designPreferences: e.target.value })}
           placeholder="E.g. Contacts heavy, light occlusion, open embrasures..."
           className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition h-24 resize-none"

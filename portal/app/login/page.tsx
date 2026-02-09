@@ -1,6 +1,5 @@
 // portal/app/login/page.tsx
 "use client";
-
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -86,8 +85,13 @@ export default function LoginPage() {
             </div>
           )}
 
-          <button type="submit" disabled={loading} className="w-full rounded-lg py-3 text-sm font-bold bg-accent text-background hover:bg-white transition-colors disabled:opacity-50">
-            {loading ? "Signing in..." : "Sign In"}
+          {/* ✅ FIXED: "Log In" text + High Contrast Hover */}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full rounded-lg py-3 text-sm font-bold bg-accent text-white hover:bg-white hover:text-black transition-colors disabled:opacity-50"
+          >
+            {loading ? "Logging in..." : "Log In"}
           </button>
         </form>
 
