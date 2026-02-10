@@ -15,12 +15,11 @@ function getFormattedDate() {
   return `${mm}-${dd}-${yyyy}`;
 }
 
-// ✅ FIX: Allow dots (.) for shades like "A3.5"
-// ✅ FIX: Replace slash (/) with hyphen (-) for complex shades
+// ✅ Allow dots for shades like "A3.5", allow hyphens, strip others
 function sanitize(str: string | null | undefined) {
   if (!str) return "";
-  const safe = str.replace(/\//g, "-"); // Replace / with - first
-  return safe.replace(/[^a-zA-Z0-9.-]/g, ""); // Allow . and -
+  const safe = str.replace(/\//g, "-"); // Replace slashes with hyphens (e.g. A2/A3 -> A2-A3)
+  return safe.replace(/[^a-zA-Z0-9.-]/g, ""); 
 }
 
 function toCamelCase(str: string | null | undefined): string {
@@ -72,15 +71,15 @@ export async function POST(req: Request) {
       const first = sanitize(c.patientFirstName);
       const type = toCamelCase(c.product); 
       let material = toCamelCase(c.material);
-      
-      // ✅ Now safe for complex shades (e.g. A2-A3.5)
       const shade = sanitize(c.shade);
 
       if (type === "Emax" || type === "InlayOnlay") {
         material = "";
       }
       
-      const caseFolderName = `${last}${first}${shade}${type}${material}`;
+      // ✅ FORMAT: DoeJohn_A5-A2-A2_ZirconiaMl
+      const caseFolderName = `${last}${first}_${shade}_${type}${material}`;
+      
       const relevantLabels = ["model_top", "model_bottom", "rx_pdf", "design_only", "design_with_model", "construction_info"];
 
       for (const file of c.files) {

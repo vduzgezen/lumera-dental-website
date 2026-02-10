@@ -23,10 +23,9 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
 
   // --- SHADE LOGIC ---
   const shadeParts = useMemo(() => {
-    // If empty, return all empty
     if (!data.shade) return { incisal: "", body: "", gingival: "" };
     
-    // If it contains slashes, it's a complex shade: "Incisal/Body/Gingival"
+    // If complex shade (has slashes), split it
     if (data.shade.includes("/")) {
       const parts = data.shade.split("/");
       return {
@@ -36,23 +35,27 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
       };
     }
     
-    // Otherwise, it's just a simple body shade
+    // Simple shade: Just body
     return { incisal: "", body: data.shade, gingival: "" };
   }, [data.shade]);
 
   const updateShade = (type: "incisal" | "body" | "gingival", value: string) => {
     const newParts = { ...shadeParts, [type]: value };
     
-    // Logic: If Incisal and Gingival are EMPTY, just store the Body string ("A2")
-    // This keeps the data clean for simple cases.
+    // 1. SIMPLE CASE: If Incisal & Gingival are EMPTY, just save Body
     if (!newParts.incisal && !newParts.gingival) {
       update({ shade: newParts.body });
       return;
     }
 
-    // Logic: If complex, store as "Incisal/Body/Gingival" even if some are empty
-    // Example: "/A2/A3" ensures we know A2 is body and A3 is gingival.
-    update({ shade: `${newParts.incisal}/${newParts.body}/${newParts.gingival}` });
+    // 2. COMPLEX CASE: If any secondary field has a value, fill gaps with Body
+    const b = newParts.body;
+    // Default Incisal/Gingival to Body if they are empty
+    const i = newParts.incisal || b; 
+    const g = newParts.gingival || b;
+    
+    // Save as "Incisal/Body/Gingival"
+    update({ shade: `${i}/${b}/${g}` });
   };
 
   // Auto-Update for Nightguard
@@ -143,7 +146,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
              </div>
            )}
 
-           {/* ✅ SHADE LAYERING INPUTS */}
+           {/* SHADE LAYERING */}
            {!isNightguard && (
               <div className="space-y-2">
                 <label className="text-sm font-medium text-white/70">Shade Layering</label>
