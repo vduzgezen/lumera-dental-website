@@ -1,7 +1,7 @@
 // portal/components/new-case/TeethSelection.tsx
 "use client";
 
-import { useEffect } from "react"; // ✅ Added useEffect
+import { useEffect, useMemo } from "react";
 import { CaseData, ProductType, MaterialType, ServiceLevel } from "./types";
 import ToothSelector from "@/components/ToothSelector";
 
@@ -21,16 +21,49 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
   
   const isNightguard = data.product === "NIGHTGUARD";
 
-  // ✅ AUTO-UPDATE: Set dummy tooth code when Nightguard is selected so validation passes
+  // --- SHADE LOGIC ---
+  const shadeParts = useMemo(() => {
+    // If empty, return all empty
+    if (!data.shade) return { incisal: "", body: "", gingival: "" };
+    
+    // If it contains slashes, it's a complex shade: "Incisal/Body/Gingival"
+    if (data.shade.includes("/")) {
+      const parts = data.shade.split("/");
+      return {
+        incisal: parts[0] || "",
+        body: parts[1] || "",
+        gingival: parts[2] || ""
+      };
+    }
+    
+    // Otherwise, it's just a simple body shade
+    return { incisal: "", body: data.shade, gingival: "" };
+  }, [data.shade]);
+
+  const updateShade = (type: "incisal" | "body" | "gingival", value: string) => {
+    const newParts = { ...shadeParts, [type]: value };
+    
+    // Logic: If Incisal and Gingival are EMPTY, just store the Body string ("A2")
+    // This keeps the data clean for simple cases.
+    if (!newParts.incisal && !newParts.gingival) {
+      update({ shade: newParts.body });
+      return;
+    }
+
+    // Logic: If complex, store as "Incisal/Body/Gingival" even if some are empty
+    // Example: "/A2/A3" ensures we know A2 is body and A3 is gingival.
+    update({ shade: `${newParts.incisal}/${newParts.body}/${newParts.gingival}` });
+  };
+
+  // Auto-Update for Nightguard
   useEffect(() => {
     if (isNightguard) {
       if (data.toothCodes.length === 0 || data.toothCodes[0] !== "Full Arch") {
-         update({ toothCodes: ["Full Arch"], shade: "" }); // Clear shade, set Arch
+         update({ toothCodes: ["Full Arch"], shade: "" }); 
       }
     } else {
-      // If switching BACK from Nightguard, clear the dummy value
       if (data.toothCodes.includes("Full Arch")) {
-         update({ toothCodes: [] });
+          update({ toothCodes: [] });
       }
     }
   }, [isNightguard]);
@@ -64,7 +97,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
         <div className="space-y-2">
           <label className="text-sm font-medium text-white/70">Product</label>
           <div className="grid grid-cols-2 gap-2">
-             {(["ZIRCONIA", "EMAX", "NIGHTGUARD", "INLAY_ONLAY"] as ProductType[]).map((type) => (
+              {(["ZIRCONIA", "EMAX", "NIGHTGUARD", "INLAY_ONLAY"] as ProductType[]).map((type) => (
                <button
                  key={type}
                  type="button"
@@ -74,7 +107,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                      ? "bg-blue-600 border-blue-500 text-white" 
                      : "bg-black/40 border-white/10 text-white/50 hover:bg-white/10"
                    }`}
-               >
+              >
                  {type.replace("_", " ")}
                </button>
             ))}
@@ -110,16 +143,39 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
              </div>
            )}
 
-           {/* ✅ HIDE SHADE IF NIGHTGUARD */}
+           {/* ✅ SHADE LAYERING INPUTS */}
            {!isNightguard && (
-             <div className="space-y-2">
-                <label className="text-sm font-medium text-white/70">Shade</label>
-                <input
-                  value={data.shade}
-                  onChange={(e) => update({ shade: e.target.value })}
-                  placeholder="e.g. A2"
-                  className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-2 text-white outline-none focus:border-blue-500/50"
-                />
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-white/70">Shade Layering</label>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <input
+                      value={shadeParts.body}
+                      onChange={(e) => updateShade("body", e.target.value)}
+                      placeholder="Body (A2)"
+                      className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white outline-none focus:border-blue-500/50 text-center placeholder-white/20"
+                    />
+                    <div className="text-[10px] text-blue-400 text-center font-bold uppercase tracking-wider">Body *</div>
+                  </div>
+                  <div className="space-y-1">
+                    <input
+                      value={shadeParts.incisal}
+                      onChange={(e) => updateShade("incisal", e.target.value)}
+                      placeholder="Matching Body"
+                      className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white outline-none focus:border-blue-500/50 text-center placeholder-white/20"
+                    />
+                    <div className="text-[10px] text-white/30 text-center uppercase tracking-wider">Incisal</div>
+                  </div>
+                  <div className="space-y-1">
+                    <input
+                      value={shadeParts.gingival}
+                      onChange={(e) => updateShade("gingival", e.target.value)}
+                      placeholder="Matching Body"
+                      className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white outline-none focus:border-blue-500/50 text-center placeholder-white/20"
+                    />
+                    <div className="text-[10px] text-white/30 text-center uppercase tracking-wider">Gingival</div>
+                  </div>
+                </div>
              </div>
            )}
         </div>
@@ -131,7 +187,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
            <div className="flex gap-4 w-full md:w-auto">
               {(["IN_HOUSE", "STANDARD"] as ServiceLevel[]).map((level) => (
                 <label key={level} className={`flex-1 md:flex-none flex items-center gap-2 cursor-pointer p-3 rounded-lg border transition-all ${data.serviceLevel === level ? "bg-blue-500/10 border-blue-500/50" : "border-transparent hover:bg-white/5"}`}>
-                  <input 
+                   <input 
                     type="radio" 
                     name="serviceLevel" 
                     checked={data.serviceLevel === level}
@@ -145,13 +201,13 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
               ))}
            </div>
            <div className="text-right">
-             <span className="text-xs text-white/40 block">Estimated Unit Price</span>
+              <span className="text-xs text-white/40 block">Estimated Unit Price</span>
              <span className="text-2xl font-bold text-emerald-400">${currentPrice}</span>
            </div>
         </div>
       </div>
 
-      {/* 3. TOOTH SELECTOR (HIDDEN FOR NIGHTGUARD) */}
+      {/* 3. TOOTH SELECTOR */}
       {!isNightguard && (
         <div className="space-y-2">
            <div className="flex justify-between items-center px-1">

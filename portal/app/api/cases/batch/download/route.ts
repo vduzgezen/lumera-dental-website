@@ -7,7 +7,6 @@ import archiver from "archiver";
 import path from "node:path";
 import { Readable } from "stream";
 
-// Helper: Format Date for folder name
 function getFormattedDate() {
   const d = new Date();
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -16,9 +15,12 @@ function getFormattedDate() {
   return `${mm}-${dd}-${yyyy}`;
 }
 
+// ✅ FIX: Allow dots (.) for shades like "A3.5"
+// ✅ FIX: Replace slash (/) with hyphen (-) for complex shades
 function sanitize(str: string | null | undefined) {
   if (!str) return "";
-  return str.replace(/[^a-zA-Z0-9]/g, "");
+  const safe = str.replace(/\//g, "-"); // Replace / with - first
+  return safe.replace(/[^a-zA-Z0-9.-]/g, ""); // Allow . and -
 }
 
 function toCamelCase(str: string | null | undefined): string {
@@ -50,13 +52,10 @@ export async function POST(req: Request) {
     const { ids } = await req.json();
     if (!ids || !Array.isArray(ids)) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-    // 1. Fetch Metadata
     const cases = await prisma.dentalCase.findMany({
       where: { id: { in: ids } },
       include: {
-        clinic: {
-          include: { address: true }
-        },
+        clinic: { include: { address: true } },
         files: true 
       }
     });
@@ -64,7 +63,6 @@ export async function POST(req: Request) {
     const fileList: { key: string; archivePath: string }[] = [];
     const rootFolder = `Download_${getFormattedDate()}`;
 
-    // 2. Build File List (Same logic as before)
     for (const c of cases) {
       const clinicName = sanitize(c.clinic.name) || "UnknownClinic";
       const zip = sanitize(c.clinic.address?.zipCode) || "NoZip";
@@ -74,6 +72,8 @@ export async function POST(req: Request) {
       const first = sanitize(c.patientFirstName);
       const type = toCamelCase(c.product); 
       let material = toCamelCase(c.material);
+      
+      // ✅ Now safe for complex shades (e.g. A2-A3.5)
       const shade = sanitize(c.shade);
 
       if (type === "Emax" || type === "InlayOnlay") {
@@ -104,8 +104,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No production files found for selected cases" }, { status: 404 });
     }
 
-    // 3. Update DB Status *Before* Streaming
-    // We do this first because once the stream starts, we can't easily "un-send" headers.
     await prisma.dentalCase.updateMany({
       where: { 
         id: { in: ids },
@@ -118,30 +116,21 @@ export async function POST(req: Request) {
       }
     });
 
-    // 4. Create Streaming Response
     const stream = new ReadableStream({
       async start(controller) {
-        // Create Archiver instance
         const archive = archiver("zip", { zlib: { level: 9 } });
-
-        // Pipe Archiver output -> Controller (Client)
         archive.on("data", (chunk) => controller.enqueue(chunk));
         archive.on("end", () => controller.close());
         archive.on("error", (err) => controller.error(err));
 
-        // Process files one by one (Async iteration)
         for (const f of fileList) {
           try {
             const s3Stream = await getFileStream(f.key);
-            // Append S3 stream to Archive
             archive.append(s3Stream as Readable, { name: f.archivePath });
           } catch (e) {
             console.warn(`[Batch Download] Skipping missing file key: ${f.key}`, e);
-            // We intentionally continue so one missing file doesn't kill the whole batch
           }
         }
-
-        // Finalize (This triggers the 'end' event above)
         await archive.finalize();
       },
     });
@@ -150,7 +139,6 @@ export async function POST(req: Request) {
       headers: {
         "Content-Type": "application/zip",
         "Content-Disposition": `attachment; filename="${rootFolder}.zip"`,
-        // Disable buffering on Vercel/proxies to ensure streaming works
         "X-Accel-Buffering": "no",
       },
     });
