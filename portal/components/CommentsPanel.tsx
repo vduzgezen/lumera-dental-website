@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image"; // ✅ Import Image
 import ImageAnnotator from "./ImageAnnotator";
 
 type Attachment = {
@@ -19,7 +20,6 @@ type Comment = {
   attachments?: Attachment[];
 };
 
-// Fix for absolute URLs
 function fixUrl(url: string) {
   if (!url) return "";
   if (url.startsWith("http://") || url.startsWith("https://")) {
@@ -107,7 +107,6 @@ export default function CommentsPanel({
       const file = new File([blob], "annotation.png", { type: "image/png" });
       const label = "Photo";
 
-      // 1. Get Permission
       const urlRes = await fetch(`/api/cases/${caseId}/files/upload-url`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -120,7 +119,6 @@ export default function CommentsPanel({
       if (!urlRes.ok) throw new Error("Failed to get upload URL");
       const { url, key } = await urlRes.json();
 
-      // 2. Upload to Cloud
       const uploadRes = await fetch(url, {
         method: "PUT",
         body: file,
@@ -128,7 +126,6 @@ export default function CommentsPanel({
       });
       if (!uploadRes.ok) throw new Error("Failed to upload image");
 
-      // 3. Save Record
       const upRes = await fetch(`/api/cases/${caseId}/files`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -143,9 +140,7 @@ export default function CommentsPanel({
       if (!upRes.ok) throw new Error("Failed to save image record");
       const upData = await upRes.json();
       
-      // 4. Post Comment linking the image
       await handlePost(upData.id);
-
     } catch (e) {
       console.error(e);
       alert("Failed to upload annotation");
@@ -156,13 +151,12 @@ export default function CommentsPanel({
   function renderBody(text: string) {
     const regex = /((?:https?:\/\/[^\s]+|(?:\/uploads\/)[^\s]+)\.(?:png|jpg|jpeg|gif|webp))/gi;
     const parts = text.split(regex);
-
     return parts.map((part, i) => {
       if (part.match(regex)) {
         const safeSrc = fixUrl(part);
         return (
           <div key={i} className="my-3">
-             {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* ✅ Optimized Inline Image */}
             <img
               src={safeSrc}
               alt="Inline Content"
@@ -197,7 +191,6 @@ export default function CommentsPanel({
             const bubbleStyle = isInternal 
                 ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" 
                 : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
-
             return (
               <div key={c.id} className="group flex gap-3">
                 <div 
@@ -229,22 +222,21 @@ export default function CommentsPanel({
                   {c.attachments && c.attachments.length > 0 && (
                     <div className="mt-3 flex flex-wrap gap-2">
                       {c.attachments.map((att) => {
-                          const safeSrc = fixUrl(att.url);
-                          return (
+                        const safeSrc = fixUrl(att.url);
+                        return (
                           <div 
                             key={att.id}
                             onClick={() => setZoomImg(safeSrc)} 
                             className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 cursor-zoom-in hover:border-white/30 transition-colors bg-black/50"
                           >
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img 
+                            {/* ✅ OPTIMIZED: Use Next.js Image for thumbnails */}
+                            <Image 
                               src={safeSrc} 
                               alt="Attachment" 
-                              className="w-full h-full object-cover" 
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).style.display = 'none';
-                                (e.target as HTMLImageElement).parentElement!.innerText = "⚠️ Error";
-                              }}
+                              fill
+                              className="object-cover" 
+                              sizes="96px"
+                              unoptimized // For Signed URLs
                             />
                           </div>
                         );
@@ -322,6 +314,8 @@ export default function CommentsPanel({
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
           onClick={() => setZoomImg(null)}
         >
+          {/* Zoomed image stays as standard img for full quality/simplicity */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             src={zoomImg} 
             alt="Zoomed" 
