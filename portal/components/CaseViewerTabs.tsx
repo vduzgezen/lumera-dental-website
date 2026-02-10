@@ -18,26 +18,26 @@ const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
 
 type TabKey = "scan" | "design_with_model" | "design_only";
 
-// --- STABLE WRAPPERS (Prevent Reloads on AutoRefresh) ---
+// --- STABLE WRAPPERS ---
 
-// Helper: Check if URLs point to the same file (ignoring ?signature=...)
 const areUrlsEqual = (prev: { url: string | null }, next: { url: string | null }) => {
-  if (prev.url === next.url) return true; // Exact match
-  if (!prev.url || !next.url) return false; // One is missing
-  
-  // Compare only the base path (e.g. https://bucket/file.stl)
+  if (prev.url === next.url) return true;
+  if (!prev.url || !next.url) return false;
   const prevBase = prev.url.split("?")[0];
   const nextBase = next.url.split("?")[0];
   return prevBase === nextBase;
 };
 
 // 1. Stable 3D Panel
-const Stable3D = memo(({ url }: { url: string | null }) => {
+const Stable3DComponent = ({ url }: { url: string | null }) => {
   return <Case3DPanel url={url} />;
-}, areUrlsEqual);
+};
+const Stable3D = memo(Stable3DComponent, areUrlsEqual);
+// ✅ CRITICAL FIX: Explicit Display Name
+Stable3D.displayName = "Stable3D";
 
-// 2. Stable Iframe (Exocad)
-const StableIframe = memo(({ url, title }: { url: string; title: string }) => {
+// 2. Stable Iframe
+const StableIframeComponent = ({ url, title }: { url: string; title: string }) => {
   const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement, Event>) => {
     try {
       const iframe = e.target as HTMLIFrameElement;
@@ -53,7 +53,7 @@ const StableIframe = memo(({ url, title }: { url: string; title: string }) => {
         doc.head.appendChild(style);
       }
     } catch (err) {
-      console.warn("Could not inject styles into viewer (Cross-Origin blocking?)", err);
+      console.warn("Could not inject styles into viewer", err);
     }
   };
 
@@ -67,8 +67,10 @@ const StableIframe = memo(({ url, title }: { url: string; title: string }) => {
       />
     </div>
   );
-}, (prev, next) => areUrlsEqual({ url: prev.url }, { url: next.url }));
-
+};
+const StableIframe = memo(StableIframeComponent, (prev, next) => areUrlsEqual({ url: prev.url }, { url: next.url }));
+// ✅ CRITICAL FIX: Explicit Display Name
+StableIframe.displayName = "StableIframe";
 
 export default function CaseViewerTabs({
   caseId,
@@ -150,21 +152,13 @@ export default function CaseViewerTabs({
 
   const renderContent = () => {
     if (tab === "scan") {
-      if (scanHtmlUrl) {
-        // ✅ Use StableIframe
-        return <StableIframe url={scanHtmlUrl} title="Exocad Scan Viewer" />;
-      }
-      // ✅ Use Stable3D
+      if (scanHtmlUrl) return <StableIframe url={scanHtmlUrl} title="Exocad Scan Viewer" />;
       return <Stable3D url={scan3DUrl} />;
     }
-
     if (tab === "design_with_model") {
-      if (designHtmlUrl) {
-        return <StableIframe url={designHtmlUrl} title="Exocad Design Viewer" />;
-      }
+      if (designHtmlUrl) return <StableIframe url={designHtmlUrl} title="Exocad Design Viewer" />;
       return <Stable3D url={designWithModel3DUrl} />;
     }
-
     return <Stable3D url={designOnly3DUrl} />;
   };
 
