@@ -24,7 +24,6 @@ export default function DesignerPicker({ caseId, currentAssigneeId, designers, d
   async function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const newVal = e.target.value;
     setBusy(true);
-    
     try {
       const res = await fetch(`/api/cases/${caseId}/assign`, {
         method: "POST",
@@ -34,7 +33,8 @@ export default function DesignerPicker({ caseId, currentAssigneeId, designers, d
       if (!res.ok) throw new Error("Failed");
       
       router.refresh();
-    } catch (err) {
+    } catch {
+      // ✅ Removed unused 'err'
       alert("Failed to update assignment.");
     } finally {
       setBusy(false);
@@ -43,7 +43,6 @@ export default function DesignerPicker({ caseId, currentAssigneeId, designers, d
 
   return (
     <div className={`flex items-center gap-3 bg-white/5 rounded-lg px-3 py-2 border border-white/10 ${disabled ? "opacity-50" : "hover:border-accent/50 transition-colors"}`}>
-      {/* FIX: Icon matches brand accent */}
       <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
       </svg>

@@ -155,13 +155,15 @@ export default function CommentsPanel({
       if (part.match(regex)) {
         const safeSrc = fixUrl(part);
         return (
-          <div key={i} className="my-3">
+          <div key={i} className="my-3 relative w-full h-64">
             {/* ✅ Optimized Inline Image */}
-            <img
+            <Image
               src={safeSrc}
               alt="Inline Content"
-              className="block max-w-full rounded-lg border border-white/10 cursor-zoom-in"
+              fill
+              className="rounded-lg border border-white/10 cursor-zoom-in object-contain"
               onClick={() => setZoomImg(safeSrc)}
+              unoptimized
             />
           </div>
         );

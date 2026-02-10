@@ -25,7 +25,6 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
   const shadeParts = useMemo(() => {
     if (!data.shade) return { incisal: "", body: "", gingival: "" };
     
-    // If complex shade (has slashes), split it
     if (data.shade.includes("/")) {
       const parts = data.shade.split("/");
       return {
@@ -35,30 +34,25 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
       };
     }
     
-    // Simple shade: Just body
     return { incisal: "", body: data.shade, gingival: "" };
   }, [data.shade]);
 
   const updateShade = (type: "incisal" | "body" | "gingival", value: string) => {
     const newParts = { ...shadeParts, [type]: value };
     
-    // 1. SIMPLE CASE: If Incisal & Gingival are EMPTY, just save Body
     if (!newParts.incisal && !newParts.gingival) {
       update({ shade: newParts.body });
       return;
     }
 
-    // 2. COMPLEX CASE: If any secondary field has a value, fill gaps with Body
     const b = newParts.body;
-    // Default Incisal/Gingival to Body if they are empty
-    const i = newParts.incisal || b; 
+    const i = newParts.incisal || b;
     const g = newParts.gingival || b;
     
-    // Save as "Incisal/Body/Gingival"
     update({ shade: `${i}/${b}/${g}` });
   };
 
-  // Auto-Update for Nightguard
+  // ✅ Auto-Update for Nightguard (Fixed Dependencies)
   useEffect(() => {
     if (isNightguard) {
       if (data.toothCodes.length === 0 || data.toothCodes[0] !== "Full Arch") {
@@ -69,7 +63,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
           update({ toothCodes: [] });
       }
     }
-  }, [isNightguard]);
+  }, [isNightguard, data.toothCodes, update]); // ✅ Added missing deps
 
   const handleProductChange = (type: ProductType) => {
     let defaultMaterial: MaterialType = null;
