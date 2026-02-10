@@ -28,7 +28,7 @@ export default function PublicNavbar() {
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2 group">
           <Image 
-            src="/Images/Lumera-Lab-White-.png" 
+            src="/Images/Lumera-Lab-White.png" 
             alt="Lumera" 
             width={320} 
             height={64} 
