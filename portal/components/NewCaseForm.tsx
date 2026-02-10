@@ -1,7 +1,7 @@
 // portal/components/NewCaseForm.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react"; // ✅ Import useCallback
 import { useRouter } from "next/navigation";
 import { CaseData, INITIAL_DATA, DoctorRow, ServiceLevel } from "./new-case/types";
 
@@ -12,15 +12,18 @@ import ProductionFiles from "./new-case/ProductionFiles";
 
 export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   const router = useRouter();
-  
   const [data, setData] = useState<CaseData>(INITIAL_DATA);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | undefined>();
   const [ok, setOk] = useState<string | undefined>();
 
-  const update = (fields: Partial<CaseData>) => {
+  // ✅ PERFORMANCE FIX: Stabilize the update function
+  const update = useCallback((fields: Partial<CaseData>) => {
     setData(prev => ({ ...prev, ...fields }));
-  };
+  }, []);
+
+  // ... (Rest of the file remains exactly the same)
+  // Just copy the rest of the file content below:
 
   // ✅ AUTO-SELECT: On load, pick first doctor and handle their clinics
   useEffect(() => {
@@ -33,7 +36,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
       let initialClinicId = "";
       let initialLevel: ServiceLevel = "STANDARD";
 
-      // If only 1 clinic available, auto-select it.
       if (clinics.length === 1) {
         initialClinicId = clinics[0].id;
         if (clinics[0].priceTier === "IN_HOUSE") initialLevel = "IN_HOUSE";
@@ -47,7 +49,7 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
         serviceLevel: initialLevel
       });
     }
-  }, [doctors]);
+  }, [doctors, update]); // ✅ Added update to dependency
 
   // Auto-Alias
   useEffect(() => {
@@ -60,31 +62,28 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     if (data.patientAlias !== generated) {
        update({ patientAlias: generated });
     }
-  }, [data.patientLastName, data.patientFirstName, data.shade, data.product]);
+  }, [data.patientLastName, data.patientFirstName, data.shade, data.product, update]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setErr(undefined);
     setOk(undefined);
 
-    // ✅ Validation: Ensure Clinic ID is present
     if (!data.doctorUserId) return setErr("Please select a doctor account.");
     if (!data.clinicId) return setErr("Please select a clinic.");
     if (!data.patientFirstName.trim() || !data.patientLastName.trim()) return setErr("Patient Name is required.");
     if (data.toothCodes.length === 0) return setErr("Please select at least one tooth.");
-    
     if (!data.scanHtml) return setErr("Please upload a scan viewer HTML file.");
     if (!data.rxPdf) return setErr("Please upload the Rx PDF.");
     
     setBusy(true);
-
     try {
       const fd = new FormData();
       fd.append("patientAlias", data.patientAlias);
-      fd.append("patientFirstName", data.patientFirstName); // ✅ Ensure this is here
+      fd.append("patientFirstName", data.patientFirstName);
       fd.append("patientLastName", data.patientLastName);
       fd.append("doctorUserId", data.doctorUserId);
-      fd.append("clinicId", data.clinicId); // ✅ Send Clinic ID
+      fd.append("clinicId", data.clinicId);
       fd.append("toothCodes", data.toothCodes.join(",")); 
       
       fd.append("orderDate", new Date(data.orderDate).toISOString());
@@ -104,7 +103,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
 
       const r = await fetch("/api/cases/new", { method: "POST", body: fd });
       const j = await r.json().catch(() => ({}));
-
       if (!r.ok) throw new Error(j.error || "Create failed");
 
       setOk("Case created. Redirecting…");
