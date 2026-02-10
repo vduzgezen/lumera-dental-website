@@ -14,7 +14,7 @@ export default function Logo({ className = "", showText = true }: LogoProps) {
         // FULL WHITE LOGO (Expanded)
         // 'w-full h-auto' allows it to scale up to the container's width (w-52 in sidebar)
         <Image 
-          src="/Images/Lumera-Lab-White-.png" 
+          src="/Images/Lumera-Lab-White.png" 
           alt="Lumera Dental" 
           width={240} 
           height={64} 
@@ -25,7 +25,7 @@ export default function Logo({ className = "", showText = true }: LogoProps) {
         // PURPLE ICON (Collapsed)
         // Fixed dimensions ensure it stays sharp in the narrow sidebar
         <Image 
-          src="/Images/ONLY-ICON-Purple-.png" 
+          src="/Images/Icon-Purple.png" 
           alt="Lumera Icon" 
           width={32} 
           height={32} 

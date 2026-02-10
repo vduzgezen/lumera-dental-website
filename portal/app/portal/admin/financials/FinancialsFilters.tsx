@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react"; // ✅ Import useCallback
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -16,7 +16,6 @@ type Props = {
   designers: { id: string; name: string | null; email: string }[];
   salesRepId: string;
   salesReps: { id: string; name: string | null; email: string }[];
-  // ✅ NEW PROPS
   doctorFilter: string;
   clinicFilter: string;
 };
@@ -41,26 +40,26 @@ export default function FinancialsFilters({
     setClinicInput(clinicFilter);
   }, [doctorFilter, clinicFilter]);
 
-  function update(updates: Record<string, string>) {
+  // ✅ STABILIZE UPDATE FUNCTION
+  const update = useCallback((updates: Record<string, string>) => {
     const url = new URL(window.location.href);
-    
     Object.entries(updates).forEach(([key, val]) => {
         if (val && val !== "ALL") url.searchParams.set(key, val);
         else url.searchParams.delete(key);
     });
-    
     router.replace(url.toString());
-  }
+  }, [router]);
 
   // Debounce text search
   useEffect(() => {
     const timer = setTimeout(() => {
+        // ✅ Add dependencies safely now that update is stable
         if (docInput !== doctorFilter || clinicInput !== clinicFilter) {
             update({ doctor: docInput, clinic: clinicInput });
         }
     }, 500);
     return () => clearTimeout(timer);
-  }, [docInput, clinicInput]);
+  }, [docInput, clinicInput, doctorFilter, clinicFilter, update]);
 
   const hasFilter = designerId || salesRepId || doctorFilter || clinicFilter || selMonth === "ALL" || selYear !== currentYear;
 
@@ -90,7 +89,7 @@ export default function FinancialsFilters({
 
       <div className="w-px h-6 bg-white/10 mx-1 hidden sm:block" />
 
-      {/* ✅ NEW: Text Filters */}
+      {/* Text Filters */}
       <input 
         placeholder="Doctor Name" 
         value={docInput}

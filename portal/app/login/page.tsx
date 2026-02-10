@@ -53,7 +53,7 @@ export default function LoginPage() {
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-3 group">
             <Image 
-              src="/Images/Lumera-Lab-White-.png" 
+              src="/Images/Lumera-Lab-White.png" 
               alt="Lumera" 
               width={320} 
               height={80} 

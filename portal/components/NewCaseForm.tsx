@@ -1,7 +1,7 @@
 // portal/components/NewCaseForm.tsx
 "use client";
 
-import { useState, useEffect, useCallback } from "react"; // ✅ Import useCallback
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CaseData, INITIAL_DATA, DoctorRow, ServiceLevel } from "./new-case/types";
 
@@ -17,16 +17,14 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   const [err, setErr] = useState<string | undefined>();
   const [ok, setOk] = useState<string | undefined>();
 
-  // ✅ PERFORMANCE FIX: Stabilize the update function
+  // ✅ STABILIZED: Wrapped in useCallback to prevent infinite loops in children
   const update = useCallback((fields: Partial<CaseData>) => {
     setData(prev => ({ ...prev, ...fields }));
   }, []);
 
-  // ... (Rest of the file remains exactly the same)
-  // Just copy the rest of the file content below:
-
-  // ✅ AUTO-SELECT: On load, pick first doctor and handle their clinics
+  // ✅ AUTO-SELECT: Added dependencies
   useEffect(() => {
+    // Only run if NO doctor is selected yet
     if (!data.doctorUserId && doctors.length > 0) {
       const first = doctors[0];
       const prefs = first.preferenceNote || first.defaultDesignPreferences || "";
@@ -49,9 +47,9 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
         serviceLevel: initialLevel
       });
     }
-  }, [doctors, update]); // ✅ Added update to dependency
+  }, [doctors, data.doctorUserId, update]); // ✅ Added missing deps
 
-  // Auto-Alias
+  // ✅ AUTO-ALIAS: Added dependencies
   useEffect(() => {
     const last = (data.patientLastName || "XX").replace(/[^a-zA-Z]/g, "").slice(0, 2).padEnd(2, "X");
     const first = (data.patientFirstName || "XX").replace(/[^a-zA-Z]/g, "").slice(0, 2).padEnd(2, "X");
@@ -59,10 +57,11 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     const prod = (data.product || "XX").slice(0, 2);
     const generated = `${last}${first}${color}${prod}00`.toUpperCase();
 
+    // Prevent loop: Only update if different
     if (data.patientAlias !== generated) {
        update({ patientAlias: generated });
     }
-  }, [data.patientLastName, data.patientFirstName, data.shade, data.product, update]);
+  }, [data.patientLastName, data.patientFirstName, data.shade, data.product, data.patientAlias, update]); // ✅ Added missing deps
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
