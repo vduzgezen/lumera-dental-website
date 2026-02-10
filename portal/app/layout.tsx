@@ -6,13 +6,9 @@ export const metadata: Metadata = {
   title: "Lumera Dental Portal",
   description: "Advanced Dental Case Management",
   icons: {
-    icon: [
-      { url: "/Images/ONLY-ICON-Purple-.png?v=3", type: "image/png" },
-    ],
-    shortcut: ["/Images/ONLY-ICON-Purple-.png?v=3"],
-    apple: [
-      { url: "/Images/ONLY-ICON-Purple-.png?v=3", sizes: "180x180", type: "image/png" },
-    ],
+    icon: "/Images/Logo-Purple-White.png", 
+    shortcut: "/Images/Logo-Purple-White.png",
+    apple: "/Images/Logo-Purple-White.png",
   },
 };
 
