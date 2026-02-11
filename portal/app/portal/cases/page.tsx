@@ -53,7 +53,7 @@ export default async function CasesPage({
   const sp = await searchParams;
   const role = session.role;
 
-  // ✅ CONSTANT HELPERS
+  // Helpers
   const getParam = (key: string) => {
     const value = sp[key];
     return Array.isArray(value) ? value[0] : value;
@@ -63,7 +63,6 @@ export default async function CasesPage({
     return Array.isArray(value) ? value : (typeof value === "string" ? [value] : []);
   };
 
-  // ✅ UNIFIED LIMIT (50 for everyone)
   const limitParam = getParam("limit");
   const limit = limitParam ? parseInt(limitParam) : 50;
 
@@ -77,17 +76,10 @@ export default async function CasesPage({
     const zipParam = getParam("zip");
 
     const whereMilling: any = {
-        // Base Scope: Cases that have entered production
         stage: { in: ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED", "DELIVERED"] }
     };
 
-    // Status Filter Logic
-    // If user explicitly selects statuses, use them.
-    // If "Show Shipped" is ON, we ensure SHIPPED is included.
-    // If NO params, default to APPROVED + IN_MILLING.
-    
     let targetStatuses: string[] = [];
-
     if (statusParams.length > 0) {
         targetStatuses = [...statusParams];
     } else {
@@ -100,7 +92,6 @@ export default async function CasesPage({
 
     whereMilling.status = { in: targetStatuses };
 
-    // Dropdown Filters
     if (doctorParam && doctorParam !== "ALL") {
         whereMilling.OR = [
             { doctorName: doctorParam },
@@ -112,7 +103,7 @@ export default async function CasesPage({
         whereMilling.doctorUser = { address: { zipCode: zipParam } };
     }
 
-    // 2. Fetch Data
+    // 2. Fetch Data (INCLUDING FILTERS)
     const [totalMillingCount, millingCases, distinctDoctors, distinctZips] = await Promise.all([
         prisma.dentalCase.count({ where: whereMilling }),
         prisma.dentalCase.findMany({
@@ -139,7 +130,7 @@ export default async function CasesPage({
                 }
             }
         }),
-        // Fetch ALL distinct doctors involved in milling stages (for the filter dropdown)
+        // Fetch ALL distinct doctors involved in milling (for filters)
         prisma.dentalCase.findMany({
             where: { stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] } },
             distinct: ['doctorName'],
@@ -148,7 +139,7 @@ export default async function CasesPage({
         // Fetch ALL distinct zips
         prisma.dentalCase.findMany({
             where: { stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] } },
-            distinct: ['doctorUserId'], // Approx distinct users
+            distinct: ['doctorUserId'],
             select: { doctorUser: { select: { address: { select: { zipCode: true } } } } }
         })
     ]);
@@ -173,14 +164,14 @@ export default async function CasesPage({
             <MillingDashboard 
                 cases={safeMillingCases} 
                 totalCount={totalMillingCount}
-                uniqueDoctors={uniqueDoctors}
-                uniqueZips={uniqueZips}
+                uniqueDoctors={uniqueDoctors} // ✅ NOW PASSED CORRECTLY
+                uniqueZips={uniqueZips}       // ✅ NOW PASSED CORRECTLY
             />
         </div>
     );
   }
 
-  // --- STANDARD VIEW (Admin/Lab/Doctor) ---
+  // --- STANDARD VIEW ---
   const isDoctor = role === "customer";
   const isAdmin = role === "admin"; 
   const currentRole = role as string; 

@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback } from "react";
 
 interface Props {
   uniqueDoctors: string[];
@@ -25,7 +25,7 @@ export default function MillingFilters({ uniqueDoctors, uniqueZips }: Props) {
     currentStatuses.add("IN_MILLING");
   }
 
-  // ✅ Unified Update Function
+  // Unified Update Function
   const update = useCallback((updates: { 
     status?: Set<string>, 
     showShipped?: boolean, 
@@ -104,7 +104,7 @@ export default function MillingFilters({ uniqueDoctors, uniqueZips }: Props) {
         onChange={(e) => update({ doctor: e.target.value })}
       >
         <option value="ALL">All Doctors</option>
-        {uniqueDoctors.map((d) => (
+        {(uniqueDoctors || []).map((d) => (
           <option key={d} value={d}>{d}</option>
         ))}
       </select>
@@ -116,7 +116,7 @@ export default function MillingFilters({ uniqueDoctors, uniqueZips }: Props) {
         onChange={(e) => update({ zip: e.target.value })}
       >
         <option value="ALL">All Zip Codes</option>
-        {uniqueZips.map((z) => (
+        {(uniqueZips || []).map((z) => (
           <option key={z} value={z}>{z}</option>
         ))}
       </select>
