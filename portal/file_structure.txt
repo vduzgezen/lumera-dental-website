@@ -34,6 +34,7 @@
 ./app/portal/cases/milling/ShippingModal.tsx
 ./app/portal/cases/milling/MillingTable.tsx
 ./app/portal/cases/milling/MillingFilters.tsx
+./app/portal/cases/milling/finance
 ./app/portal/cases/milling/MillingHeader.tsx
 ./app/portal/cases/CaseListClient.tsx
 ./app/portal/cases/new
@@ -109,9 +110,13 @@
 ./prisma/migrations/20260128173922_init_neon/migration.sql
 ./prisma/migrations/20260203181000_sales
 ./prisma/migrations/20260203181000_sales/migration.sql
+./prisma/migrations/20260211152149_add_shipping_finance_fields
+./prisma/migrations/20260211152149_add_shipping_finance_fields/migration.sql
 ./prisma/schema.prisma
 ./prisma/dev.backup.20251030-153514.db
 ./prisma/dev.db
+./prisma/seed3.mjs
+./prisma/seed2.mjs
 ./sentry.server.config.ts
 ./next-env.d.ts
 ./README.md

@@ -1,24 +1,15 @@
-// FILE: app/portal/cases/milling/MillingDashboard.tsx
+// portal/app/portal/cases/milling/MillingDashboard.tsx
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation"; 
 import { CaseRow } from "../page";
 import MillingHeader from "./MillingHeader";
 import MillingFilters from "./MillingFilters";
 import MillingTable from "./MillingTable";
 import ShippingModal from "./ShippingModal";
 import { calculateProductionCosts } from "@/lib/cost-engine";
-
-// ✅ 1. Local Interface Definition
-interface LocalShippingTarget {
-  name: string;
-  attn: string | null;
-  phone: string | null;
-  street: string | null;
-  city: string | null;
-  state: string | null;
-  zip: string | null;
-}
+import { ShippingTarget } from "@/lib/types";
 
 type SortConfig = {
   key: string | null;
@@ -27,53 +18,40 @@ type SortConfig = {
 
 interface MillingDashboardProps {
   cases: CaseRow[];
+  totalCount: number;
+  uniqueDoctors: string[]; // ✅ Passed from Server
+  uniqueZips: string[];    // ✅ Passed from Server
 }
 
-export default function MillingDashboard({ cases }: MillingDashboardProps) {
+export default function MillingDashboard({ cases, totalCount, uniqueDoctors, uniqueZips }: MillingDashboardProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
 
-  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set(["APPROVED", "IN_MILLING"]));
-  const [showShipped, setShowShipped] = useState(false);
-  const [doctorFilter, setDoctorFilter] = useState("ALL");
-  const [zipFilter, setZipFilter] = useState("ALL");
-
+  // UI States
   const [isDownloading, setIsDownloading] = useState(false);
   const [isShipping, setIsShipping] = useState(false);
   const [isSavingShipment, setIsSavingShipment] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  // --- DERIVED DATA ---
-  const uniqueDoctors = useMemo(() => {
-    const doctors = new Set(
-      cases.map(c => c.doctorUser?.name || c.doctorName).filter((name): name is string => !!name)
-    );
-    return Array.from(doctors).sort();
-  }, [cases]);
+  // --- PAGINATION HANDLER ---
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    const params = new URLSearchParams(searchParams.toString());
+    const currentLimit = parseInt(params.get("limit") || "50");
+    const newLimit = currentLimit + 50;
+    params.set("limit", newLimit.toString());
+    
+    router.replace(`?${params.toString()}`, { scroll: false });
+    setTimeout(() => setLoadingMore(false), 2000);
+  };
 
-  const uniqueZips = useMemo(() => {
-    const zips = new Set(
-      cases.map(c => c.doctorUser?.address?.zipCode).filter((zip): zip is string => !!zip)
-    );
-    return Array.from(zips).sort();
-  }, [cases]);
-
-  const filteredCases = cases.filter(c => {
-    const isVisibleStatus = statusFilter.has(c.status) || (c.status === "SHIPPED" && showShipped);
-    if (!isVisibleStatus) return false;
-    if (doctorFilter !== "ALL") {
-      const docName = c.doctorUser?.name || c.doctorName;
-      if (docName !== doctorFilter) return false;
-    }
-    if (zipFilter !== "ALL") {
-      const zip = c.doctorUser?.address?.zipCode;
-      if (zip !== zipFilter) return false;
-    }
-    return true;
-  });
-
+  // --- SORTING LOGIC (Applied to Server Results) ---
   const sortedCases = useMemo(() => {
-    if (!sortConfig.key || !sortConfig.direction) return filteredCases;
-    return [...filteredCases].sort((a, b) => {
+    if (!sortConfig.key || !sortConfig.direction) return cases;
+    return [...cases].sort((a, b) => {
       let aVal: any = "";
       let bVal: any = "";
       switch (sortConfig.key) {
@@ -90,7 +68,7 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
       if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [filteredCases, sortConfig]);
+  }, [cases, sortConfig]); // ✅ Depends on 'cases' directly now
 
   const handleSort = (key: string) => {
     setSortConfig((current) => {
@@ -101,23 +79,18 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredCases.length) {
+    if (selectedIds.size === cases.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredCases.map(c => c.id)));
+      setSelectedIds(new Set(cases.map(c => c.id)));
     }
   };
+
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelectedIds(next);
-  };
-  const toggleStatusFilter = (status: string) => {
-    const next = new Set(statusFilter);
-    if (next.has(status)) next.delete(status);
-    else next.add(status);
-    setStatusFilter(next);
   };
 
   const hasSelection = selectedIds.size > 0;
@@ -129,32 +102,23 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
   
   const canDownload = hasSelection;
 
-  // --- LOGIC: BATCH METRICS ---
   const batchMetrics = useMemo(() => {
     let totalCost = 0;
     const clinics = new Set<string>();
     const doctors = new Set<string>();
-    
-    // ✅ Type explicitly set to LocalShippingTarget OR null
-    let shipTarget: LocalShippingTarget | null = null;
+    let shipTarget: ShippingTarget | null = null;
 
-    // ✅ CRITICAL FIX: Changed from .forEach() to for...of loop.
-    // This allows TypeScript to correctly infer that 'shipTarget' is assigned a value.
     for (const c of cases) {
         if (selectedIds.has(c.id)) {
-            // 1. Calculate Cost
             const costs = calculateProductionCosts(c.product, c.material, 1, false); 
             totalCost += costs.milling;
 
-            // 2. Track Entities
             if (c.clinic?.name) clinics.add(c.clinic.name);
             const docName = c.doctorUser?.name || c.doctorName || "Unknown";
             doctors.add(docName);
 
-            // 3. Capture Address (Take the first one found)
             if (!shipTarget && c.doctorUser?.address) {
                 const phone = c.clinic.phone || c.doctorUser.phoneNumber || "No Phone";
-                
                 shipTarget = {
                     name: docName,
                     attn: null,
@@ -168,12 +132,9 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
         }
     }
 
-    // 4. Handle Multi-Doctor Batches
-    // TS now understands shipTarget is not "never" here because the assignment happened in the same scope.
     if (shipTarget && doctors.size > 1) {
         const clinicName = Array.from(clinics)[0] || "Dental Clinic";
         const docList = Array.from(doctors).join(", ");
-        
         shipTarget.name = clinicName;
         shipTarget.attn = `Attn: ${docList}`;
     }
@@ -243,18 +204,10 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
           onDownload={handleDownload}
           onShip={() => setIsShipping(true)}
         />
+        {/* ✅ Server-Driven Filters */}
         <MillingFilters 
-          statusFilter={statusFilter}
-          toggleStatus={toggleStatusFilter}
-          showShipped={showShipped}
-          setShowShipped={setShowShipped}
-          doctorFilter={doctorFilter}
-          setDoctorFilter={setDoctorFilter}
           uniqueDoctors={uniqueDoctors}
-          zipFilter={zipFilter}
-          setZipFilter={setZipFilter}
           uniqueZips={uniqueZips}
-          onClear={() => { setDoctorFilter("ALL"); setZipFilter("ALL"); }}
         />
       </div>
 
@@ -265,6 +218,9 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
         onSort={handleSort}
         onSelect={toggleSelect}
         onSelectAll={toggleSelectAll}
+        totalCount={totalCount}
+        onLoadMore={handleLoadMore}
+        loadingMore={loadingMore}
       />
 
       <ShippingModal 

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import CopyableId from "@/components/CopyableId";
 
 type SortConfig = {
@@ -9,7 +10,6 @@ type SortConfig = {
   direction: "asc" | "desc" | null;
 };
 
-// Reuse money formatter
 function formatMoney(amount: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -18,34 +18,18 @@ function formatMoney(amount: number) {
 }
 
 const SortableHeader = ({ 
-  label, 
-  colKey, 
-  sortConfig, 
-  onSort,
-  className = "",
-  align = "left"
-}: { 
-  label: string, 
-  colKey: string, 
-  sortConfig: SortConfig, 
-  onSort: (k: string) => void,
-  className?: string,
-  align?: "left" | "center" | "right"
-}) => {
+  label, colKey, sortConfig, onSort, className = "", align = "left"
+}: any) => {
   const isActive = sortConfig.key === colKey;
   return (
     <th 
       className={`
         h-12 p-0 font-medium cursor-pointer transition-colors duration-200 select-none group border-b-2 outline-none whitespace-nowrap align-middle
-        ${isActive 
-          ? "text-white border-accent" 
-          : "border-transparent hover:text-white"
-        }
+        ${isActive ? "text-white border-accent" : "border-transparent hover:text-white"}
         ${className}
       `}
       onClick={() => onSort(colKey)}
     >
-      {/* Container to center content vertically and apply padding/alignment */}
       <div className={`flex items-center h-full px-4 ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start"}`}>
         <span className="truncate">{label}</span>
         {isActive && (
@@ -58,16 +42,17 @@ const SortableHeader = ({
   );
 };
 
-export default function FinancialsTable({ rows }: { rows: any[] }) {
+export default function FinancialsTable({ rows, totalCount }: { rows: any[], totalCount: number }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const sortedRows = useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) return rows;
-
     return [...rows].sort((a, b) => {
       let aVal: any = "";
       let bVal: any = "";
-
       switch (sortConfig.key) {
         case "alias": aVal = a.patientAlias; bVal = b.patientAlias; break;
         case "id": aVal = a.id; bVal = b.id; break;
@@ -78,15 +63,12 @@ export default function FinancialsTable({ rows }: { rows: any[] }) {
         case "rep": aVal = a.salesRepName || ""; bVal = b.salesRepName || ""; break;
         case "product": aVal = a.product; bVal = b.product; break;
         case "units": aVal = a.units; bVal = b.units; break;
-        
-        // Numeric sorts
         case "revenue": aVal = Number(a.cost); bVal = Number(b.cost); break;
         case "haus": aVal = a.millingCost; bVal = b.millingCost; break;
         case "design": aVal = a.designCost; bVal = b.designCost; break;
         case "comm": aVal = a.commissionCost; bVal = b.commissionCost; break;
         case "margin": aVal = a.margin; bVal = b.margin; break;
       }
-
       if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
       if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
@@ -101,10 +83,19 @@ export default function FinancialsTable({ rows }: { rows: any[] }) {
     });
   };
 
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    const params = new URLSearchParams(searchParams.toString());
+    const currentLimit = parseInt(params.get("limit") || "50");
+    const newLimit = currentLimit + 50;
+    params.set("limit", newLimit.toString());
+    router.replace(`?${params.toString()}`, { scroll: false });
+    setTimeout(() => setLoadingMore(false), 2000);
+  };
+
   return (
     <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl">
       <div className="flex-1 overflow-auto custom-scrollbar">
-        {/* Adjusted min-width slightly lower since columns are tighter */}
         <table className="w-full text-left text-sm min-w-[1800px]">
           <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10 h-12">
             <tr>
@@ -116,11 +107,7 @@ export default function FinancialsTable({ rows }: { rows: any[] }) {
                 <SortableHeader label="Designer" colKey="designer" sortConfig={sortConfig} onSort={handleSort} className="w-[110px]" />
                 <SortableHeader label="Sales Rep" colKey="rep" sortConfig={sortConfig} onSort={handleSort} className="w-[120px]" />
                 <SortableHeader label="Product" colKey="product" sortConfig={sortConfig} onSort={handleSort} className="min-w-[120px]" />
-                
-                {/* ✅ Tighter Units Column */}
                 <SortableHeader label="Units" colKey="units" sortConfig={sortConfig} onSort={handleSort} className="w-[50px]" align="center" />
-                
-                {/* ✅ Tighter Financial Columns */}
                 <SortableHeader label="Revenue" colKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-emerald-400" align="right" />
                 <SortableHeader label="Haus Cost" colKey="haus" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-blue-400" align="right" />
                 <SortableHeader label="Design Fee" colKey="design" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-purple-400" align="right" />
@@ -164,8 +151,6 @@ export default function FinancialsTable({ rows }: { rows: any[] }) {
                         <div className="text-xs font-medium truncate">{r.product.replace(/_/g, " ")}</div>
                         {r.material && <div className="text-[10px] text-white/40 truncate">{r.material}</div>}
                     </td>
-                    
-                    {/* ✅ Tighter Body Cells to Match Header */}
                     <td className="px-4 text-center text-white/60">{r.units}</td>
                     <td className="px-4 text-right font-medium text-emerald-400/90">{formatMoney(Number(r.cost))}</td>
                     <td className="px-4 text-right text-blue-300/80">{formatMoney(r.millingCost)}</td>
@@ -176,6 +161,28 @@ export default function FinancialsTable({ rows }: { rows: any[] }) {
             ))}
           </tbody>
         </table>
+      </div>
+
+      {/* ✅ UNIFIED FOOTER: SAME ROW */}
+      <div className="flex-none h-14 p-3 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
+        <span className="text-xs text-white/40 pl-2">
+          Showing {rows.length} of {totalCount} records
+        </span>
+        
+        {rows.length < totalCount && (
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-colors flex items-center gap-2"
+          >
+            {loadingMore ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Loading...
+              </>
+            ) : "Load More"}
+          </button>
+        )}
       </div>
     </div>
   );

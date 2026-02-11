@@ -13,7 +13,8 @@ import {
   LogOut,
   ChevronRight,
   ChevronLeft,
-  ShieldCheck 
+  ShieldCheck,
+  DollarSign
 } from "lucide-react";
 
 export default function PortalSidebar({ userRole }: { userRole: string }) {
@@ -43,6 +44,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
     { label: "Dashboard", href: "/portal/cases", icon: LayoutDashboard, roles: ["customer", "lab", "admin", "milling"] },
     { label: "New Case", href: "/portal/cases/new", icon: FolderOpen, roles: ["lab", "admin"] },
     { label: "Billing", href: "/portal/billing", icon: CreditCard, roles: ["customer", "admin"] },
+    { label: "Milling Finance", href: "/portal/cases/milling/finance", icon: DollarSign, roles: ["milling", "admin"] },
     { label: "Admin", href: "/portal/admin/users", icon: ShieldCheck, roles: ["admin"] },
   ];
 
@@ -77,9 +79,25 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto custom-scrollbar flex flex-col items-center">
         {filteredNav.map((item) => {
-          const isActive = item.label === "Admin" 
-            ? pathname.startsWith("/portal/admin")
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          
+          // ✅ EXCLUSIVE HIGHLIGHTING LOGIC
+          let isActive = false;
+
+          if (item.label === "Milling Finance") {
+             isActive = pathname.startsWith("/portal/cases/milling/finance");
+          } else if (item.label === "New Case") {
+             isActive = pathname.startsWith("/portal/cases/new");
+          } else if (item.label === "Admin") {
+             isActive = pathname.startsWith("/portal/admin");
+          } else if (item.label === "Dashboard") {
+             // Active ONLY if it matches root cases path AND isn't caught by the sub-routes above
+             const isFinance = pathname.startsWith("/portal/cases/milling/finance");
+             const isNew = pathname.startsWith("/portal/cases/new");
+             isActive = pathname.startsWith("/portal/cases") && !isFinance && !isNew;
+          } else {
+             // Fallback for Billing, etc.
+             isActive = pathname.startsWith(item.href);
+          }
             
           const Icon = item.icon;
 
