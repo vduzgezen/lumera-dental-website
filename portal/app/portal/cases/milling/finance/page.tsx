@@ -5,6 +5,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import MillingFinanceTable from "./MillingFinanceTable";
 import MillingFinanceFilters from "./MillingFinanceFilters";
+import MillingFinanceStats from "./MillingFinanceStats"; // ✅ New Import
 import { calculateProductionCosts } from "@/lib/cost-engine";
 
 export const dynamic = "force-dynamic";
@@ -51,22 +52,54 @@ export default async function MillingFinancePage({
     ];
   }
 
-  // --- 2. Discovery Phase: Find relevant Batch IDs ---
-  // We fetch minimal data to determine which batches match the criteria.
-  const matchingCases = await prisma.dentalCase.findMany({
+  // --- 2. Discovery & Aggregation Phase ---
+  // We fetch ALL matching records to calculate the summary totals accurately
+  const allMatchingCases = await prisma.dentalCase.findMany({
     where,
-    select: { shippingBatchId: true, shippedAt: true },
+    select: {
+      shippingBatchId: true,
+      shippedAt: true,
+      // Fields needed for Cost Calculation
+      product: true,
+      material: true,
+      units: true,
+      shippingCost: true,
+      salesRepId: true
+    },
     orderBy: { shippedAt: "desc" }
   });
 
-  // Deduplicate Batch IDs (maintaining date order)
-  const uniqueBatchIds = Array.from(new Set(matchingCases.map(c => c.shippingBatchId!)));
-  const totalBatchCount = uniqueBatchIds.length;
+  // Calculate Aggregates
+  let totalMilling = 0;
+  let totalShipping = 0;
+  let totalUnits = 0;
+  
+  // Use a Set to track unique batches for pagination
+  // We maintain order by pushing to array only when first seen
+  const orderedUniqueBatchIds: string[] = [];
+  const seenBatches = new Set<string>();
 
-  // Apply Pagination Slice
-  const targetBatchIds = uniqueBatchIds.slice(0, limit);
+  for (const c of allMatchingCases) {
+    // 1. Pagination List Builder
+    if (c.shippingBatchId && !seenBatches.has(c.shippingBatchId)) {
+        seenBatches.add(c.shippingBatchId);
+        orderedUniqueBatchIds.push(c.shippingBatchId);
+    }
 
-  // --- 3. Data Phase: Fetch Full Data for Target Batches ---
+    // 2. Financial Totals (Sum ALL matching cases)
+    const costs = calculateProductionCosts(c.product, c.material, c.units, !!c.salesRepId);
+    totalMilling += costs.milling;
+    totalShipping += Number(c.shippingCost || 0);
+    totalUnits += c.units;
+  }
+
+  const totalDue = totalMilling + totalShipping;
+  const totalBatchCount = orderedUniqueBatchIds.length;
+
+  // --- 3. Pagination Slice ---
+  const targetBatchIds = orderedUniqueBatchIds.slice(0, limit);
+
+  // --- 4. Data Phase: Fetch Full Data for Target Batches ---
   const cases = await prisma.dentalCase.findMany({
     where: {
       shippingBatchId: { in: targetBatchIds }
@@ -75,7 +108,7 @@ export default async function MillingFinancePage({
     orderBy: { shippedAt: "desc" }
   });
 
-  // --- 4. Grouping & Serialization ---
+  // --- 5. Grouping & Serialization ---
   const batchMap: Record<string, any> = {};
 
   for (const c of cases) {
@@ -94,7 +127,6 @@ export default async function MillingFinancePage({
 
     const costs = calculateProductionCosts(c.product, c.material, c.units, !!c.salesRepId);
     
-    // ✅ Fix: Manual serialization of Decimal to Number for client
     batchMap[bid].cases.push({
       ...c,
       cost: Number(c.cost), 
@@ -121,6 +153,13 @@ export default async function MillingFinancePage({
         
         <MillingFinanceFilters />
       </header>
+
+      {/* ✅ Insert Summary Stats */}
+      <MillingFinanceStats 
+        totalDue={totalDue}
+        totalUnits={totalUnits}
+        totalBatches={totalBatchCount}
+      />
       
       <MillingFinanceTable 
         batches={sortedBatches} 
