@@ -1,4 +1,5 @@
 // portal/app/portal/billing/page.tsx
+
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -19,7 +20,6 @@ export default async function BillingPage({
 
   const sp = await searchParams;
 
-  // --- 1. FILTERS ---
   const getParam = (key: string) => {
     const val = sp[key];
     if (Array.isArray(val)) return val[0];
@@ -32,6 +32,7 @@ export default async function BillingPage({
 
   const selYear = getParam("year") ? parseInt(getParam("year")!) : currentYear;
   const selMonth = getParam("month") ? parseInt(getParam("month")!) : currentMonth;
+  const limit = parseInt(getParam("limit") || "50");
 
   const qFilter = getParam("q") || "";
   const doctorFilter = getParam("doctor") || "";
@@ -39,7 +40,6 @@ export default async function BillingPage({
   const isAdminOrLab = session.role === "admin" || session.role === "lab";
 
   const where: Prisma.DentalCaseWhereInput = {};
-
   if (session.role === "customer") {
     if (!session.clinicId) {
       return <div className="p-8 text-white/50">No clinic linked. Contact support.</div>;
@@ -57,7 +57,6 @@ export default async function BillingPage({
     where.OR = [
       { patientAlias: { contains: qFilter.trim(), mode: 'insensitive' } },
       { id: { contains: qFilter.trim() } },
-      // Allow searching by patient name in billing too
       { patientFirstName: { contains: qFilter.trim(), mode: 'insensitive' } },
       { patientLastName: { contains: qFilter.trim(), mode: 'insensitive' } }
     ];
@@ -69,36 +68,32 @@ export default async function BillingPage({
   }
 
   // --- 2. FETCH DATA ---
-  const stats = await prisma.dentalCase.aggregate({
-    where,
-    _sum: {
-        cost: true,
-        units: true
-    },
-    _count: {
-        id: true
-    }
-  });
-
-  const rawCases = await prisma.dentalCase.findMany({
-    where,
-    orderBy: { orderDate: "desc" },
-    take: 100, 
-    select: {
-      id: true,
-      orderDate: true,
-      patientAlias: true,
-      // ✅ ADDED: Patient Names
-      patientFirstName: true,
-      patientLastName: true,
-      doctorName: true,
-      product: true,
-      units: true,
-      cost: true,
-      billingType: true,
-      clinic: { select: { name: true } },
-    },
-  });
+  const [stats, rawCases] = await Promise.all([
+    // ✅ Use 'aggregate' for counts to populate the footer accurately
+    prisma.dentalCase.aggregate({
+        where,
+        _sum: { cost: true, units: true },
+        _count: { id: true }
+    }),
+    prisma.dentalCase.findMany({
+        where,
+        orderBy: { orderDate: "desc" },
+        take: limit, // ✅ Apply Limit Here
+        select: {
+            id: true,
+            orderDate: true,
+            patientAlias: true,
+            patientFirstName: true,
+            patientLastName: true,
+            doctorName: true,
+            product: true,
+            units: true,
+            cost: true,
+            billingType: true,
+            clinic: { select: { name: true } },
+        },
+    })
+  ]);
 
   const cases = rawCases.map((c) => ({
     ...c,
@@ -125,13 +120,11 @@ export default async function BillingPage({
         totalUnits={stats._sum.units || 0}
       />
 
-      <BillingList cases={cases} isAdminOrLab={isAdminOrLab} />
-      
-      {stats._count.id > 100 && (
-        <p className="text-center text-xs text-white/30 pt-2">
-            Showing recent 100 of {stats._count.id} records. Export to CSV for full history.
-        </p>
-      )}
+      <BillingList 
+        cases={cases} 
+        isAdminOrLab={isAdminOrLab} 
+        totalCount={stats._count.id} // ✅ Pass Total
+      />
     </section>
   );
 }

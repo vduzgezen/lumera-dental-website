@@ -339,6 +339,7 @@ FILE: ./app/portal/admin/financials/FinancialsTable.tsx
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import CopyableId from "@/components/CopyableId";
 
 type SortConfig = {
@@ -346,7 +347,6 @@ type SortConfig = {
   direction: "asc" | "desc" | null;
 };
 
-// Reuse money formatter
 function formatMoney(amount: number) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -355,34 +355,18 @@ function formatMoney(amount: number) {
 }
 
 const SortableHeader = ({ 
-  label, 
-  colKey, 
-  sortConfig, 
-  onSort,
-  className = "",
-  align = "left"
-}: { 
-  label: string, 
-  colKey: string, 
-  sortConfig: SortConfig, 
-  onSort: (k: string) => void,
-  className?: string,
-  align?: "left" | "center" | "right"
-}) => {
+  label, colKey, sortConfig, onSort, className = "", align = "left"
+}: any) => {
   const isActive = sortConfig.key === colKey;
   return (
     <th 
       className={`
         h-12 p-0 font-medium cursor-pointer transition-colors duration-200 select-none group border-b-2 outline-none whitespace-nowrap align-middle
-        ${isActive 
-          ? "text-white border-accent" 
-          : "border-transparent hover:text-white"
-        }
+        ${isActive ? "text-white border-accent" : "border-transparent hover:text-white"}
         ${className}
       `}
       onClick={() => onSort(colKey)}
     >
-      {/* Container to center content vertically and apply padding/alignment */}
       <div className={`flex items-center h-full px-4 ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start"}`}>
         <span className="truncate">{label}</span>
         {isActive && (
@@ -395,16 +379,17 @@ const SortableHeader = ({
   );
 };
 
-export default function FinancialsTable({ rows }: { rows: any[] }) {
+export default function FinancialsTable({ rows, totalCount }: { rows: any[], totalCount: number }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const sortedRows = useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) return rows;
-
     return [...rows].sort((a, b) => {
       let aVal: any = "";
       let bVal: any = "";
-
       switch (sortConfig.key) {
         case "alias": aVal = a.patientAlias; bVal = b.patientAlias; break;
         case "id": aVal = a.id; bVal = b.id; break;
@@ -415,15 +400,12 @@ export default function FinancialsTable({ rows }: { rows: any[] }) {
         case "rep": aVal = a.salesRepName || ""; bVal = b.salesRepName || ""; break;
         case "product": aVal = a.product; bVal = b.product; break;
         case "units": aVal = a.units; bVal = b.units; break;
-        
-        // Numeric sorts
         case "revenue": aVal = Number(a.cost); bVal = Number(b.cost); break;
         case "haus": aVal = a.millingCost; bVal = b.millingCost; break;
         case "design": aVal = a.designCost; bVal = b.designCost; break;
         case "comm": aVal = a.commissionCost; bVal = b.commissionCost; break;
         case "margin": aVal = a.margin; bVal = b.margin; break;
       }
-
       if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
       if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
@@ -438,10 +420,19 @@ export default function FinancialsTable({ rows }: { rows: any[] }) {
     });
   };
 
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    const params = new URLSearchParams(searchParams.toString());
+    const currentLimit = parseInt(params.get("limit") || "50");
+    const newLimit = currentLimit + 50;
+    params.set("limit", newLimit.toString());
+    router.replace(`?${params.toString()}`, { scroll: false });
+    setTimeout(() => setLoadingMore(false), 2000);
+  };
+
   return (
     <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl">
       <div className="flex-1 overflow-auto custom-scrollbar">
-        {/* Adjusted min-width slightly lower since columns are tighter */}
         <table className="w-full text-left text-sm min-w-[1800px]">
           <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10 h-12">
             <tr>
@@ -453,11 +444,7 @@ export default function FinancialsTable({ rows }: { rows: any[] }) {
                 <SortableHeader label="Designer" colKey="designer" sortConfig={sortConfig} onSort={handleSort} className="w-[110px]" />
                 <SortableHeader label="Sales Rep" colKey="rep" sortConfig={sortConfig} onSort={handleSort} className="w-[120px]" />
                 <SortableHeader label="Product" colKey="product" sortConfig={sortConfig} onSort={handleSort} className="min-w-[120px]" />
-                
-                {/* ✅ Tighter Units Column */}
                 <SortableHeader label="Units" colKey="units" sortConfig={sortConfig} onSort={handleSort} className="w-[50px]" align="center" />
-                
-                {/* ✅ Tighter Financial Columns */}
                 <SortableHeader label="Revenue" colKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-emerald-400" align="right" />
                 <SortableHeader label="Haus Cost" colKey="haus" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-blue-400" align="right" />
                 <SortableHeader label="Design Fee" colKey="design" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-purple-400" align="right" />
@@ -501,8 +488,6 @@ export default function FinancialsTable({ rows }: { rows: any[] }) {
                         <div className="text-xs font-medium truncate">{r.product.replace(/_/g, " ")}</div>
                         {r.material && <div className="text-[10px] text-white/40 truncate">{r.material}</div>}
                     </td>
-                    
-                    {/* ✅ Tighter Body Cells to Match Header */}
                     <td className="px-4 text-center text-white/60">{r.units}</td>
                     <td className="px-4 text-right font-medium text-emerald-400/90">{formatMoney(Number(r.cost))}</td>
                     <td className="px-4 text-right text-blue-300/80">{formatMoney(r.millingCost)}</td>
@@ -514,6 +499,28 @@ export default function FinancialsTable({ rows }: { rows: any[] }) {
           </tbody>
         </table>
       </div>
+
+      {/* ✅ UNIFIED FOOTER: SAME ROW */}
+      <div className="flex-none h-14 p-3 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
+        <span className="text-xs text-white/40 pl-2">
+          Showing {rows.length} of {totalCount} records
+        </span>
+        
+        {rows.length < totalCount && (
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-colors flex items-center gap-2"
+          >
+            {loadingMore ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Loading...
+              </>
+            ) : "Load More"}
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -524,7 +531,7 @@ FILE: ./app/portal/admin/financials/FinancialsFilters.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react"; // ✅ Import useCallback
+import { useState, useEffect, useCallback } from "react";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -552,11 +559,9 @@ export default function FinancialsFilters({
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 3 }, (_, i) => currentYear - i);
 
-  // Local state for text inputs to allow typing without instant reload
   const [docInput, setDocInput] = useState(doctorFilter);
   const [clinicInput, setClinicInput] = useState(clinicFilter);
 
-  // Sync state if URL changes externally
   useEffect(() => {
     setDocInput(doctorFilter);
     setClinicInput(clinicFilter);
@@ -565,9 +570,20 @@ export default function FinancialsFilters({
   // ✅ STABILIZE UPDATE FUNCTION
   const update = useCallback((updates: Record<string, string>) => {
     const url = new URL(window.location.href);
+    
+    // ✅ 1. Reset pagination limit whenever a filter changes
+    url.searchParams.delete("limit");
+
+    // ✅ 2. Update Params
     Object.entries(updates).forEach(([key, val]) => {
-        if (val && val !== "ALL") url.searchParams.set(key, val);
-        else url.searchParams.delete(key);
+        // FIX: Removed '&& val !== "ALL"' check.
+        // We MUST allow "ALL" to be sent so the server knows to fetch the full year
+        // instead of defaulting to the current month.
+        if (val) {
+            url.searchParams.set(key, val);
+        } else {
+            url.searchParams.delete(key);
+        }
     });
     router.replace(url.toString());
   }, [router]);
@@ -575,7 +591,6 @@ export default function FinancialsFilters({
   // Debounce text search
   useEffect(() => {
     const timer = setTimeout(() => {
-        // ✅ Add dependencies safely now that update is stable
         if (docInput !== doctorFilter || clinicInput !== clinicFilter) {
             update({ doctor: docInput, clinic: clinicInput });
         }
@@ -665,13 +680,14 @@ export default function FinancialsFilters({
 
 FILE: ./app/portal/admin/financials/page.tsx
 // portal/app/portal/admin/financials/page.tsx
+
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { calculateProductionCosts } from "@/lib/cost-engine";
 import { AdminTabs } from "@/components/AdminTabs";
 import FinancialsFilters from "./FinancialsFilters";
 import FinancialsTable from "./FinancialsTable"; 
+import { calculateProductionCosts } from "@/lib/cost-engine";
 
 export const dynamic = "force-dynamic";
 
@@ -685,20 +701,19 @@ function formatMoney(amount: number) {
 export default async function FinancialsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ month?: string; year?: string; designer?: string; salesRep?: string; doctor?: string; clinic?: string }>;
+  searchParams: Promise<{ month?: string; year?: string; designer?: string; salesRep?: string; doctor?: string; clinic?: string; limit?: string }>;
 }) {
   const session = await getSession();
   if (!session || session.role !== "admin") redirect("/portal/cases");
 
   const sp = await searchParams;
   const now = new Date();
-
-  // Filters
+  
   const year = Number(sp.year) || now.getFullYear();
   const monthParam = sp.month; 
   const month = monthParam ? (monthParam === "ALL" ? "ALL" : parseInt(monthParam)) : now.getMonth() + 1;
-  
-  // --- DATE RANGE LOGIC ---
+  const limit = parseInt(sp.limit || "50");
+
   let start: Date, end: Date;
   if (month === "ALL") {
       start = new Date(year, 0, 1);
@@ -719,17 +734,46 @@ export default async function FinancialsPage({
     orderDate: { gte: start, lte: end },
     status: { not: "CANCELLED" },
   };
-  
   if (designerId) where.assigneeId = designerId;
   if (salesRepId) where.salesRepId = salesRepId;
   if (doctorFilter) where.doctorName = { contains: doctorFilter, mode: 'insensitive' };
   if (clinicFilter) where.clinic = { name: { contains: clinicFilter, mode: 'insensitive' } };
 
-  // Fetch Data
-  const [cases, designers, salesReps] = await Promise.all([
+  // 1. Fetch Summary Data (For Scorecards & Total Count)
+  // We fetch ALL matching records here (lightweight select) to ensure scorecards represent the full month/year
+  const summaryCases = await prisma.dentalCase.findMany({
+    where,
+    select: {
+      cost: true,
+      units: true,
+      product: true,
+      material: true,
+      salesRepId: true,
+    }
+  });
+
+  // 2. Scorecard Calculations
+  let totalRevenue = 0;
+  let totalOwedHaus = 0;
+  let totalOwedDesigners = 0;
+  let totalOwedSales = 0;
+  
+  for (const c of summaryCases) {
+    const costs = calculateProductionCosts(c.product, c.material, c.units, !!c.salesRepId);
+    totalRevenue += Number(c.cost);
+    totalOwedHaus += costs.milling;
+    totalOwedDesigners += costs.design;
+    totalOwedSales += costs.commission;
+  }
+  const netProfit = totalRevenue - totalOwedHaus - totalOwedDesigners - totalOwedSales;
+
+  // 3. Fetch Paginated Table Data
+  // This fetch is heavy (includes relations) but limited by 'take'
+  const [tableCases, designers, salesReps] = await Promise.all([
     prisma.dentalCase.findMany({
       where,
       orderBy: { orderDate: "desc" },
+      take: limit, // ✅ PAGINATED
       select: {
         id: true,
         patientAlias: true,
@@ -759,27 +803,12 @@ export default async function FinancialsPage({
     })
   ]);
 
-  // Calculations
-  let totalRevenue = 0;
-  let totalOwedHaus = 0;
-  let totalOwedDesigners = 0;
-  let totalOwedSales = 0;
-  let totalUnits = 0; 
-
-  const rows = cases.map((c) => {
+  const rows = tableCases.map((c) => {
     const costs = calculateProductionCosts(c.product, c.material, c.units, !!c.salesRepId);
-    // Convert Decimal to Number immediately
     const revenue = Number(c.cost);
-    
-    totalRevenue += revenue;
-    totalOwedHaus += costs.milling;
-    totalOwedDesigners += costs.design;
-    totalOwedSales += costs.commission;
-    totalUnits += c.units;
-
     return {
       ...c,
-      cost: revenue, // ✅ FIX: Overwrite the Decimal object with a plain number
+      cost: revenue, 
       millingCost: costs.milling,
       designCost: costs.design,
       commissionCost: costs.commission, 
@@ -789,21 +818,16 @@ export default async function FinancialsPage({
     };
   });
 
-  const netProfit = totalRevenue - totalOwedHaus - totalOwedDesigners - totalOwedSales;
-
-  // Dynamic Labels
   const designerLabel = designerId 
     ? `Owed to ${designers.find(d => d.id === designerId)?.name?.split(' ')[0] || 'Designer'}`
     : "Owed to Designers";
-  
   const salesLabel = salesRepId
     ? `Owed to ${salesReps.find(r => r.id === salesRepId)?.name?.split(' ')[0] || 'Rep'}`
     : "Sales Comm.";
 
   return (
     <div className="flex-1 min-h-0 flex flex-col space-y-4">
-      
-      {/* 1. Header */}
+      {/* Header */}
       <div className="flex-none flex items-center justify-between">
          <div className="flex items-center gap-4">
             <h1 className="text-2xl font-semibold text-white hidden sm:block">Admin</h1>
@@ -812,7 +836,7 @@ export default async function FinancialsPage({
          </div>
       </div>
 
-      {/* 2. Filters & Controls */}
+      {/* Filters */}
       <div className="flex-none">
         <FinancialsFilters 
           selYear={year} 
@@ -826,7 +850,7 @@ export default async function FinancialsPage({
         />
       </div>
 
-      {/* 3. Scorecards */}
+      {/* Scorecards */}
       <div className="flex-none grid grid-cols-2 md:grid-cols-5 gap-4">
         <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
             <div className="text-[10px] text-emerald-400 uppercase font-bold tracking-wider mb-1">Total Revenue</div>
@@ -850,13 +874,8 @@ export default async function FinancialsPage({
         </div>
       </div>
 
-      {/* 4. Client Side Table with Sorting */}
-      <FinancialsTable rows={rows} />
-
-      {/* 5. Bottom Summary Footer */}
-      <div className="flex-none p-2 border-t border-white/5 bg-white/[0.02] text-center text-xs text-white/40">
-          Showing {rows.length} cases with a total of {totalUnits} units.
-      </div>
+      {/* Client Table (Total count passed for footer) */}
+      <FinancialsTable rows={rows} totalCount={summaryCases.length} />
     </div>
   );
 }
@@ -1642,27 +1661,18 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
 --- END OF FILE ---
 
 FILE: ./app/portal/cases/milling/MillingDashboard.tsx
-// FILE: app/portal/cases/milling/MillingDashboard.tsx
+// portal/app/portal/cases/milling/MillingDashboard.tsx
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation"; 
 import { CaseRow } from "../page";
 import MillingHeader from "./MillingHeader";
 import MillingFilters from "./MillingFilters";
 import MillingTable from "./MillingTable";
 import ShippingModal from "./ShippingModal";
 import { calculateProductionCosts } from "@/lib/cost-engine";
-
-// ✅ 1. Local Interface Definition
-interface LocalShippingTarget {
-  name: string;
-  attn: string | null;
-  phone: string | null;
-  street: string | null;
-  city: string | null;
-  state: string | null;
-  zip: string | null;
-}
+import { ShippingTarget } from "@/lib/types";
 
 type SortConfig = {
   key: string | null;
@@ -1671,53 +1681,40 @@ type SortConfig = {
 
 interface MillingDashboardProps {
   cases: CaseRow[];
+  totalCount: number;
+  uniqueDoctors: string[]; // ✅ Passed from Server
+  uniqueZips: string[];    // ✅ Passed from Server
 }
 
-export default function MillingDashboard({ cases }: MillingDashboardProps) {
+export default function MillingDashboard({ cases, totalCount, uniqueDoctors, uniqueZips }: MillingDashboardProps) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
 
-  const [statusFilter, setStatusFilter] = useState<Set<string>>(new Set(["APPROVED", "IN_MILLING"]));
-  const [showShipped, setShowShipped] = useState(false);
-  const [doctorFilter, setDoctorFilter] = useState("ALL");
-  const [zipFilter, setZipFilter] = useState("ALL");
-
+  // UI States
   const [isDownloading, setIsDownloading] = useState(false);
   const [isShipping, setIsShipping] = useState(false);
   const [isSavingShipment, setIsSavingShipment] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
 
-  // --- DERIVED DATA ---
-  const uniqueDoctors = useMemo(() => {
-    const doctors = new Set(
-      cases.map(c => c.doctorUser?.name || c.doctorName).filter((name): name is string => !!name)
-    );
-    return Array.from(doctors).sort();
-  }, [cases]);
+  // --- PAGINATION HANDLER ---
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    const params = new URLSearchParams(searchParams.toString());
+    const currentLimit = parseInt(params.get("limit") || "50");
+    const newLimit = currentLimit + 50;
+    params.set("limit", newLimit.toString());
+    
+    router.replace(`?${params.toString()}`, { scroll: false });
+    setTimeout(() => setLoadingMore(false), 2000);
+  };
 
-  const uniqueZips = useMemo(() => {
-    const zips = new Set(
-      cases.map(c => c.doctorUser?.address?.zipCode).filter((zip): zip is string => !!zip)
-    );
-    return Array.from(zips).sort();
-  }, [cases]);
-
-  const filteredCases = cases.filter(c => {
-    const isVisibleStatus = statusFilter.has(c.status) || (c.status === "SHIPPED" && showShipped);
-    if (!isVisibleStatus) return false;
-    if (doctorFilter !== "ALL") {
-      const docName = c.doctorUser?.name || c.doctorName;
-      if (docName !== doctorFilter) return false;
-    }
-    if (zipFilter !== "ALL") {
-      const zip = c.doctorUser?.address?.zipCode;
-      if (zip !== zipFilter) return false;
-    }
-    return true;
-  });
-
+  // --- SORTING LOGIC (Applied to Server Results) ---
   const sortedCases = useMemo(() => {
-    if (!sortConfig.key || !sortConfig.direction) return filteredCases;
-    return [...filteredCases].sort((a, b) => {
+    if (!sortConfig.key || !sortConfig.direction) return cases;
+    return [...cases].sort((a, b) => {
       let aVal: any = "";
       let bVal: any = "";
       switch (sortConfig.key) {
@@ -1734,7 +1731,7 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
       if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [filteredCases, sortConfig]);
+  }, [cases, sortConfig]); // ✅ Depends on 'cases' directly now
 
   const handleSort = (key: string) => {
     setSortConfig((current) => {
@@ -1745,23 +1742,18 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredCases.length) {
+    if (selectedIds.size === cases.length) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(filteredCases.map(c => c.id)));
+      setSelectedIds(new Set(cases.map(c => c.id)));
     }
   };
+
   const toggleSelect = (id: string) => {
     const next = new Set(selectedIds);
     if (next.has(id)) next.delete(id);
     else next.add(id);
     setSelectedIds(next);
-  };
-  const toggleStatusFilter = (status: string) => {
-    const next = new Set(statusFilter);
-    if (next.has(status)) next.delete(status);
-    else next.add(status);
-    setStatusFilter(next);
   };
 
   const hasSelection = selectedIds.size > 0;
@@ -1773,32 +1765,23 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
   
   const canDownload = hasSelection;
 
-  // --- LOGIC: BATCH METRICS ---
   const batchMetrics = useMemo(() => {
     let totalCost = 0;
     const clinics = new Set<string>();
     const doctors = new Set<string>();
-    
-    // ✅ Type explicitly set to LocalShippingTarget OR null
-    let shipTarget: LocalShippingTarget | null = null;
+    let shipTarget: ShippingTarget | null = null;
 
-    // ✅ CRITICAL FIX: Changed from .forEach() to for...of loop.
-    // This allows TypeScript to correctly infer that 'shipTarget' is assigned a value.
     for (const c of cases) {
         if (selectedIds.has(c.id)) {
-            // 1. Calculate Cost
             const costs = calculateProductionCosts(c.product, c.material, 1, false); 
             totalCost += costs.milling;
 
-            // 2. Track Entities
             if (c.clinic?.name) clinics.add(c.clinic.name);
             const docName = c.doctorUser?.name || c.doctorName || "Unknown";
             doctors.add(docName);
 
-            // 3. Capture Address (Take the first one found)
             if (!shipTarget && c.doctorUser?.address) {
                 const phone = c.clinic.phone || c.doctorUser.phoneNumber || "No Phone";
-                
                 shipTarget = {
                     name: docName,
                     attn: null,
@@ -1812,12 +1795,9 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
         }
     }
 
-    // 4. Handle Multi-Doctor Batches
-    // TS now understands shipTarget is not "never" here because the assignment happened in the same scope.
     if (shipTarget && doctors.size > 1) {
         const clinicName = Array.from(clinics)[0] || "Dental Clinic";
         const docList = Array.from(doctors).join(", ");
-        
         shipTarget.name = clinicName;
         shipTarget.attn = `Attn: ${docList}`;
     }
@@ -1887,18 +1867,10 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
           onDownload={handleDownload}
           onShip={() => setIsShipping(true)}
         />
+        {/* ✅ Server-Driven Filters */}
         <MillingFilters 
-          statusFilter={statusFilter}
-          toggleStatus={toggleStatusFilter}
-          showShipped={showShipped}
-          setShowShipped={setShowShipped}
-          doctorFilter={doctorFilter}
-          setDoctorFilter={setDoctorFilter}
           uniqueDoctors={uniqueDoctors}
-          zipFilter={zipFilter}
-          setZipFilter={setZipFilter}
           uniqueZips={uniqueZips}
-          onClear={() => { setDoctorFilter("ALL"); setZipFilter("ALL"); }}
         />
       </div>
 
@@ -1909,6 +1881,9 @@ export default function MillingDashboard({ cases }: MillingDashboardProps) {
         onSort={handleSort}
         onSelect={toggleSelect}
         onSelectAll={toggleSelectAll}
+        totalCount={totalCount}
+        onLoadMore={handleLoadMore}
+        loadingMore={loadingMore}
       />
 
       <ShippingModal 
@@ -2141,7 +2116,6 @@ FILE: ./app/portal/cases/milling/MillingTable.tsx
 
 import { CaseRow } from "../page";
 
-// Redefine locally to avoid circular imports
 type SortConfig = {
   key: string | null;
   direction: "asc" | "desc" | null;
@@ -2154,16 +2128,15 @@ interface Props {
   onSort: (key: string) => void;
   onSelect: (id: string) => void;
   onSelectAll: () => void;
+  // ✅ Pagination Props
+  totalCount: number;
+  onLoadMore: () => void;
+  loadingMore: boolean;
 }
 
 const fmtDate = (d?: Date | string | null) => {
   if (!d) return "—";
   return new Date(d).toLocaleDateString();
-};
-
-// ✅ VISUAL FIX: No icon when inactive
-const SortIcon = ({ colKey }: { colKey: string }) => {
-  return null; // The header itself manages the icon via props now if needed, but for simplicity we rely on the component below
 };
 
 const SortableHeader = ({ 
@@ -2209,11 +2182,15 @@ export default function MillingTable({
   sortConfig, 
   onSort, 
   onSelect, 
-  onSelectAll 
+  onSelectAll,
+  totalCount,
+  onLoadMore,
+  loadingMore
 }: Props) {
   const allSelected = cases.length > 0 && selectedIds.size === cases.length;
 
   return (
+    // ✅ FIX: Rounded corners & Overflow handling
     <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <table className="w-full text-sm text-left border-collapse">
@@ -2227,12 +2204,8 @@ export default function MillingTable({
                   className="accent-blue-500"
                 />
               </th>
-              
               <SortableHeader label="Case ID" colKey="id" sortConfig={sortConfig} onSort={onSort} />
-              
-              {/* ✅ NEW: Alias Column */}
               <SortableHeader label="Alias" colKey="alias" sortConfig={sortConfig} onSort={onSort} />
-              
               <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={onSort} />
               <SortableHeader label="Zip Code" colKey="zip" sortConfig={sortConfig} onSort={onSort} />
               <SortableHeader label="Product Details" colKey="product" sortConfig={sortConfig} onSort={onSort} />
@@ -2255,20 +2228,14 @@ export default function MillingTable({
                     className="accent-blue-500"
                   />
                 </td>
-
                 <td className="p-4 font-mono text-blue-400 select-all">#{c.id.slice(-6)}</td>
-
-                {/* ✅ NEW: Alias Data */}
                 <td className="p-4 font-medium text-white">{c.patientAlias}</td>
-
                 <td className="p-4 font-medium text-white">
                   {c.doctorUser?.name || c.doctorName || <span className="text-white/30 italic">Unknown</span>}
                 </td>
-
                 <td className="p-4 text-white/70 font-mono">
                   {c.doctorUser?.address?.zipCode || <span className="text-white/30">-</span>}
                 </td>
-
                 <td className="p-4">
                   <div className="flex flex-col">
                     <span className="text-white font-medium">{c.product}</span>
@@ -2278,7 +2245,6 @@ export default function MillingTable({
                     </span>
                   </div>
                 </td>
-
                 <td className="p-4">
                   <span
                     className={`px-2 py-1 rounded text-xs font-semibold tracking-wide border
@@ -2295,12 +2261,10 @@ export default function MillingTable({
                     {c.status.replace(/_/g, " ")}
                   </span>
                 </td>
-
                 <td className="p-4 text-white/50">{fmtDate(c.updatedAt)}</td>
                 <td className="p-4 text-white/50">{fmtDate(c.dueDate)}</td>
               </tr>
             ))}
-
             {cases.length === 0 && (
               <tr>
                 <td colSpan={9} className="p-12 text-center text-white/40">
@@ -2312,8 +2276,26 @@ export default function MillingTable({
         </table>
       </div>
 
-      <div className="flex-none p-2 border-t border-white/5 bg-white/[0.02] text-center text-xs text-white/30">
-        Showing {cases.length} production cases.
+      {/* ✅ UNIFIED FOOTER: Fixed Height h-14 to avoid shrinkage */}
+      <div className="flex-none h-14 p-3 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
+        <span className="text-xs text-white/40 pl-2">
+          Showing {cases.length} of {totalCount} records (Milling Queue)
+        </span>
+        
+        {cases.length < totalCount && (
+          <button
+            onClick={onLoadMore}
+            disabled={loadingMore}
+            className="text-xs font-bold text-white/80 hover:text-white px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-2"
+          >
+            {loadingMore ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Loading...
+              </>
+            ) : "Load More"}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -2324,31 +2306,75 @@ FILE: ./app/portal/cases/milling/MillingFilters.tsx
 // portal/app/portal/cases/milling/MillingFilters.tsx
 "use client";
 
+import { useRouter, useSearchParams } from "next/navigation";
+import { useCallback, useEffect, useState } from "react";
+
 interface Props {
-  statusFilter: Set<string>;
-  toggleStatus: (s: string) => void;
-  
-  showShipped: boolean;
-  setShowShipped: (v: boolean) => void;
-  
-  doctorFilter: string;
-  setDoctorFilter: (v: string) => void;
   uniqueDoctors: string[];
-  
-  zipFilter: string;
-  setZipFilter: (v: string) => void;
   uniqueZips: string[];
-  
-  onClear: () => void;
 }
 
-export default function MillingFilters({
-  statusFilter, toggleStatus,
-  showShipped, setShowShipped,
-  doctorFilter, setDoctorFilter, uniqueDoctors,
-  zipFilter, setZipFilter, uniqueZips,
-  onClear
-}: Props) {
+export default function MillingFilters({ uniqueDoctors, uniqueZips }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Initialize state from URL
+  const currentStatuses = new Set(searchParams.getAll("status"));
+  const showShipped = searchParams.get("showShipped") === "true";
+  const doctorFilter = searchParams.get("doctor") || "ALL";
+  const zipFilter = searchParams.get("zip") || "ALL";
+
+  // If no status in URL, default to APPROVED + IN_MILLING (Initial Load)
+  if (currentStatuses.size === 0 && !searchParams.has("status")) {
+    currentStatuses.add("APPROVED");
+    currentStatuses.add("IN_MILLING");
+  }
+
+  // ✅ Unified Update Function
+  const update = useCallback((updates: { 
+    status?: Set<string>, 
+    showShipped?: boolean, 
+    doctor?: string, 
+    zip?: string 
+  }) => {
+    const params = new URLSearchParams(searchParams.toString());
+    
+    // 1. Reset Pagination on any filter change
+    params.delete("limit");
+
+    // 2. Handle Status
+    if (updates.status !== undefined) {
+      params.delete("status");
+      updates.status.forEach(s => params.append("status", s));
+    }
+
+    // 3. Handle Shipped Toggle
+    if (updates.showShipped !== undefined) {
+        if (updates.showShipped) params.set("showShipped", "true");
+        else params.delete("showShipped");
+    }
+
+    // 4. Handle Dropdowns
+    if (updates.doctor !== undefined) {
+        if (updates.doctor !== "ALL") params.set("doctor", updates.doctor);
+        else params.delete("doctor");
+    }
+
+    if (updates.zip !== undefined) {
+        if (updates.zip !== "ALL") params.set("zip", updates.zip);
+        else params.delete("zip");
+    }
+
+    router.replace(`?${params.toString()}`, { scroll: false });
+  }, [searchParams, router]);
+
+  const toggleStatus = (status: string) => {
+    const next = new Set(currentStatuses);
+    if (next.has(status)) next.delete(status);
+    else next.add(status);
+    update({ status: next });
+  };
+
   return (
     <div className="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
       {/* Status Checkboxes */}
@@ -2356,7 +2382,7 @@ export default function MillingFilters({
         <label className="flex items-center gap-2 text-sm text-white cursor-pointer select-none">
           <input 
             type="checkbox" 
-            checked={statusFilter.has("APPROVED")} 
+            checked={currentStatuses.has("APPROVED")} 
             onChange={() => toggleStatus("APPROVED")} 
             className="accent-emerald-500" 
           />
@@ -2366,7 +2392,7 @@ export default function MillingFilters({
         <label className="flex items-center gap-2 text-sm text-white cursor-pointer select-none">
           <input 
             type="checkbox" 
-            checked={statusFilter.has("IN_MILLING")} 
+            checked={currentStatuses.has("IN_MILLING")} 
             onChange={() => toggleStatus("IN_MILLING")} 
             className="accent-purple-500" 
           />
@@ -2376,10 +2402,11 @@ export default function MillingFilters({
 
       <div className="w-px h-6 bg-white/10 mx-2" />
 
+      {/* Doctor Filter */}
       <select
         className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-blue-500 transition-colors"
         value={doctorFilter}
-        onChange={(e) => setDoctorFilter(e.target.value)}
+        onChange={(e) => update({ doctor: e.target.value })}
       >
         <option value="ALL">All Doctors</option>
         {uniqueDoctors.map((d) => (
@@ -2387,10 +2414,11 @@ export default function MillingFilters({
         ))}
       </select>
 
+      {/* Zip Filter */}
       <select
         className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-blue-500 transition-colors"
         value={zipFilter}
-        onChange={(e) => setZipFilter(e.target.value)}
+        onChange={(e) => update({ zip: e.target.value })}
       >
         <option value="ALL">All Zip Codes</option>
         {uniqueZips.map((z) => (
@@ -2400,22 +2428,395 @@ export default function MillingFilters({
 
       <div className="w-px h-6 bg-white/10 mx-2" />
 
+      {/* Show Shipped Toggle */}
       <label className="flex items-center gap-2 px-3 py-1.5 bg-black/40 border border-white/10 rounded-lg text-sm text-white cursor-pointer select-none hover:bg-white/5 transition">
         <input 
             type="checkbox" 
             checked={showShipped} 
-            onChange={() => setShowShipped(!showShipped)} 
+            onChange={() => update({ showShipped: !showShipped })} 
             className="accent-blue-500" 
         />
         Show Shipped
       </label>
 
+      {/* Clear Button */}
       {(doctorFilter !== "ALL" || zipFilter !== "ALL") && (
         <button
-          onClick={onClear}
+          onClick={() => update({ doctor: "ALL", zip: "ALL" })}
           className="px-3 py-1.5 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition"
         >
           Clear
+        </button>
+      )}
+    </div>
+  );
+}
+--- END OF FILE ---
+
+FILE: ./app/portal/cases/milling/finance/MillingFinanceTable.tsx
+// portal/app/portal/cases/milling/finance/MillingFinanceTable.tsx
+"use client";
+
+import { useState, Fragment } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { formatCurrency } from "@/lib/pricing";
+
+export default function MillingFinanceTable({ 
+  batches, 
+  totalCount, 
+  currentLimit 
+}: { 
+  batches: any[], 
+  totalCount: number, 
+  currentLimit: number 
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [expandedBatches, setExpandedBatches] = useState<Set<string>>(new Set());
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const toggleBatch = (id: string) => {
+    const next = new Set(expandedBatches);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setExpandedBatches(next);
+  };
+
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    const params = new URLSearchParams(searchParams.toString());
+    const newLimit = currentLimit + 10;
+    params.set("limit", newLimit.toString());
+    router.replace(`?${params.toString()}`, { scroll: false });
+    setTimeout(() => setLoadingMore(false), 1000);
+  };
+
+  if (batches.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center border border-white/10 rounded-xl bg-black/20">
+        <p className="text-white/40">No shipped batches found.</p>
+      </div>
+    );
+  }
+
+  return (
+    // ✅ FIX: Rounded corners & Overflow
+    <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden shadow-xl">
+      <div className="flex-1 overflow-auto custom-scrollbar">
+        <table className="w-full text-left text-sm border-collapse">
+          <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
+            <tr>
+              <th className="p-4 w-10"></th>
+              <th className="p-4">Ship Date</th>
+              <th className="p-4">Tracking / Carrier</th>
+              <th className="p-4 text-center">Cases</th>
+              <th className="p-4 text-right">Shipping Cost</th>
+              <th className="p-4 text-right">Milling Fees</th>
+              <th className="p-4 text-right">Total Owed</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-white/5">
+            {batches.map((batch) => (
+              <Fragment key={batch.id}>
+                <tr 
+                  onClick={() => toggleBatch(batch.id)}
+                  className="hover:bg-white/5 cursor-pointer transition-colors group"
+                >
+                  <td className="p-4">
+                    {expandedBatches.has(batch.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  </td>
+                  <td className="p-4 font-medium">{new Date(batch.shippedAt).toLocaleDateString()}</td>
+                  <td className="p-4">
+                    <div className="flex flex-col">
+                      <span className="text-xs text-white/40 uppercase font-bold">{batch.carrier}</span>
+                      <span className="font-mono text-blue-400">{batch.tracking}</span>
+                    </div>
+                  </td>
+                  <td className="p-4 text-center">
+                    <span className="bg-white/5 px-2 py-1 rounded border border-white/10 text-xs">
+                      {batch.cases.length} Units
+                    </span>
+                  </td>
+                  <td className="p-4 text-right text-orange-400">{formatCurrency(batch.totalShipping)}</td>
+                  <td className="p-4 text-right text-purple-400">{formatCurrency(batch.millingTotal)}</td>
+                  <td className="p-4 text-right font-bold text-white">
+                    {formatCurrency(batch.totalShipping + batch.millingTotal)}
+                  </td>
+                </tr>
+                {expandedBatches.has(batch.id) && (
+                  <tr>
+                    <td colSpan={7} className="bg-black/40 p-0">
+                      <div className="border-l-2 border-accent ml-6 my-2">
+                        <table className="w-full text-xs text-white/60">
+                          <thead className="text-[10px] uppercase tracking-wider text-white/30">
+                            <tr>
+                              <th className="px-4 py-2">Case ID</th>
+                              <th className="px-4 py-2">Clinic</th>
+                              <th className="px-4 py-2">Product</th>
+                              <th className="px-4 py-2 text-right">Milling Fee</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {batch.cases.map((c: any) => (
+                              <tr key={c.id} className="border-t border-white/5">
+                                <td className="px-4 py-2 font-mono">#{c.id.slice(-6)}</td>
+                                <td className="px-4 py-2">{c.clinic.name}</td>
+                                <td className="px-4 py-2">{c.product} ({c.material || 'HT'})</td>
+                                <td className="px-4 py-2 text-right">{formatCurrency(c.millingFee)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ✅ FIX: Fixed Height Footer (h-14) */}
+      <div className="flex-none h-14 p-3 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
+        <span className="text-xs text-white/40 pl-2">
+          Showing {batches.length} of {totalCount} shipments
+        </span>
+        
+        {batches.length < totalCount && (
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="text-xs font-bold text-white/80 hover:text-white px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-2"
+          >
+            {loadingMore ? "Loading..." : "Load More"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+--- END OF FILE ---
+
+FILE: ./app/portal/cases/milling/finance/page.tsx
+// portal/app/portal/cases/milling/finance/page.tsx
+
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import MillingFinanceTable from "./MillingFinanceTable";
+import MillingFinanceFilters from "./MillingFinanceFilters";
+import { calculateProductionCosts } from "@/lib/cost-engine";
+
+export const dynamic = "force-dynamic";
+
+export default async function MillingFinancePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ month?: string; year?: string; q?: string; limit?: string }>;
+}) {
+  const session = await getSession();
+  if (!session || (session.role !== "admin" && session.role !== "milling")) {
+    redirect("/portal/cases");
+  }
+
+  const sp = await searchParams;
+  const year = parseInt(sp.year || new Date().getFullYear().toString());
+  const month = sp.month && sp.month !== "ALL" ? parseInt(sp.month) : undefined;
+  const query = sp.q?.trim() || "";
+  const limit = parseInt(sp.limit || "50");
+
+  // --- 1. Build Base Filter ---
+  const where: any = {
+    shippingBatchId: { not: null }
+  };
+
+  // Date Filter
+  if (month) {
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0, 23, 59, 59);
+    where.shippedAt = { gte: start, lte: end };
+  } else {
+    const start = new Date(year, 0, 1);
+    const end = new Date(year, 11, 31, 23, 59, 59);
+    where.shippedAt = { gte: start, lte: end };
+  }
+
+  // Text Search
+  if (query) {
+    where.OR = [
+      { trackingNumber: { contains: query } },
+      { shippingCarrier: { contains: query } },
+      { shippingBatchId: { contains: query } },
+      { clinic: { name: { contains: query } } }
+    ];
+  }
+
+  // --- 2. Discovery Phase: Find relevant Batch IDs ---
+  // We fetch minimal data to determine which batches match the criteria.
+  const matchingCases = await prisma.dentalCase.findMany({
+    where,
+    select: { shippingBatchId: true, shippedAt: true },
+    orderBy: { shippedAt: "desc" }
+  });
+
+  // Deduplicate Batch IDs (maintaining date order)
+  const uniqueBatchIds = Array.from(new Set(matchingCases.map(c => c.shippingBatchId!)));
+  const totalBatchCount = uniqueBatchIds.length;
+
+  // Apply Pagination Slice
+  const targetBatchIds = uniqueBatchIds.slice(0, limit);
+
+  // --- 3. Data Phase: Fetch Full Data for Target Batches ---
+  const cases = await prisma.dentalCase.findMany({
+    where: {
+      shippingBatchId: { in: targetBatchIds }
+    },
+    include: { clinic: true },
+    orderBy: { shippedAt: "desc" }
+  });
+
+  // --- 4. Grouping & Serialization ---
+  const batchMap: Record<string, any> = {};
+
+  for (const c of cases) {
+    const bid = c.shippingBatchId!;
+    if (!batchMap[bid]) {
+      batchMap[bid] = {
+        id: bid,
+        shippedAt: c.shippedAt,
+        carrier: c.shippingCarrier,
+        tracking: c.trackingNumber,
+        totalShipping: 0,
+        millingTotal: 0,
+        cases: []
+      };
+    }
+
+    const costs = calculateProductionCosts(c.product, c.material, c.units, !!c.salesRepId);
+    
+    // ✅ Fix: Manual serialization of Decimal to Number for client
+    batchMap[bid].cases.push({
+      ...c,
+      cost: Number(c.cost), 
+      shippingCost: c.shippingCost ? Number(c.shippingCost) : 0,
+      millingFee: costs.milling
+    });
+
+    batchMap[bid].totalShipping += Number(c.shippingCost || 0);
+    batchMap[bid].millingTotal += costs.milling;
+  }
+
+  // Preserve Sort Order from the ID list
+  const sortedBatches = targetBatchIds
+    .map(id => batchMap[id])
+    .filter(Boolean);
+
+  return (
+    <div className="flex flex-col h-full space-y-6 p-6 overflow-hidden">
+      <header className="flex flex-col gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-white">Haus Finance</h1>
+          <p className="text-sm text-white/40">Track milling costs and shipping batch totals.</p>
+        </div>
+        
+        <MillingFinanceFilters />
+      </header>
+      
+      <MillingFinanceTable 
+        batches={sortedBatches} 
+        totalCount={totalBatchCount} 
+        currentLimit={limit}
+      />
+    </div>
+  );
+}
+--- END OF FILE ---
+
+FILE: ./app/portal/cases/milling/finance/MillingFinanceFilters.tsx
+// portal/app/portal/cases/milling/finance/MillingFinanceFilters.tsx
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
+
+const MONTHS = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+
+export default function MillingFinanceFilters() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Initialize from URL or defaults
+  const [year, setYear] = useState(searchParams.get("year") || new Date().getFullYear().toString());
+  const [month, setMonth] = useState(searchParams.get("month") || (new Date().getMonth() + 1).toString());
+  const [query, setQuery] = useState(searchParams.get("q") || "");
+
+  const years = Array.from({ length: 3 }, (_, i) => new Date().getFullYear() - i);
+
+  // Debounce Search & Auto-Submit
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const params = new URLSearchParams();
+      if (year) params.set("year", year);
+      if (month && month !== "ALL") params.set("month", month);
+      if (query.trim()) params.set("q", query.trim());
+      
+      router.replace(`?${params.toString()}`, { scroll: false });
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [year, month, query, router]);
+
+  return (
+    <div className="flex flex-wrap items-center gap-3 bg-black/20 p-2 rounded-xl border border-white/5">
+      
+      {/* Year */}
+      <select 
+        value={year}
+        onChange={(e) => setYear(e.target.value)}
+        className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-accent/50 cursor-pointer"
+      >
+        {years.map(y => <option key={y} value={y} className="bg-[#1a1a1a]">{y}</option>)}
+      </select>
+
+      {/* Month */}
+      <select 
+        value={month}
+        onChange={(e) => setMonth(e.target.value)}
+        className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-accent/50 cursor-pointer"
+      >
+        <option value="ALL" className="bg-[#1a1a1a]">All Months</option>
+        {MONTHS.map((m, i) => (
+          <option key={m} value={i + 1} className="bg-[#1a1a1a]">{m}</option>
+        ))}
+      </select>
+
+      <div className="w-px h-6 bg-white/10 mx-1 hidden sm:block" />
+
+      {/* Search Input */}
+      <div className="relative flex-1 min-w-[200px]">
+        <input 
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search Tracking, Clinic, or Batch ID..."
+          className="w-full bg-black/40 border border-white/10 rounded-lg pl-9 pr-3 py-1.5 text-sm text-white outline-none focus:border-accent/50 placeholder-white/30 transition-all" 
+        />
+        <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        </svg>
+      </div>
+
+      {/* Reset Button */}
+      {(query || month !== "ALL") && (
+        <button 
+          onClick={() => { setQuery(""); setMonth("ALL"); }}
+          className="text-xs text-white/40 hover:text-white px-2 transition-colors"
+        >
+          Reset
         </button>
       )}
     </div>
@@ -2486,8 +2887,9 @@ FILE: ./app/portal/cases/CaseListClient.tsx
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation"; 
 import CaseListRow from "@/components/CaseListRow";
-import { CaseRow } from "./page"; 
+import { CaseRow } from "./page";
 
 type SortConfig = {
   key: string | null;
@@ -2497,6 +2899,7 @@ type SortConfig = {
 interface Props {
   cases: CaseRow[];
   role: string;
+  totalCount: number;
 }
 
 const SortableHeader = ({ 
@@ -2534,10 +2937,13 @@ const SortableHeader = ({
   );
 };
 
-export default function CaseListClient({ cases, role }: Props) {
+export default function CaseListClient({ cases, role, totalCount }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const isDoctor = role === "customer";
   
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // --- SORTING LOGIC ---
   const sortedCases = useMemo(() => {
@@ -2548,24 +2954,14 @@ export default function CaseListClient({ cases, role }: Props) {
       let bVal: any = "";
 
       switch (sortConfig.key) {
-        case "id":
-          aVal = a.id; bVal = b.id; break;
-        case "alias":
-          aVal = a.patientAlias; bVal = b.patientAlias; break;
-        case "clinic":
-          aVal = a.clinic.name; bVal = b.clinic.name; break;
-        
-        case "doctor":
-          aVal = a.doctorName || ""; bVal = b.doctorName || ""; break;
-        case "patient":
-          aVal = a.patientLastName || ""; bVal = b.patientLastName || ""; break;
-
-        case "designer":
-          aVal = a.assigneeUser?.name || ""; bVal = b.assigneeUser?.name || ""; break;
-        case "tooth":
-          aVal = a.toothCodes; bVal = b.toothCodes; break;
-        case "status":
-          aVal = a.status; bVal = b.status; break;
+        case "id": aVal = a.id; bVal = b.id; break;
+        case "alias": aVal = a.patientAlias; bVal = b.patientAlias; break;
+        case "clinic": aVal = a.clinic.name; bVal = b.clinic.name; break;
+        case "doctor": aVal = a.doctorName || ""; bVal = b.doctorName || ""; break;
+        case "patient": aVal = a.patientLastName || ""; bVal = b.patientLastName || ""; break;
+        case "designer": aVal = a.assigneeUser?.name || ""; bVal = b.assigneeUser?.name || ""; break;
+        case "tooth": aVal = a.toothCodes; bVal = b.toothCodes; break;
+        case "status": aVal = a.status; bVal = b.status; break;
         case "due":
           aVal = a.dueDate ? new Date(a.dueDate).getTime() : 0;
           bVal = b.dueDate ? new Date(b.dueDate).getTime() : 0;
@@ -2590,15 +2986,26 @@ export default function CaseListClient({ cases, role }: Props) {
     });
   };
 
+  // ✅ LOAD MORE HANDLER
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    const params = new URLSearchParams(searchParams.toString());
+    const currentLimit = parseInt(params.get("limit") || "50");
+    const newLimit = currentLimit + 50;
+    params.set("limit", newLimit.toString());
+    router.replace(`?${params.toString()}`, { scroll: false });
+    setTimeout(() => setLoadingMore(false), 1500);
+  };
+
   return (
-    <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
+    // ✅ FIX: Rounded Card Style
+    <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-white/10 bg-black/20 shadow-2xl shadow-black/50 overflow-hidden">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <table className="w-full text-sm text-left border-collapse min-w-[1000px]">
           <thead className="bg-black/60 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
             <tr>
               <SortableHeader label="Case ID" colKey="id" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader label="Alias" colKey="alias" sortConfig={sortConfig} onSort={handleSort} />
-              
               {isDoctor ? (
                 <>
                     <SortableHeader label="Patient Name" colKey="patient" sortConfig={sortConfig} onSort={handleSort} />
@@ -2610,16 +3017,11 @@ export default function CaseListClient({ cases, role }: Props) {
                     <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />
                 </>
               )}
-              
               {!isDoctor && (
                 <SortableHeader label="Designer" colKey="designer" sortConfig={sortConfig} onSort={handleSort} />
               )}
-              
               <SortableHeader label="Tooth" colKey="tooth" sortConfig={sortConfig} onSort={handleSort} />
-              
-              {/* ✅ UPDATED: Now using SortableHeader for Status */}
               <SortableHeader label="Status" colKey="status" sortConfig={sortConfig} onSort={handleSort} />
-              
               <SortableHeader label="Due Date" colKey="due" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader label="Created" colKey="created" sortConfig={sortConfig} onSort={handleSort} />
             </tr>
@@ -2635,8 +3037,26 @@ export default function CaseListClient({ cases, role }: Props) {
         </table>
       </div>
       
-      <div className="flex-none p-2 border-t border-white/5 bg-white/[0.02] text-center text-xs text-white/30">
-          Showing {sortedCases.length} cases.
+      {/* ✅ FIX: Fixed Height Footer (h-14) */}
+      <div className="flex-none h-14 p-2 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
+          <span className="text-xs text-white/30 pl-2">
+            Showing {cases.length} of {totalCount} cases
+          </span>
+
+          {cases.length < totalCount && (
+            <button
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              className="px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-colors flex items-center gap-2"
+            >
+              {loadingMore ? (
+                <>
+                  <span className="w-3 h-3 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                  Loading...
+                </>
+              ) : "Load More"}
+            </button>
+          )}
       </div>
     </div>
   );
@@ -2980,13 +3400,12 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
 --- END OF FILE ---
 
 FILE: ./app/portal/cases/page.tsx
-// FILE: app/portal/cases/page.tsx
+// portal/app/portal/cases/page.tsx
 
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Prisma } from "@prisma/client";
 import MillingDashboard from "./milling/MillingDashboard";
 import AutoRefresh from "@/components/AutoRefresh"; 
 import CaseListClient from "./CaseListClient"; 
@@ -2994,7 +3413,6 @@ import CasesFilterBar from "./CasesFilterBar";
 
 export const dynamic = "force-dynamic";
 
-// ✅ Export this so MillingDashboard can use it
 export type CaseRow = {
   id: string;
   patientAlias: string;
@@ -3037,53 +3455,7 @@ export default async function CasesPage({
   const sp = await searchParams;
   const role = session.role;
 
-  // --- MILLING VIEW ---
-  if (role === "milling") {
-    // ✅ FIX: Use 'any' to bypass "no exported member" error if client is stale
-    const whereMilling: any = {
-        OR: [{ status: "APPROVED" }, { stage: "MILLING_GLAZING" }, { status: "IN_MILLING" }, { status: "SHIPPED" }]
-    };
-    
-    const millingCases = await prisma.dentalCase.findMany({
-        where: whereMilling,
-        orderBy: { dueDate: "asc" },
-        take: 300, 
-        select: {
-            id: true, patientAlias: true, patientFirstName: true, patientLastName: true, 
-            toothCodes: true, status: true, dueDate: true, product: true, shade: true,
-            updatedAt: true, createdAt: true, material: true, serviceLevel: true,
-            doctorName: true, 
-            clinic: { 
-                select: { name: true, phone: true } 
-            }, 
-            assigneeUser: { select: { name: true, email: true } }, 
-            doctorUser: { 
-                select: { 
-                    name: true, 
-                    phoneNumber: true, 
-                    address: { 
-                        select: { street: true, zipCode: true, city: true, state: true } 
-                    } 
-                } 
-            }
-        }
-    });
-
-    // ✅ FIX: Explicitly cast 'c' to 'any' to avoid implicit type errors during map
-    const safeMillingCases = millingCases.map((c: any) => ({ 
-        ...c, 
-        dueDate: c.dueDate ? c.dueDate : null 
-    })) as unknown as any[];
-    
-    return (
-        <div className="flex flex-col h-full overflow-hidden">
-            <AutoRefresh intervalMs={60000} />
-            <MillingDashboard cases={safeMillingCases} />
-        </div>
-    );
-  }
-
-  // --- STANDARD VIEW ---
+  // ✅ CONSTANT HELPERS
   const getParam = (key: string) => {
     const value = sp[key];
     return Array.isArray(value) ? value[0] : value;
@@ -3093,6 +3465,124 @@ export default async function CasesPage({
     return Array.isArray(value) ? value : (typeof value === "string" ? [value] : []);
   };
 
+  // ✅ UNIFIED LIMIT (50 for everyone)
+  const limitParam = getParam("limit");
+  const limit = limitParam ? parseInt(limitParam) : 50;
+
+  // --- MILLING VIEW ---
+  if (role === "milling") {
+    
+    // 1. Build Filter Query from Search Params
+    const statusParams = getParamArray("status");
+    const showShipped = getParam("showShipped") === "true";
+    const doctorParam = getParam("doctor");
+    const zipParam = getParam("zip");
+
+    const whereMilling: any = {
+        // Base Scope: Cases that have entered production
+        stage: { in: ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED", "DELIVERED"] }
+    };
+
+    // Status Filter Logic
+    // If user explicitly selects statuses, use them.
+    // If "Show Shipped" is ON, we ensure SHIPPED is included.
+    // If NO params, default to APPROVED + IN_MILLING.
+    
+    let targetStatuses: string[] = [];
+
+    if (statusParams.length > 0) {
+        targetStatuses = [...statusParams];
+    } else {
+        targetStatuses = ["APPROVED", "IN_MILLING"];
+    }
+
+    if (showShipped && !targetStatuses.includes("SHIPPED")) {
+        targetStatuses.push("SHIPPED");
+    }
+
+    whereMilling.status = { in: targetStatuses };
+
+    // Dropdown Filters
+    if (doctorParam && doctorParam !== "ALL") {
+        whereMilling.OR = [
+            { doctorName: doctorParam },
+            { doctorUser: { name: doctorParam } }
+        ];
+    }
+
+    if (zipParam && zipParam !== "ALL") {
+        whereMilling.doctorUser = { address: { zipCode: zipParam } };
+    }
+
+    // 2. Fetch Data
+    const [totalMillingCount, millingCases, distinctDoctors, distinctZips] = await Promise.all([
+        prisma.dentalCase.count({ where: whereMilling }),
+        prisma.dentalCase.findMany({
+            where: whereMilling,
+            orderBy: { dueDate: "asc" },
+            take: limit, 
+            select: {
+                id: true, patientAlias: true, patientFirstName: true, patientLastName: true, 
+                toothCodes: true, status: true, dueDate: true, product: true, shade: true,
+                updatedAt: true, createdAt: true, material: true, serviceLevel: true,
+                doctorName: true, 
+                clinic: { 
+                    select: { name: true, phone: true } 
+                }, 
+                assigneeUser: { select: { name: true, email: true } }, 
+                doctorUser: { 
+                    select: { 
+                        name: true, 
+                        phoneNumber: true, 
+                        address: { 
+                            select: { street: true, zipCode: true, city: true, state: true } 
+                        } 
+                    } 
+                }
+            }
+        }),
+        // Fetch ALL distinct doctors involved in milling stages (for the filter dropdown)
+        prisma.dentalCase.findMany({
+            where: { stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] } },
+            distinct: ['doctorName'],
+            select: { doctorName: true, doctorUser: { select: { name: true } } }
+        }),
+        // Fetch ALL distinct zips
+        prisma.dentalCase.findMany({
+            where: { stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] } },
+            distinct: ['doctorUserId'], // Approx distinct users
+            select: { doctorUser: { select: { address: { select: { zipCode: true } } } } }
+        })
+    ]);
+    
+    // Process Distinct Lists
+    const uniqueDoctors = Array.from(new Set(
+        distinctDoctors.map(c => c.doctorUser?.name || c.doctorName).filter(Boolean) as string[]
+    )).sort();
+
+    const uniqueZips = Array.from(new Set(
+        distinctZips.map(c => c.doctorUser?.address?.zipCode).filter(Boolean) as string[]
+    )).sort();
+
+    const safeMillingCases = millingCases.map((c: any) => ({ 
+        ...c, 
+        dueDate: c.dueDate ? c.dueDate : null 
+    })) as unknown as any[];
+
+    return (
+        <div className="flex flex-col h-full overflow-hidden">
+            <AutoRefresh intervalMs={60000} />
+            <MillingDashboard 
+                cases={safeMillingCases} 
+                totalCount={totalMillingCount}
+                uniqueDoctors={uniqueDoctors}
+                uniqueZips={uniqueZips}
+            />
+        </div>
+    );
+  }
+
+  // --- STANDARD VIEW (Admin/Lab/Doctor) ---
   const isDoctor = role === "customer";
   const isAdmin = role === "admin"; 
   const currentRole = role as string; 
@@ -3106,9 +3596,7 @@ export default async function CasesPage({
   const aliasFilter = getParam("alias");
   const statusFilter = getParamArray("status");
 
-  // ✅ FIX: Use 'any' here to prevent namespace errors
   const where: any = {};
-
   if (statusFilter.length > 0) {
     where.status = { in: statusFilter };
   } else {
@@ -3168,7 +3656,7 @@ export default async function CasesPage({
     prisma.dentalCase.findMany({
         where,
         orderBy: [{ updatedAt: "desc" }],
-        take: 50,
+        take: limit, 
         select: {
             id: true, 
             patientAlias: true,
@@ -3187,8 +3675,9 @@ export default async function CasesPage({
             serviceLevel: true,
             doctorUser: {
               select: {
-                    name: true,
-                    address: { select: { street: true, zipCode: true, city: true, state: true } }
+                name: true,
+                phoneNumber: true,
+                address: { select: { street: true, zipCode: true, city: true, state: true } }
               }
             }
         },
@@ -3224,13 +3713,11 @@ export default async function CasesPage({
         />
       </div>
 
-      <CaseListClient cases={rows as CaseRow[]} role={role} />
-      
-      {totalCount > rows.length && (
-        <div className="flex-none p-2 text-center text-xs text-white/30">
-            Showing recent {rows.length} of {totalCount} cases. Use filters to find older records.
-        </div>
-      )}
+      <CaseListClient 
+        cases={rows as CaseRow[]} 
+        role={role} 
+        totalCount={totalCount}
+      />
     </section>
   );
 }
@@ -3272,6 +3759,7 @@ export default async function PortalLayout({
 
 FILE: ./app/portal/billing/page.tsx
 // portal/app/portal/billing/page.tsx
+
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -3292,7 +3780,6 @@ export default async function BillingPage({
 
   const sp = await searchParams;
 
-  // --- 1. FILTERS ---
   const getParam = (key: string) => {
     const val = sp[key];
     if (Array.isArray(val)) return val[0];
@@ -3305,6 +3792,7 @@ export default async function BillingPage({
 
   const selYear = getParam("year") ? parseInt(getParam("year")!) : currentYear;
   const selMonth = getParam("month") ? parseInt(getParam("month")!) : currentMonth;
+  const limit = parseInt(getParam("limit") || "50");
 
   const qFilter = getParam("q") || "";
   const doctorFilter = getParam("doctor") || "";
@@ -3312,7 +3800,6 @@ export default async function BillingPage({
   const isAdminOrLab = session.role === "admin" || session.role === "lab";
 
   const where: Prisma.DentalCaseWhereInput = {};
-
   if (session.role === "customer") {
     if (!session.clinicId) {
       return <div className="p-8 text-white/50">No clinic linked. Contact support.</div>;
@@ -3330,7 +3817,6 @@ export default async function BillingPage({
     where.OR = [
       { patientAlias: { contains: qFilter.trim(), mode: 'insensitive' } },
       { id: { contains: qFilter.trim() } },
-      // Allow searching by patient name in billing too
       { patientFirstName: { contains: qFilter.trim(), mode: 'insensitive' } },
       { patientLastName: { contains: qFilter.trim(), mode: 'insensitive' } }
     ];
@@ -3342,36 +3828,32 @@ export default async function BillingPage({
   }
 
   // --- 2. FETCH DATA ---
-  const stats = await prisma.dentalCase.aggregate({
-    where,
-    _sum: {
-        cost: true,
-        units: true
-    },
-    _count: {
-        id: true
-    }
-  });
-
-  const rawCases = await prisma.dentalCase.findMany({
-    where,
-    orderBy: { orderDate: "desc" },
-    take: 100, 
-    select: {
-      id: true,
-      orderDate: true,
-      patientAlias: true,
-      // ✅ ADDED: Patient Names
-      patientFirstName: true,
-      patientLastName: true,
-      doctorName: true,
-      product: true,
-      units: true,
-      cost: true,
-      billingType: true,
-      clinic: { select: { name: true } },
-    },
-  });
+  const [stats, rawCases] = await Promise.all([
+    // ✅ Use 'aggregate' for counts to populate the footer accurately
+    prisma.dentalCase.aggregate({
+        where,
+        _sum: { cost: true, units: true },
+        _count: { id: true }
+    }),
+    prisma.dentalCase.findMany({
+        where,
+        orderBy: { orderDate: "desc" },
+        take: limit, // ✅ Apply Limit Here
+        select: {
+            id: true,
+            orderDate: true,
+            patientAlias: true,
+            patientFirstName: true,
+            patientLastName: true,
+            doctorName: true,
+            product: true,
+            units: true,
+            cost: true,
+            billingType: true,
+            clinic: { select: { name: true } },
+        },
+    })
+  ]);
 
   const cases = rawCases.map((c) => ({
     ...c,
@@ -3398,13 +3880,11 @@ export default async function BillingPage({
         totalUnits={stats._sum.units || 0}
       />
 
-      <BillingList cases={cases} isAdminOrLab={isAdminOrLab} />
-      
-      {stats._count.id > 100 && (
-        <p className="text-center text-xs text-white/30 pt-2">
-            Showing recent 100 of {stats._count.id} records. Export to CSV for full history.
-        </p>
-      )}
+      <BillingList 
+        cases={cases} 
+        isAdminOrLab={isAdminOrLab} 
+        totalCount={stats._count.id} // ✅ Pass Total
+      />
     </section>
   );
 }
@@ -4270,11 +4750,12 @@ export async function POST(req: Request) {
 --- END OF FILE ---
 
 FILE: ./app/api/cases/batch/ship/route.ts
-// FILE: app/api/cases/batch/ship/route.ts
+// portal/app/api/cases/batch/ship/route.ts
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import crypto from "node:crypto";
 
 export async function POST(req: Request) {
   try {
@@ -4283,9 +4764,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ✅ Receive shippingCost
     const { ids, tracking, carrier, shippingCost } = await req.json();
-
+    
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json({ error: "No cases selected" }, { status: 400 });
     }
@@ -4294,7 +4774,11 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Tracking number is required" }, { status: 400 });
     }
 
-    // Update all selected cases
+    // ✅ Generate a unique Batch ID for finance tracking
+    const batchId = crypto.randomUUID();
+    // ✅ Distribute the total shipping cost across selected cases
+    const distributedCost = shippingCost ? (Number(shippingCost) / ids.length) : 0;
+
     await prisma.dentalCase.updateMany({
         where: { id: { in: ids } },
         data: {
@@ -4302,9 +4786,9 @@ export async function POST(req: Request) {
             stage: "SHIPPING",
             shippedAt: new Date(),
             trackingNumber: tracking,
-            shippingCarrier: carrier || "UPS"
-            // Note: shippingCost is not stored in DB yet as schema update is required.
-            // Future: Add 'shippingCost' field to DentalCase model.
+            shippingCarrier: carrier || "UPS",
+            shippingCost: distributedCost,
+            shippingBatchId: batchId
         }
     });
 
@@ -6236,6 +6720,8 @@ model DentalCase {
   shippingCarrier String?
   trackingNumber  String?
   shippingEta     DateTime?
+  shippingCost    Decimal?    @default(0.00) // ✅ NEW: Store actual cost
+  shippingBatchId String?
 
   needsReview        Boolean   @default(false)
   reviewQuestion     String?
@@ -6896,7 +7382,8 @@ import {
   LogOut,
   ChevronRight,
   ChevronLeft,
-  ShieldCheck 
+  ShieldCheck,
+  DollarSign
 } from "lucide-react";
 
 export default function PortalSidebar({ userRole }: { userRole: string }) {
@@ -6926,6 +7413,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
     { label: "Dashboard", href: "/portal/cases", icon: LayoutDashboard, roles: ["customer", "lab", "admin", "milling"] },
     { label: "New Case", href: "/portal/cases/new", icon: FolderOpen, roles: ["lab", "admin"] },
     { label: "Billing", href: "/portal/billing", icon: CreditCard, roles: ["customer", "admin"] },
+    { label: "Milling Finance", href: "/portal/cases/milling/finance", icon: DollarSign, roles: ["milling", "admin"] },
     { label: "Admin", href: "/portal/admin/users", icon: ShieldCheck, roles: ["admin"] },
   ];
 
@@ -6960,9 +7448,25 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto custom-scrollbar flex flex-col items-center">
         {filteredNav.map((item) => {
-          const isActive = item.label === "Admin" 
-            ? pathname.startsWith("/portal/admin")
-            : pathname === item.href || pathname.startsWith(`${item.href}/`);
+          
+          // ✅ EXCLUSIVE HIGHLIGHTING LOGIC
+          let isActive = false;
+
+          if (item.label === "Milling Finance") {
+             isActive = pathname.startsWith("/portal/cases/milling/finance");
+          } else if (item.label === "New Case") {
+             isActive = pathname.startsWith("/portal/cases/new");
+          } else if (item.label === "Admin") {
+             isActive = pathname.startsWith("/portal/admin");
+          } else if (item.label === "Dashboard") {
+             // Active ONLY if it matches root cases path AND isn't caught by the sub-routes above
+             const isFinance = pathname.startsWith("/portal/cases/milling/finance");
+             const isNew = pathname.startsWith("/portal/cases/new");
+             isActive = pathname.startsWith("/portal/cases") && !isFinance && !isNew;
+          } else {
+             // Fallback for Billing, etc.
+             isActive = pathname.startsWith(item.href);
+          }
             
           const Icon = item.icon;
 
@@ -11434,6 +11938,7 @@ FILE: ./components/BillingList.tsx
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { formatCurrency, BillingType } from "@/lib/pricing";
 
 type BillingCase = {
@@ -11453,6 +11958,7 @@ type BillingCase = {
 type Props = {
   cases: BillingCase[];
   isAdminOrLab: boolean;
+  totalCount: number; // ✅
 };
 
 type SortConfig = {
@@ -11461,29 +11967,14 @@ type SortConfig = {
 };
 
 const SortableHeader = ({ 
-  label, 
-  colKey, 
-  sortConfig, 
-  onSort,
-  align = "left",
-  className = ""
-}: { 
-  label: string, 
-  colKey: string, 
-  sortConfig: SortConfig, 
-  onSort: (k: string) => void,
-  align?: "left" | "center" | "right",
-  className?: string
-}) => {
+  label, colKey, sortConfig, onSort, align = "left", className = ""
+}: any) => {
   const isActive = sortConfig.key === colKey;
   return (
     <th 
       className={`
         p-4 font-medium cursor-pointer transition-colors select-none group border-b-2 outline-none whitespace-nowrap
-        ${isActive 
-          ? "text-white border-accent" 
-          : "border-transparent hover:text-white"
-        }
+        ${isActive ? "text-white border-accent" : "border-transparent hover:text-white"}
         ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}
         ${className}
       `}
@@ -11501,16 +11992,17 @@ const SortableHeader = ({
   );
 };
 
-export default function BillingList({ cases, isAdminOrLab }: Props) {
+export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const sortedCases = useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) return cases;
-
     return [...cases].sort((a, b) => {
       let aVal: any = "";
       let bVal: any = "";
-
       switch (sortConfig.key) {
         case "date": aVal = new Date(a.orderDate).getTime(); bVal = new Date(b.orderDate).getTime(); break;
         case "clinic": aVal = a.clinic.name; bVal = b.clinic.name; break;
@@ -11524,7 +12016,6 @@ export default function BillingList({ cases, isAdminOrLab }: Props) {
         case "units": aVal = a.units; bVal = b.units; break;
         case "cost": aVal = Number(a.cost); bVal = Number(b.cost); break;
       }
-
       if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
       if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
@@ -11539,39 +12030,38 @@ export default function BillingList({ cases, isAdminOrLab }: Props) {
     });
   };
 
+  const handleLoadMore = () => {
+    setLoadingMore(true);
+    const params = new URLSearchParams(searchParams.toString());
+    const currentLimit = parseInt(params.get("limit") || "50");
+    const newLimit = currentLimit + 50;
+    params.set("limit", newLimit.toString());
+    router.replace(`?${params.toString()}`, { scroll: false });
+    setTimeout(() => setLoadingMore(false), 2000);
+  };
+
   return (
+    // ✅ FIX: Rounded corners & Overflow handling
     <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <table className="w-full text-sm text-left border-collapse">
           <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
             <tr>
-              {/* ✅ RENAMED: "Date" -> "Created On" */}
               <SortableHeader label="Created On" colKey="date" sortConfig={sortConfig} onSort={handleSort} />
-              
-              {isAdminOrLab && (
-                <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />
-              )}
-              
+              {isAdminOrLab && <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />}
               <SortableHeader label="Patient Name" colKey="patientName" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader label="Alias" colKey="alias" sortConfig={sortConfig} onSort={handleSort} />
-              
-              {isAdminOrLab && (
-                <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={handleSort} />
-              )}
-              
+              {isAdminOrLab && <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={handleSort} />}
               <SortableHeader label="Product" colKey="product" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader label="Units" colKey="units" sortConfig={sortConfig} onSort={handleSort} align="center" />
               <SortableHeader label="Cost" colKey="cost" sortConfig={sortConfig} onSort={handleSort} align="right" />
             </tr>
           </thead>
           <tbody className="divide-y divide-white/5">
-            {sortedCases.length === 0 ? (
+             {sortedCases.length === 0 ? (
               <tr>
-                <td
-                  colSpan={isAdminOrLab ? 8 : 6}
-                  className="p-12 text-center text-white/40"
-                >
-                  No records found matching your filters.
+                <td colSpan={isAdminOrLab ? 8 : 6} className="p-12 text-center text-white/40">
+                   No records found matching your filters.
                 </td>
               </tr>
             ) : (
@@ -11579,44 +12069,17 @@ export default function BillingList({ cases, isAdminOrLab }: Props) {
                 const isWarranty = c.billingType === BillingType.WARRANTY;
                 return (
                   <tr key={c.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4 text-white/70">
-                      {new Date(c.orderDate).toLocaleDateString()}
-                    </td>
-                    
-                    {isAdminOrLab && (
-                      <td className="p-4 text-white/70">{c.clinic.name}</td>
-                    )}
-                    
-                    <td className="p-4 font-medium text-white">
-                        {c.patientLastName}, {c.patientFirstName}
-                    </td>
-
-                    <td className="p-4 font-mono text-xs text-white/60">
-                      {c.patientAlias}
-                    </td>
-
-                    {isAdminOrLab && (
-                      <td className="p-4 text-white/60">
-                        {c.doctorName || "—"}
-                      </td>
-                    )}
-
+                    <td className="p-4 text-white/70">{new Date(c.orderDate).toLocaleDateString()}</td>
+                    {isAdminOrLab && <td className="p-4 text-white/70">{c.clinic.name}</td>}
+                    <td className="p-4 font-medium text-white">{c.patientLastName}, {c.patientFirstName}</td>
+                    <td className="p-4 font-mono text-xs text-white/60">{c.patientAlias}</td>
+                    {isAdminOrLab && <td className="p-4 text-white/60">{c.doctorName || "—"}</td>}
                     <td className="p-4 text-white/60">
                       {c.product.replace(/_/g, " ")}
-                      {isWarranty && (
-                        <span className="ml-2 px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 uppercase tracking-wide">
-                          Warranty
-                        </span>
-                      )}
+                      {isWarranty && <span className="ml-2 px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 uppercase tracking-wide">Warranty</span>}
                     </td>
                     <td className="p-4 text-center text-white/60">{c.units}</td>
-                    <td
-                      className={`p-4 text-right font-mono ${
-                        isWarranty
-                          ? "text-white/30 decoration-line-through"
-                          : "text-emerald-400"
-                      }`}
-                    >
+                    <td className={`p-4 text-right font-mono ${isWarranty ? "text-white/30 decoration-line-through" : "text-emerald-400"}`}>
                       {formatCurrency(Number(c.cost))}
                     </td>
                   </tr>
@@ -11625,6 +12088,28 @@ export default function BillingList({ cases, isAdminOrLab }: Props) {
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* ✅ UNIFIED FOOTER: SAME ROW */}
+      <div className="flex-none h-14 p-3 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
+        <span className="text-xs text-white/40 pl-2">
+          Showing {cases.length} of {totalCount} records
+        </span>
+        
+        {cases.length < totalCount && (
+          <button
+            onClick={handleLoadMore}
+            disabled={loadingMore}
+            className="px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-colors flex items-center gap-2"
+          >
+            {loadingMore ? (
+              <>
+                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                Loading...
+              </>
+            ) : "Load More"}
+          </button>
+        )}
       </div>
     </div>
   );

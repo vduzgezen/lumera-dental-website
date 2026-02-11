@@ -168,6 +168,8 @@ model DentalCase {
   shippingCarrier String?
   trackingNumber  String?
   shippingEta     DateTime?
+  shippingCost    Decimal?    @default(0.00) // ✅ NEW: Store actual cost
+  shippingBatchId String?
 
   needsReview        Boolean   @default(false)
   reviewQuestion     String?

@@ -1,10 +1,9 @@
-// FILE: app/portal/cases/page.tsx
+// portal/app/portal/cases/page.tsx
 
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Prisma } from "@prisma/client";
 import MillingDashboard from "./milling/MillingDashboard";
 import AutoRefresh from "@/components/AutoRefresh"; 
 import CaseListClient from "./CaseListClient"; 
@@ -12,7 +11,6 @@ import CasesFilterBar from "./CasesFilterBar";
 
 export const dynamic = "force-dynamic";
 
-// ✅ Export this so MillingDashboard can use it
 export type CaseRow = {
   id: string;
   patientAlias: string;
@@ -55,53 +53,7 @@ export default async function CasesPage({
   const sp = await searchParams;
   const role = session.role;
 
-  // --- MILLING VIEW ---
-  if (role === "milling") {
-    // ✅ FIX: Use 'any' to bypass "no exported member" error if client is stale
-    const whereMilling: any = {
-        OR: [{ status: "APPROVED" }, { stage: "MILLING_GLAZING" }, { status: "IN_MILLING" }, { status: "SHIPPED" }]
-    };
-    
-    const millingCases = await prisma.dentalCase.findMany({
-        where: whereMilling,
-        orderBy: { dueDate: "asc" },
-        take: 300, 
-        select: {
-            id: true, patientAlias: true, patientFirstName: true, patientLastName: true, 
-            toothCodes: true, status: true, dueDate: true, product: true, shade: true,
-            updatedAt: true, createdAt: true, material: true, serviceLevel: true,
-            doctorName: true, 
-            clinic: { 
-                select: { name: true, phone: true } 
-            }, 
-            assigneeUser: { select: { name: true, email: true } }, 
-            doctorUser: { 
-                select: { 
-                    name: true, 
-                    phoneNumber: true, 
-                    address: { 
-                        select: { street: true, zipCode: true, city: true, state: true } 
-                    } 
-                } 
-            }
-        }
-    });
-
-    // ✅ FIX: Explicitly cast 'c' to 'any' to avoid implicit type errors during map
-    const safeMillingCases = millingCases.map((c: any) => ({ 
-        ...c, 
-        dueDate: c.dueDate ? c.dueDate : null 
-    })) as unknown as any[];
-    
-    return (
-        <div className="flex flex-col h-full overflow-hidden">
-            <AutoRefresh intervalMs={60000} />
-            <MillingDashboard cases={safeMillingCases} />
-        </div>
-    );
-  }
-
-  // --- STANDARD VIEW ---
+  // ✅ CONSTANT HELPERS
   const getParam = (key: string) => {
     const value = sp[key];
     return Array.isArray(value) ? value[0] : value;
@@ -111,6 +63,124 @@ export default async function CasesPage({
     return Array.isArray(value) ? value : (typeof value === "string" ? [value] : []);
   };
 
+  // ✅ UNIFIED LIMIT (50 for everyone)
+  const limitParam = getParam("limit");
+  const limit = limitParam ? parseInt(limitParam) : 50;
+
+  // --- MILLING VIEW ---
+  if (role === "milling") {
+    
+    // 1. Build Filter Query from Search Params
+    const statusParams = getParamArray("status");
+    const showShipped = getParam("showShipped") === "true";
+    const doctorParam = getParam("doctor");
+    const zipParam = getParam("zip");
+
+    const whereMilling: any = {
+        // Base Scope: Cases that have entered production
+        stage: { in: ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED", "DELIVERED"] }
+    };
+
+    // Status Filter Logic
+    // If user explicitly selects statuses, use them.
+    // If "Show Shipped" is ON, we ensure SHIPPED is included.
+    // If NO params, default to APPROVED + IN_MILLING.
+    
+    let targetStatuses: string[] = [];
+
+    if (statusParams.length > 0) {
+        targetStatuses = [...statusParams];
+    } else {
+        targetStatuses = ["APPROVED", "IN_MILLING"];
+    }
+
+    if (showShipped && !targetStatuses.includes("SHIPPED")) {
+        targetStatuses.push("SHIPPED");
+    }
+
+    whereMilling.status = { in: targetStatuses };
+
+    // Dropdown Filters
+    if (doctorParam && doctorParam !== "ALL") {
+        whereMilling.OR = [
+            { doctorName: doctorParam },
+            { doctorUser: { name: doctorParam } }
+        ];
+    }
+
+    if (zipParam && zipParam !== "ALL") {
+        whereMilling.doctorUser = { address: { zipCode: zipParam } };
+    }
+
+    // 2. Fetch Data
+    const [totalMillingCount, millingCases, distinctDoctors, distinctZips] = await Promise.all([
+        prisma.dentalCase.count({ where: whereMilling }),
+        prisma.dentalCase.findMany({
+            where: whereMilling,
+            orderBy: { dueDate: "asc" },
+            take: limit, 
+            select: {
+                id: true, patientAlias: true, patientFirstName: true, patientLastName: true, 
+                toothCodes: true, status: true, dueDate: true, product: true, shade: true,
+                updatedAt: true, createdAt: true, material: true, serviceLevel: true,
+                doctorName: true, 
+                clinic: { 
+                    select: { name: true, phone: true } 
+                }, 
+                assigneeUser: { select: { name: true, email: true } }, 
+                doctorUser: { 
+                    select: { 
+                        name: true, 
+                        phoneNumber: true, 
+                        address: { 
+                            select: { street: true, zipCode: true, city: true, state: true } 
+                        } 
+                    } 
+                }
+            }
+        }),
+        // Fetch ALL distinct doctors involved in milling stages (for the filter dropdown)
+        prisma.dentalCase.findMany({
+            where: { stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] } },
+            distinct: ['doctorName'],
+            select: { doctorName: true, doctorUser: { select: { name: true } } }
+        }),
+        // Fetch ALL distinct zips
+        prisma.dentalCase.findMany({
+            where: { stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] } },
+            distinct: ['doctorUserId'], // Approx distinct users
+            select: { doctorUser: { select: { address: { select: { zipCode: true } } } } }
+        })
+    ]);
+    
+    // Process Distinct Lists
+    const uniqueDoctors = Array.from(new Set(
+        distinctDoctors.map(c => c.doctorUser?.name || c.doctorName).filter(Boolean) as string[]
+    )).sort();
+
+    const uniqueZips = Array.from(new Set(
+        distinctZips.map(c => c.doctorUser?.address?.zipCode).filter(Boolean) as string[]
+    )).sort();
+
+    const safeMillingCases = millingCases.map((c: any) => ({ 
+        ...c, 
+        dueDate: c.dueDate ? c.dueDate : null 
+    })) as unknown as any[];
+
+    return (
+        <div className="flex flex-col h-full overflow-hidden">
+            <AutoRefresh intervalMs={60000} />
+            <MillingDashboard 
+                cases={safeMillingCases} 
+                totalCount={totalMillingCount}
+                uniqueDoctors={uniqueDoctors}
+                uniqueZips={uniqueZips}
+            />
+        </div>
+    );
+  }
+
+  // --- STANDARD VIEW (Admin/Lab/Doctor) ---
   const isDoctor = role === "customer";
   const isAdmin = role === "admin"; 
   const currentRole = role as string; 
@@ -124,9 +194,7 @@ export default async function CasesPage({
   const aliasFilter = getParam("alias");
   const statusFilter = getParamArray("status");
 
-  // ✅ FIX: Use 'any' here to prevent namespace errors
   const where: any = {};
-
   if (statusFilter.length > 0) {
     where.status = { in: statusFilter };
   } else {
@@ -186,7 +254,7 @@ export default async function CasesPage({
     prisma.dentalCase.findMany({
         where,
         orderBy: [{ updatedAt: "desc" }],
-        take: 50,
+        take: limit, 
         select: {
             id: true, 
             patientAlias: true,
@@ -205,8 +273,9 @@ export default async function CasesPage({
             serviceLevel: true,
             doctorUser: {
               select: {
-                    name: true,
-                    address: { select: { street: true, zipCode: true, city: true, state: true } }
+                name: true,
+                phoneNumber: true,
+                address: { select: { street: true, zipCode: true, city: true, state: true } }
               }
             }
         },
@@ -242,13 +311,11 @@ export default async function CasesPage({
         />
       </div>
 
-      <CaseListClient cases={rows as CaseRow[]} role={role} />
-      
-      {totalCount > rows.length && (
-        <div className="flex-none p-2 text-center text-xs text-white/30">
-            Showing recent {rows.length} of {totalCount} cases. Use filters to find older records.
-        </div>
-      )}
+      <CaseListClient 
+        cases={rows as CaseRow[]} 
+        role={role} 
+        totalCount={totalCount}
+      />
     </section>
   );
 }

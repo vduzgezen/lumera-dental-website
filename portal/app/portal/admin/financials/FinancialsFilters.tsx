@@ -2,7 +2,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useCallback } from "react"; // ✅ Import useCallback
+import { useState, useEffect, useCallback } from "react";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -30,11 +30,9 @@ export default function FinancialsFilters({
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 3 }, (_, i) => currentYear - i);
 
-  // Local state for text inputs to allow typing without instant reload
   const [docInput, setDocInput] = useState(doctorFilter);
   const [clinicInput, setClinicInput] = useState(clinicFilter);
 
-  // Sync state if URL changes externally
   useEffect(() => {
     setDocInput(doctorFilter);
     setClinicInput(clinicFilter);
@@ -43,9 +41,20 @@ export default function FinancialsFilters({
   // ✅ STABILIZE UPDATE FUNCTION
   const update = useCallback((updates: Record<string, string>) => {
     const url = new URL(window.location.href);
+    
+    // ✅ 1. Reset pagination limit whenever a filter changes
+    url.searchParams.delete("limit");
+
+    // ✅ 2. Update Params
     Object.entries(updates).forEach(([key, val]) => {
-        if (val && val !== "ALL") url.searchParams.set(key, val);
-        else url.searchParams.delete(key);
+        // FIX: Removed '&& val !== "ALL"' check.
+        // We MUST allow "ALL" to be sent so the server knows to fetch the full year
+        // instead of defaulting to the current month.
+        if (val) {
+            url.searchParams.set(key, val);
+        } else {
+            url.searchParams.delete(key);
+        }
     });
     router.replace(url.toString());
   }, [router]);
@@ -53,7 +62,6 @@ export default function FinancialsFilters({
   // Debounce text search
   useEffect(() => {
     const timer = setTimeout(() => {
-        // ✅ Add dependencies safely now that update is stable
         if (docInput !== doctorFilter || clinicInput !== clinicFilter) {
             update({ doctor: docInput, clinic: clinicInput });
         }

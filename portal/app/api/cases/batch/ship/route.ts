@@ -1,8 +1,9 @@
-// FILE: app/api/cases/batch/ship/route.ts
+// portal/app/api/cases/batch/ship/route.ts
 
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import crypto from "node:crypto";
 
 export async function POST(req: Request) {
   try {
@@ -11,9 +12,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // ✅ Receive shippingCost
     const { ids, tracking, carrier, shippingCost } = await req.json();
-
+    
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json({ error: "No cases selected" }, { status: 400 });
     }
@@ -22,7 +22,11 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Tracking number is required" }, { status: 400 });
     }
 
-    // Update all selected cases
+    // ✅ Generate a unique Batch ID for finance tracking
+    const batchId = crypto.randomUUID();
+    // ✅ Distribute the total shipping cost across selected cases
+    const distributedCost = shippingCost ? (Number(shippingCost) / ids.length) : 0;
+
     await prisma.dentalCase.updateMany({
         where: { id: { in: ids } },
         data: {
@@ -30,9 +34,9 @@ export async function POST(req: Request) {
             stage: "SHIPPING",
             shippedAt: new Date(),
             trackingNumber: tracking,
-            shippingCarrier: carrier || "UPS"
-            // Note: shippingCost is not stored in DB yet as schema update is required.
-            // Future: Add 'shippingCost' field to DentalCase model.
+            shippingCarrier: carrier || "UPS",
+            shippingCost: distributedCost,
+            shippingBatchId: batchId
         }
     });
 
