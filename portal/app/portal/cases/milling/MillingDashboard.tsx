@@ -19,8 +19,8 @@ type SortConfig = {
 interface MillingDashboardProps {
   cases: CaseRow[];
   totalCount: number;
-  uniqueDoctors: string[]; // ✅ Passed from Server
-  uniqueZips: string[];    // ✅ Passed from Server
+  uniqueDoctors: string[];
+  uniqueZips: string[];
 }
 
 export default function MillingDashboard({ cases, totalCount, uniqueDoctors, uniqueZips }: MillingDashboardProps) {
@@ -30,7 +30,6 @@ export default function MillingDashboard({ cases, totalCount, uniqueDoctors, uni
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
 
-  // UI States
   const [isDownloading, setIsDownloading] = useState(false);
   const [isShipping, setIsShipping] = useState(false);
   const [isSavingShipment, setIsSavingShipment] = useState(false);
@@ -48,7 +47,7 @@ export default function MillingDashboard({ cases, totalCount, uniqueDoctors, uni
     setTimeout(() => setLoadingMore(false), 2000);
   };
 
-  // --- SORTING LOGIC (Applied to Server Results) ---
+  // --- SORTING LOGIC ---
   const sortedCases = useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) return cases;
     return [...cases].sort((a, b) => {
@@ -68,7 +67,7 @@ export default function MillingDashboard({ cases, totalCount, uniqueDoctors, uni
       if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [cases, sortConfig]); // ✅ Depends on 'cases' directly now
+  }, [cases, sortConfig]);
 
   const handleSort = (key: string) => {
     setSortConfig((current) => {
@@ -204,7 +203,6 @@ export default function MillingDashboard({ cases, totalCount, uniqueDoctors, uni
           onDownload={handleDownload}
           onShip={() => setIsShipping(true)}
         />
-        {/* ✅ Server-Driven Filters */}
         <MillingFilters 
           uniqueDoctors={uniqueDoctors}
           uniqueZips={uniqueZips}
