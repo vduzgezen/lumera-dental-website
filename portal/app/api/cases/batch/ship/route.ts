@@ -1,4 +1,5 @@
-// portal/app/api/cases/batch/ship/route.ts
+// FILE: app/api/cases/batch/ship/route.ts
+
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -10,7 +11,8 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { ids, tracking, carrier } = await req.json();
+    // ✅ Receive shippingCost
+    const { ids, tracking, carrier, shippingCost } = await req.json();
 
     if (!ids || !Array.isArray(ids) || ids.length === 0) {
         return NextResponse.json({ error: "No cases selected" }, { status: 400 });
@@ -28,7 +30,9 @@ export async function POST(req: Request) {
             stage: "SHIPPING",
             shippedAt: new Date(),
             trackingNumber: tracking,
-            shippingCarrier: carrier || "UPS" // Default if missing
+            shippingCarrier: carrier || "UPS"
+            // Note: shippingCost is not stored in DB yet as schema update is required.
+            // Future: Add 'shippingCost' field to DentalCase model.
         }
     });
 

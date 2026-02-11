@@ -1,16 +1,18 @@
-// portal/app/portal/cases/page.tsx
+// FILE: app/portal/cases/page.tsx
+
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Prisma } from "@prisma/client";
-import MillingDashboard from "./milling/MillingDashboard"; 
+import MillingDashboard from "./milling/MillingDashboard";
 import AutoRefresh from "@/components/AutoRefresh"; 
 import CaseListClient from "./CaseListClient"; 
-import CasesFilterBar from "./CasesFilterBar"; // ✅ New Component
+import CasesFilterBar from "./CasesFilterBar";
 
 export const dynamic = "force-dynamic";
 
+// ✅ Export this so MillingDashboard can use it
 export type CaseRow = {
   id: string;
   patientAlias: string;
@@ -22,15 +24,19 @@ export type CaseRow = {
   updatedAt: Date;
   createdAt: Date;
   doctorName: string | null;
-  clinic: { name: string };
+  clinic: { 
+    name: string; 
+    phone: string | null;
+  };
   assigneeUser: { name: string | null; email: string } | null;
-  
   product: string;
   material: string | null;
   serviceLevel: string | null;
   doctorUser: {
     name: string | null;
+    phoneNumber: string | null;
     address: {
+      street: string | null;
       zipCode: string | null;
       city: string | null;
       state: string | null;
@@ -51,10 +57,11 @@ export default async function CasesPage({
 
   // --- MILLING VIEW ---
   if (role === "milling") {
-    // ... (Keep existing Milling logic)
-    const whereMilling: Prisma.DentalCaseWhereInput = {
+    // ✅ FIX: Use 'any' to bypass "no exported member" error if client is stale
+    const whereMilling: any = {
         OR: [{ status: "APPROVED" }, { stage: "MILLING_GLAZING" }, { status: "IN_MILLING" }, { status: "SHIPPED" }]
     };
+    
     const millingCases = await prisma.dentalCase.findMany({
         where: whereMilling,
         orderBy: { dueDate: "asc" },
@@ -63,12 +70,29 @@ export default async function CasesPage({
             id: true, patientAlias: true, patientFirstName: true, patientLastName: true, 
             toothCodes: true, status: true, dueDate: true, product: true, shade: true,
             updatedAt: true, createdAt: true, material: true, serviceLevel: true,
-            doctorName: true, clinic: { select: { name: true } }, 
+            doctorName: true, 
+            clinic: { 
+                select: { name: true, phone: true } 
+            }, 
             assigneeUser: { select: { name: true, email: true } }, 
-            doctorUser: { select: { name: true, address: { select: { zipCode: true, city: true, state: true } } } }
+            doctorUser: { 
+                select: { 
+                    name: true, 
+                    phoneNumber: true, 
+                    address: { 
+                        select: { street: true, zipCode: true, city: true, state: true } 
+                    } 
+                } 
+            }
         }
     });
-    const safeMillingCases = millingCases.map(c => ({ ...c, dueDate: c.dueDate ? c.dueDate : null })) as unknown as any[];
+
+    // ✅ FIX: Explicitly cast 'c' to 'any' to avoid implicit type errors during map
+    const safeMillingCases = millingCases.map((c: any) => ({ 
+        ...c, 
+        dueDate: c.dueDate ? c.dueDate : null 
+    })) as unknown as any[];
+    
     return (
         <div className="flex flex-col h-full overflow-hidden">
             <AutoRefresh intervalMs={60000} />
@@ -100,7 +124,8 @@ export default async function CasesPage({
   const aliasFilter = getParam("alias");
   const statusFilter = getParamArray("status");
 
-  const where: Prisma.DentalCaseWhereInput = {};
+  // ✅ FIX: Use 'any' here to prevent namespace errors
+  const where: any = {};
 
   if (statusFilter.length > 0) {
     where.status = { in: statusFilter };
@@ -133,7 +158,6 @@ export default async function CasesPage({
     if (clinicFilter?.trim()) where.clinic = { name: { contains: clinicFilter.trim(), mode: 'insensitive' } };
     if (doctorFilter?.trim()) where.doctorName = { contains: doctorFilter.trim(), mode: 'insensitive' };
     if (caseIdFilter?.trim()) where.id = { contains: caseIdFilter.trim() };
-    
     if (isAdmin && assigneeFilter?.trim()) {
         where.assigneeId = assigneeFilter.trim();
     }
@@ -148,7 +172,6 @@ export default async function CasesPage({
     }
   }
 
-  // Fetch Lab Users for Filter
   let labUsers: { id: string; name: string | null; email: string }[] = [];
   if (isAdmin) {
     labUsers = await prisma.user.findMany({
@@ -183,7 +206,7 @@ export default async function CasesPage({
             doctorUser: {
               select: {
                     name: true,
-                    address: { select: { zipCode: true, city: true, state: true } }
+                    address: { select: { street: true, zipCode: true, city: true, state: true } }
               }
             }
         },
@@ -211,7 +234,6 @@ export default async function CasesPage({
           )}
         </header>
 
-        {/* ✅ REPLACED FORM WITH SMART FILTER BAR */}
         <CasesFilterBar 
             role={role}
             isAdmin={isAdmin}

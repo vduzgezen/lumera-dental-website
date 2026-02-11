@@ -1,4 +1,4 @@
-// portal/lib/types.ts
+// FILE: lib/types.ts
 
 export type Role = "customer" | "lab" | "admin" | "milling" | "sales";
 
@@ -9,8 +9,18 @@ export type CaseStatus =
   | "APPROVED" 
   | "IN_MILLING" 
   | "SHIPPED" 
-  | "COMPLETED"   // Arrived at Clinic
-  | "DELIVERED";  // Given to Patient
+  | "COMPLETED" 
+  | "DELIVERED";
 
-// ✅ DELIVERED is now the final stage
 export type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED" | "DELIVERED";
+
+// ✅ NEW: Shared Shipping Address Type
+export interface ShippingTarget {
+  name: string;
+  attn: string | null;
+  phone: string | null;
+  street: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+}
