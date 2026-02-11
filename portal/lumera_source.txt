@@ -4728,8 +4728,8 @@ function getOutputSuffix(dbLabel: string): string {
   if (l === "model_top") return "_ModelTop";
   if (l === "model_bottom") return "_ModelBottom";
   if (l === "rx_pdf") return "_RX";
-  if (l === "design_only" || l === "design_with_model") return "_Design";
-  if (l === "construction_info") return "_Design"; 
+  if (l === "design_only") return "_Design"; // ✅ Only design_only gets _Design.stl
+  if (l === "construction_info") return "_Design"; // Matches suffix but gets .constructionInfo extension below
   return "_File";
 }
 
@@ -4751,7 +4751,7 @@ export async function POST(req: Request) {
       }
     });
 
-    const fileList: { key: string; archivePath: string }[] = [];
+    const fileList: { key: string; archivePath: string; isMock?: boolean }[] = [];
     const rootFolder = `Download_${getFormattedDate()}`;
 
     for (const c of cases) {
@@ -4772,7 +4772,14 @@ export async function POST(req: Request) {
       // ✅ FORMAT: DoeJohn_A5-A2-A2_ZirconiaMl
       const caseFolderName = `${last}${first}_${shade}_${type}${material}`;
       
-      const relevantLabels = ["model_top", "model_bottom", "rx_pdf", "design_only", "design_with_model", "construction_info"];
+      // ✅ UPDATED: Removed 'design_with_model' and 'scan'
+      const relevantLabels = [
+        "model_top", 
+        "model_bottom", 
+        "rx_pdf", 
+        "design_only", 
+        "construction_info"
+      ];
 
       for (const file of c.files) {
         if (!file.label || !relevantLabels.includes(file.label)) continue;
@@ -4787,7 +4794,9 @@ export async function POST(req: Request) {
 
         const finalFileName = `${alias}${suffix}${ext}`;
         const archivePath = path.join(rootFolder, routingFolder, caseFolderName, finalFileName);
-        fileList.push({ key, archivePath });
+        
+        const isMock = key.startsWith("mock/");
+        fileList.push({ key, archivePath, isMock });
       }
     }
 
@@ -4816,10 +4825,17 @@ export async function POST(req: Request) {
 
         for (const f of fileList) {
           try {
-            const s3Stream = await getFileStream(f.key);
-            archive.append(s3Stream as Readable, { name: f.archivePath });
+            if (f.isMock) {
+               // ✅ Support for mock testing files
+               archive.append(`Mock file content for ${f.archivePath}\n(Testing only)`, { name: f.archivePath });
+            } else {
+               const s3Stream = await getFileStream(f.key);
+               archive.append(s3Stream as Readable, { name: f.archivePath });
+            }
           } catch (e) {
             console.warn(`[Batch Download] Skipping missing file key: ${f.key}`, e);
+            // Insert placeholder error file so the technician knows a file was expected but missing
+            archive.append(`Error: File missing from storage.\nKey: ${f.key}`, { name: `${f.archivePath}.ERROR.txt` });
           }
         }
         await archive.finalize();
