@@ -1,5 +1,4 @@
-// portal/app/portal/cases/page.tsx
-
+// app/portal/cases/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import Link from "next/link";
@@ -68,8 +67,7 @@ export default async function CasesPage({
 
   // --- MILLING VIEW ---
   if (role === "milling") {
-    
-    // 1. Build Filter Query from Search Params
+    // ... (Milling logic preserved)
     const statusParams = getParamArray("status");
     const showShipped = getParam("showShipped") === "true";
     const doctorParam = getParam("doctor");
@@ -103,7 +101,6 @@ export default async function CasesPage({
         whereMilling.doctorUser = { address: { zipCode: zipParam } };
     }
 
-    // 2. Fetch Data (INCLUDING FILTERS)
     const [totalMillingCount, millingCases, distinctDoctors, distinctZips] = await Promise.all([
         prisma.dentalCase.count({ where: whereMilling }),
         prisma.dentalCase.findMany({
@@ -115,28 +112,22 @@ export default async function CasesPage({
                 toothCodes: true, status: true, dueDate: true, product: true, shade: true,
                 updatedAt: true, createdAt: true, material: true, serviceLevel: true,
                 doctorName: true, 
-                clinic: { 
-                    select: { name: true, phone: true } 
-                }, 
+                clinic: { select: { name: true, phone: true } }, 
                 assigneeUser: { select: { name: true, email: true } }, 
                 doctorUser: { 
                     select: { 
                         name: true, 
                         phoneNumber: true, 
-                        address: { 
-                            select: { street: true, zipCode: true, city: true, state: true } 
-                        } 
+                        address: { select: { street: true, zipCode: true, city: true, state: true } } 
                     } 
                 }
             }
         }),
-        // Fetch ALL distinct doctors involved in milling (for filters)
         prisma.dentalCase.findMany({
             where: { stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] } },
             distinct: ['doctorName'],
             select: { doctorName: true, doctorUser: { select: { name: true } } }
         }),
-        // Fetch ALL distinct zips
         prisma.dentalCase.findMany({
             where: { stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] } },
             distinct: ['doctorUserId'],
@@ -144,7 +135,6 @@ export default async function CasesPage({
         })
     ]);
     
-    // Process Distinct Lists
     const uniqueDoctors = Array.from(new Set(
         distinctDoctors.map(c => c.doctorUser?.name || c.doctorName).filter(Boolean) as string[]
     )).sort();
@@ -159,13 +149,13 @@ export default async function CasesPage({
     })) as unknown as any[];
 
     return (
-        <div className="flex flex-col h-full overflow-hidden">
+        <div className="flex flex-col h-full overflow-hidden bg-background text-foreground">
             <AutoRefresh intervalMs={60000} />
             <MillingDashboard 
                 cases={safeMillingCases} 
                 totalCount={totalMillingCount}
-                uniqueDoctors={uniqueDoctors} // ✅ NOW PASSED CORRECTLY
-                uniqueZips={uniqueZips}       // ✅ NOW PASSED CORRECTLY
+                uniqueDoctors={uniqueDoctors}
+                uniqueZips={uniqueZips}
             />
         </div>
     );
@@ -274,20 +264,20 @@ export default async function CasesPage({
   ]);
 
   return (
-    <section className="flex flex-col h-full w-full p-6 overflow-hidden">
+    <section className="flex flex-col h-full w-full p-6 overflow-hidden bg-background text-foreground">
       <AutoRefresh intervalMs={60000} />
 
       <div className="flex-none space-y-4 mb-4">
         <header className="flex items-center justify-between">
           <div className="flex items-baseline gap-3">
-            <h1 className="text-2xl font-semibold text-white">Cases</h1>
-            <span className="text-sm text-white/40">Total: {totalCount}</span>
+            <h1 className="text-2xl font-semibold text-foreground">Cases</h1>
+            <span className="text-sm text-muted">Total: {totalCount}</span>
           </div>
           
           {canCreate && (
             <Link
             href="/portal/cases/new"
-            className="px-3 py-1.5 rounded-lg bg-white text-black text-sm hover:bg-gray-200 transition font-medium shadow-lg shadow-white/5"
+            className="px-3 py-1.5 rounded-lg bg-accent text-white text-sm hover:opacity-90 transition font-medium shadow-lg"
             >
             + New Case
             </Link>

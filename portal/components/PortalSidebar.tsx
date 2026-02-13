@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import Logo from "./Logo";
+import ThemeToggle from "./ThemeToggle";
 // Icons
 import { 
   LayoutDashboard, 
@@ -19,13 +20,9 @@ import {
 
 export default function PortalSidebar({ userRole }: { userRole: string }) {
   const pathname = usePathname();
-  
-  // Initialize with a function to avoid hydration mismatch, or handle in useEffect
-  // We start 'true' to match server render, then sync with local storage
   const [expanded, setExpanded] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // ✅ FIX: Load preference on mount
   useEffect(() => {
     const saved = window.localStorage.getItem("lumera_sidebar");
     if (saved !== null) {
@@ -33,7 +30,6 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
     }
   }, []);
 
-  // ✅ FIX: Save preference on toggle
   const toggleSidebar = () => {
     const next = !expanded;
     setExpanded(next);
@@ -41,7 +37,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
   };
 
   const navItems = [
-    { label: "Dashboard", href: "/portal/cases", icon: LayoutDashboard, roles: ["customer", "lab", "admin", "milling"] },
+    { label: "Dashboard", href: "/portal/cases", icon: LayoutDashboard, roles: ["customer", "lab", "admin", "milling", "sales"] },
     { label: "New Case", href: "/portal/cases/new", icon: FolderOpen, roles: ["lab", "admin"] },
     { label: "Billing", href: "/portal/billing", icon: CreditCard, roles: ["customer", "admin"] },
     { label: "Milling Finance", href: "/portal/cases/milling/finance", icon: DollarSign, roles: ["milling", "admin"] },
@@ -64,7 +60,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
   return (
     <aside 
       className={`
-        h-full bg-[#0a1020] border-r border-white/5 
+        h-full bg-sidebar
         transition-all duration-300 ease-in-out flex flex-col shrink-0 relative
         ${expanded ? "w-64" : "w-20"}
       `}
@@ -79,10 +75,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto custom-scrollbar flex flex-col items-center">
         {filteredNav.map((item) => {
-          
-          // ✅ EXCLUSIVE HIGHLIGHTING LOGIC
           let isActive = false;
-
           if (item.label === "Milling Finance") {
              isActive = pathname.startsWith("/portal/cases/milling/finance");
           } else if (item.label === "New Case") {
@@ -90,30 +83,29 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
           } else if (item.label === "Admin") {
              isActive = pathname.startsWith("/portal/admin");
           } else if (item.label === "Dashboard") {
-             // Active ONLY if it matches root cases path AND isn't caught by the sub-routes above
              const isFinance = pathname.startsWith("/portal/cases/milling/finance");
              const isNew = pathname.startsWith("/portal/cases/new");
              isActive = pathname.startsWith("/portal/cases") && !isFinance && !isNew;
           } else {
-             // Fallback for Billing, etc.
              isActive = pathname.startsWith(item.href);
           }
             
           const Icon = item.icon;
-
           return (
             <Link
               key={item.href}
               href={item.href}
+              // ✅ FIX: 'transition-[background-color]' ensures text color snaps instantly (no delay)
+              // while background fade remains smooth.
               className={`
-                h-11 flex items-center rounded-lg transition-all group relative
+                h-11 flex items-center rounded-lg group relative transition-[background-color] duration-200
                 ${expanded 
                   ? "w-full px-3 justify-start" 
                   : "w-11 justify-center"
                 }
                 ${isActive 
-                  ? "bg-accent text-background font-bold shadow-none" 
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
+                  ? "bg-[var(--accent-dim)] text-accent font-semibold" 
+                  : "text-muted hover:bg-[var(--accent-dim)] hover:text-accent"
                 }
               `}
               title={!expanded ? item.label : ""}
@@ -121,14 +113,13 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
               <Icon 
                 size={20} 
                 className={`
-                  shrink-0 transition-colors duration-300
-                  ${isActive ? "text-background" : "text-white/40 group-hover:text-white"}
+                  shrink-0 transition-transform 
+                  ${isActive ? "" : "group-hover:scale-110"}
                 `} 
               />
-              
               <span 
                 className={`
-                  ml-3 font-medium whitespace-nowrap overflow-hidden transition-all duration-300
+                  ml-3 font-medium whitespace-nowrap overflow-hidden transition-opacity duration-300
                   ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"}
                 `}
               >
@@ -139,34 +130,39 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
         })}
       </nav>
 
-      {/* Footer / Logout */}
-      <div className="p-4 border-t border-white/5 bg-[#0a1020] flex flex-col items-center">
+      {/* Footer: Theme Toggle & Logout */}
+      <div className="p-4 bg-sidebar flex flex-col items-center space-y-2">
+        
+        {/* Theme Toggle */}
+        <ThemeToggle expanded={expanded} />
+
         <button 
           onClick={handleLogout}
           disabled={loggingOut}
+          // ✅ FIX: 'transition-[background-color]' applied here too for consistency
           className={`
-            h-11 flex items-center rounded-lg text-white/40 hover:text-red-400 hover:bg-red-500/10 transition-colors group
+            h-11 flex items-center rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 transition-[background-color] duration-200 group
             ${expanded 
               ? "w-full px-3 justify-start" 
               : "w-11 justify-center"
             }
           `}
-          title={!expanded ? "Sign Out" : ""}
+          title={!expanded ? "Log Out" : ""}
         >
           <LogOut size={20} className="shrink-0 group-hover:scale-110 transition-transform" />
           <span 
              className={`
-               ml-3 font-medium whitespace-nowrap transition-all duration-300 overflow-hidden
+               ml-3 font-medium whitespace-nowrap transition-opacity duration-300 overflow-hidden
                ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"}
              `}
           >
-            {loggingOut ? "..." : "Sign Out"}
+            {loggingOut ? "..." : "Log Out"}
           </span>
         </button>
 
         <button
           onClick={toggleSidebar}
-          className="mt-2 w-full flex justify-center py-2 text-white/20 hover:text-accent transition-colors"
+          className="w-full flex justify-center py-2 text-muted hover:text-accent transition-colors"
         >
           {expanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </button>
