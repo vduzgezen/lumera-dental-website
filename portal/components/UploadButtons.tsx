@@ -60,7 +60,7 @@ export default function UploadButtons({
   }
 
   return (
-    <div className="rounded-xl border border-white/10 p-4">
+    <div className="rounded-xl border border-border p-4 bg-surface">
       <h2 className="font-medium mb-2">{title}</h2>
       <div className="flex items-center gap-3">
         <input
@@ -72,7 +72,7 @@ export default function UploadButtons({
         />
         <button
           type="button"
-          className="rounded-md bg-white text-black text-sm px-3 py-1.5 disabled:opacity-50"
+          className="rounded-md bg-accent text-white text-sm px-3 py-1.5 disabled:opacity-50 hover:bg-accent/80 transition"
           onClick={upload}
           disabled={busy || disabled}
         >
@@ -80,7 +80,7 @@ export default function UploadButtons({
         </button>
       </div>
       {disabled && (
-        <p className="text-xs text-white/50 mt-2">
+        <p className="text-xs text-muted mt-2">
           This slot can’t be changed at the current stage.
         </p>
       )}

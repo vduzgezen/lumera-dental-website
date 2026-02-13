@@ -120,14 +120,14 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
         <TeethSelection data={data} update={update} />
         <ProductionFiles data={data} update={update} />
 
-        <div className="flex flex-col items-end gap-3 pt-6 border-t border-white/10">
+        <div className="flex flex-col items-end gap-3 pt-6 border-t border-border">
           {err && <p className="text-red-400 text-sm font-medium bg-red-500/10 px-3 py-1 rounded">{err}</p>}
           {ok && <p className="text-emerald-400 text-sm font-medium bg-emerald-500/10 px-3 py-1 rounded">{ok}</p>}
           
           <button
             type="submit"
             disabled={busy}
-            className="px-8 py-3 rounded-lg bg-white text-black font-bold hover:bg-gray-200 transition disabled:opacity-50 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+            className="px-8 py-3 rounded-lg bg-accent text-white font-bold hover:bg-accent/80 transition disabled:opacity-50"
           >
             {busy ? "Creating Case..." : "Create Case"}
           </button>

@@ -45,8 +45,8 @@ const SortableHeader = ({
       className={`
         p-4 font-medium cursor-pointer transition-all select-none text-${align} group border-b-2 outline-none
         ${isActive 
-          ? "text-white border-accent" 
-          : "text-white/70 border-transparent hover:text-white hover:bg-white/5"
+          ? "text-accent border-accent" 
+          : "text-muted border-transparent hover:text-foreground hover:bg-[var(--accent-dim)]"
         }
       `}
       onClick={() => onSort(colKey)}
@@ -78,10 +78,10 @@ export default function MillingTable({
 
   return (
     // ✅ FIX: Rounded corners & Overflow handling
-    <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
+    <div className="flex-1 min-h-0 rounded-xl border border-border bg-surface overflow-hidden flex flex-col shadow-2xl">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <table className="w-full text-sm text-left border-collapse">
-          <thead className="bg-black/60 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
+          <thead className="bg-surface sticky top-0 backdrop-blur-md z-10 border-b border-border">
             <tr>
               <th className="p-4 w-10 border-b-2 border-transparent">
                 <input
@@ -101,11 +101,11 @@ export default function MillingTable({
               <SortableHeader label="Due Date" colKey="due" sortConfig={sortConfig} onSort={onSort} />
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-border">
             {cases.map((c) => (
               <tr
                 key={c.id}
-                className={`hover:bg-white/5 transition-colors ${selectedIds.has(c.id) ? "bg-white/5" : ""}`}
+                className={`hover:bg-[var(--accent-dim)] transition-colors ${selectedIds.has(c.id) ? "bg-[var(--accent-dim)]" : ""}`}
               >
                 <td className="p-4">
                   <input
@@ -116,17 +116,17 @@ export default function MillingTable({
                   />
                 </td>
                 <td className="p-4 font-mono text-blue-400 select-all">#{c.id.slice(-6)}</td>
-                <td className="p-4 font-medium text-white">{c.patientAlias}</td>
-                <td className="p-4 font-medium text-white">
-                  {c.doctorUser?.name || c.doctorName || <span className="text-white/30 italic">Unknown</span>}
+                <td className="p-4 font-medium text-foreground">{c.patientAlias}</td>
+                <td className="p-4 font-medium text-foreground">
+                  {c.doctorUser?.name || c.doctorName || <span className="text-muted italic">Unknown</span>}
                 </td>
-                <td className="p-4 text-white/70 font-mono">
-                  {c.doctorUser?.address?.zipCode || <span className="text-white/30">-</span>}
+                <td className="p-4 text-muted font-mono">
+                  {c.doctorUser?.address?.zipCode || <span className="text-muted">-</span>}
                 </td>
                 <td className="p-4">
                   <div className="flex flex-col">
-                    <span className="text-white font-medium">{c.product}</span>
-                    <span className="text-xs text-white/50">
+                    <span className="text-foreground font-medium">{c.product}</span>
+                    <span className="text-xs text-muted">
                       {c.material ? `${c.material} • ` : ""}
                       {c.serviceLevel?.replace(/_/g, " ") || "Standard"}
                     </span>
@@ -148,13 +148,13 @@ export default function MillingTable({
                     {c.status.replace(/_/g, " ")}
                   </span>
                 </td>
-                <td className="p-4 text-white/50">{fmtDate(c.updatedAt)}</td>
-                <td className="p-4 text-white/50">{fmtDate(c.dueDate)}</td>
+                <td className="p-4 text-muted">{fmtDate(c.updatedAt)}</td>
+                <td className="p-4 text-muted">{fmtDate(c.dueDate)}</td>
               </tr>
             ))}
             {cases.length === 0 && (
               <tr>
-                <td colSpan={9} className="p-12 text-center text-white/40">
+                <td colSpan={9} className="p-12 text-center text-muted">
                   No cases found.
                 </td>
               </tr>
@@ -164,8 +164,8 @@ export default function MillingTable({
       </div>
 
       {/* ✅ UNIFIED FOOTER: Fixed Height h-14 to avoid shrinkage */}
-      <div className="flex-none h-14 p-3 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
-        <span className="text-xs text-white/40 pl-2">
+      <div className="flex-none h-14 p-3 border-t border-border bg-surface flex items-center justify-between">
+        <span className="text-xs text-muted pl-2">
           Showing {cases.length} of {totalCount} records (Milling Queue)
         </span>
         
@@ -173,11 +173,11 @@ export default function MillingTable({
           <button
             onClick={onLoadMore}
             disabled={loadingMore}
-            className="text-xs font-bold text-white/80 hover:text-white px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-2"
+            className="text-xs font-bold text-foreground hover:text-accent px-3 py-1.5 rounded-lg bg-surface hover:bg-[var(--accent-dim)] border border-border transition-colors flex items-center gap-2"
           >
             {loadingMore ? (
               <>
-                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-3 h-3 border-2 border-muted border-t-foreground rounded-full animate-spin" />
                 Loading...
               </>
             ) : "Load More"}

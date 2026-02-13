@@ -14,7 +14,7 @@ export default function PublicNavbar() {
       <Link
         href={path}
         className={`text-sm font-medium transition-colors hover:text-white ${
-          isActive ? "text-white" : "text-white/60"
+          isActive ? "text-foreground" : "text-muted"
         }`}
       >
         {label}
@@ -23,7 +23,7 @@ export default function PublicNavbar() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-white/5 bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-md">
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2 group">
@@ -49,7 +49,7 @@ export default function PublicNavbar() {
           {/* FIX: Corrected route from /auth/login to /login */}
           <Link 
             href="/login" 
-            className="text-sm font-medium text-white/60 hover:text-white transition-colors"
+            className="text-sm font-medium text-muted hover:text-foreground transition-colors"
           >
             Log In
           </Link>

@@ -13,6 +13,7 @@ export default {
       colors: {
         background: "var(--background)",
         surface: "var(--surface)",
+        "surface-highlight": "var(--surface-highlight)",
         accent: "var(--accent)",
         foreground: "var(--foreground)",
         muted: "var(--muted)",

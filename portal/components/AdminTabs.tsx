@@ -13,7 +13,7 @@ export function AdminTabs() {
       <Link
         href={href}
         className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-          active ? "bg-white text-black" : "text-white/60 hover:bg-white/10 hover:text-white"
+          active ? "bg-accent text-white" : "text-muted hover:bg-[var(--accent-dim)] hover:text-foreground"
         }`}
       >
         {label}

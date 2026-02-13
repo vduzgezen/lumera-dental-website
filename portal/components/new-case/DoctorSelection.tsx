@@ -97,9 +97,9 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-4 shadow-lg">
-      <div className="flex items-center justify-between border-b border-white/5 pb-2">
-        <h2 className="text-lg font-medium text-white/90">Doctor & Clinic</h2>
+    <div className="rounded-xl border border-border bg-surface p-6 space-y-4 shadow-lg">
+      <div className="flex items-center justify-between border-b border-border pb-2">
+        <h2 className="text-lg font-medium text-foreground">Doctor & Clinic</h2>
         <span className="text-[10px] uppercase tracking-wider text-blue-400 font-bold bg-blue-500/10 px-2 py-1 rounded">Required</span>
       </div>
       
@@ -114,19 +114,19 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
       {/* ✅ ALWAYS SHOW CLINIC (Read-only if single, Dropdown if multiple) */}
       {availableClinics.length > 0 && (
         <div className="space-y-1 animate-in fade-in slide-in-from-top-2 duration-300">
-          <label className="text-xs font-medium text-white/70 uppercase tracking-wider">
-            Select Clinic <span className="text-blue-400">*</span>
+          <label className="text-xs font-medium text-muted uppercase tracking-wider">
+            Select Clinic <span className="text-accent">*</span>
           </label>
           <div className="relative">
             <select
               value={data.clinicId}
               onChange={handleClinicChange}
               disabled={availableClinics.length === 1} // Disable if only 1 option
-              className={`w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition appearance-none 
-                ${availableClinics.length === 1 ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-white/5"}`}
+              className={`w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition appearance-none 
+                ${availableClinics.length === 1 ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-[var(--accent-dim)]"}`}
             >
               {availableClinics.map(c => (
-                <option key={c.id} value={c.id} className="bg-gray-900">
+                <option key={c.id} value={c.id} className="bg-surface-highlight">
                   {c.name} {c.priceTier === "IN_HOUSE" ? "(In-House)" : ""}
                 </option>
               ))}
@@ -144,7 +144,7 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
           
           {/* Helper Text */}
           {availableClinics.length === 1 && (
-             <p className="text-[10px] text-white/40 pl-1 mt-1">
+             <p className="text-[10px] text-muted pl-1 mt-1">
                Doctor is only associated with this clinic.
              </p>
           )}

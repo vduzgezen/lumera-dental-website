@@ -161,7 +161,7 @@ export default function CommentsPanel({
               src={safeSrc}
               alt="Inline Content"
               fill
-              className="rounded-lg border border-white/10 cursor-zoom-in object-contain"
+              className="rounded-lg border border-border cursor-zoom-in object-contain"
               onClick={() => setZoomImg(safeSrc)}
               unoptimized
             />
@@ -175,13 +175,13 @@ export default function CommentsPanel({
 
   return (
     <div className="flex flex-col h-full min-h-0">
-      <h3 className="text-xs font-semibold text-white/50 uppercase tracking-wider mb-4 flex-shrink-0">
+      <h3 className="text-xs font-semibold text-muted uppercase tracking-wider mb-4 flex-shrink-0">
         Discussion
       </h3>
 
       <div className="flex-1 overflow-y-auto min-h-0 space-y-4 space-y-reverse pr-2 custom-scrollbar flex flex-col-reverse">
         {comments.length === 0 ? (
-          <p className="text-white/40 text-sm text-center py-4">No comments yet.</p>
+          <p className="text-muted text-sm text-center py-4">No comments yet.</p>
         ) : (
           comments.map((c) => {
             const isInternal = c.role === "admin" || c.role === "lab" || c.role === "milling";
@@ -206,18 +206,18 @@ export default function CommentsPanel({
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-baseline justify-between">
-                    <span className="text-sm font-medium text-white/90">
+                    <span className="text-sm font-medium text-foreground">
                       {displayAuthor}
                       {!maskAsLumera && c.role !== "customer" && (
-                        <span className="ml-2 text-[10px] opacity-50 uppercase border border-white/20 px-1 rounded">{c.role}</span>
+                        <span className="ml-2 text-[10px] opacity-50 uppercase border border-border px-1 rounded">{c.role}</span>
                       )}
                     </span>
-                    <span className="text-[10px] text-white/40">
+                    <span className="text-[10px] text-muted">
                       {new Date(c.at).toLocaleString()}
                     </span>
                   </div>
                   
-                  <div className="mt-1 text-sm text-white/80 whitespace-pre-wrap leading-relaxed">
+                  <div className="mt-1 text-sm text-foreground/80 whitespace-pre-wrap leading-relaxed">
                     {renderBody(c.body)}
                   </div>
 
@@ -229,7 +229,7 @@ export default function CommentsPanel({
                           <div 
                             key={att.id}
                             onClick={() => setZoomImg(safeSrc)} 
-                            className="relative w-24 h-24 rounded-lg overflow-hidden border border-white/10 cursor-zoom-in hover:border-white/30 transition-colors bg-black/50"
+                            className="relative w-24 h-24 rounded-lg overflow-hidden border border-border cursor-zoom-in hover:border-accent/30 transition-colors bg-surface"
                           >
                             {/* ✅ OPTIMIZED: Use Next.js Image for thumbnails */}
                             <Image 
@@ -253,7 +253,7 @@ export default function CommentsPanel({
       </div>
 
       {canPost && (
-        <div className="mt-4 pt-4 border-t border-white/10 flex-shrink-0">
+        <div className="mt-4 pt-4 border-t border-border flex-shrink-0">
           <div className="relative flex items-center gap-2">
             <input 
               type="file" 
@@ -265,7 +265,7 @@ export default function CommentsPanel({
             
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 rounded-lg bg-white/5 text-white/60 hover:text-white hover:bg-white/10 transition-colors"
+              className="p-2 rounded-lg bg-surface text-muted hover:text-foreground hover:bg-[var(--accent-dim)] transition-colors"
               title="Attach Image & Draw"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -283,16 +283,16 @@ export default function CommentsPanel({
                 }
               }}
               placeholder="Type a message..."
-              className="flex-1 bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/30 transition-colors"
+              className="flex-1 bg-surface-highlight border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder-muted focus:outline-none focus:border-accent/30 transition-colors"
             />
             
             <button
               onClick={() => handlePost()}
               disabled={posting || (!body.trim())}
-              className="p-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 rounded-lg bg-accent text-white hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {posting ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-muted border-t-foreground rounded-full animate-spin" />
               ) : (
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -313,7 +313,7 @@ export default function CommentsPanel({
 
       {zoomImg && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-4"
           onClick={() => setZoomImg(null)}
         >
           {/* Zoomed image stays as standard img for full quality/simplicity */}
@@ -323,7 +323,7 @@ export default function CommentsPanel({
             alt="Zoomed" 
             className="max-w-full max-h-full rounded-lg shadow-2xl" 
           />
-          <button className="absolute top-4 right-4 text-white/50 hover:text-white">
+          <button className="absolute top-4 right-4 text-muted hover:text-foreground">
             <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>

@@ -26,10 +26,10 @@ export default function CopyableId({ id, truncate = false }: Props) {
     <button
       type="button"
       onClick={handleCopy}
-      className="group relative inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-white/10 transition-colors cursor-pointer"
+      className="group relative inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 hover:bg-[var(--accent-dim)] transition-colors cursor-pointer"
       title="Click to copy Case ID"
     >
-      <code className="text-xs text-white/50 group-hover:text-white/90 transition-colors font-mono">
+      <code className="text-xs text-muted group-hover:text-foreground transition-colors font-mono">
         {truncate ? `${id.slice(-6)}...` : id}
       </code>
       
@@ -41,7 +41,7 @@ export default function CopyableId({ id, truncate = false }: Props) {
       ) : (
         /* Hidden copy icon that appears on hover */
         <svg 
-          className="w-3 h-3 text-white/30 opacity-0 group-hover:opacity-100 transition-opacity" 
+          className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" 
           fill="none" 
           viewBox="0 0 24 24" 
           stroke="currentColor"

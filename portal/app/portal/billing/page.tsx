@@ -42,7 +42,7 @@ export default async function BillingPage({
   const where: Prisma.DentalCaseWhereInput = {};
   if (session.role === "customer") {
     if (!session.clinicId) {
-      return <div className="p-8 text-white/50">No clinic linked. Contact support.</div>;
+      return <div className="p-8 text-muted">No clinic linked. Contact support.</div>;
     }
     where.clinicId = session.clinicId;
   }

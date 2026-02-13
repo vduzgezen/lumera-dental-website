@@ -44,24 +44,24 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
       {/* Header */}
       <div className="flex-none flex items-center justify-between">
          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold text-white hidden sm:block">Admin</h1>
-            <div className="h-6 w-px bg-white/10 hidden sm:block" />
+            <h1 className="text-2xl font-semibold text-foreground hidden sm:block">Admin</h1>
+            <div className="h-6 w-px bg-border hidden sm:block" />
             <AdminTabs />
          </div>
         
         <button 
           onClick={() => setIsCreating(true)} 
-          className="px-3 py-1.5 rounded-lg bg-white text-black text-sm hover:bg-gray-200 transition font-medium"
+          className="px-3 py-1.5 rounded-lg bg-accent text-white text-sm hover:bg-accent/80 transition font-medium"
         >
           + New User
         </button>
       </div>
 
       {/* Table Container */}
-      <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
+      <div className="flex-1 min-h-0 rounded-xl border border-border bg-surface overflow-hidden flex flex-col shadow-2xl">
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left text-sm min-w-[600px]">
-            <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
+            <thead className="bg-surface text-muted sticky top-0 backdrop-blur-md z-10 border-b border-border">
               <tr>
                 <th className="p-4 font-medium">Name</th>
                 <th className="p-4 font-medium">Email</th>
@@ -70,11 +70,11 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
                 <th className="p-4 font-medium text-right">Action</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {users.map((u) => (
-                <tr key={u.id} className="hover:bg-white/5 transition-colors group">
-                  <td className="p-4 font-medium text-white">{u.name || "—"}</td>
-                  <td className="p-4 text-white/60">{u.email}</td>
+                <tr key={u.id} className="hover:bg-[var(--accent-dim)] transition-colors group">
+                  <td className="p-4 font-medium text-foreground">{u.name || "—"}</td>
+                  <td className="p-4 text-muted">{u.email}</td>
                   <td className="p-4">
                     {/* ✅ UPDATED ROLE COLORS */}
                     <span className={`px-2 py-1 rounded text-xs font-semibold tracking-wide border ${
@@ -87,10 +87,10 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
                       {u.role.toUpperCase()}
                     </span>
                   </td>
-                  <td className="p-4 text-white/60">
-                    {u.clinic?.name || <span className="text-white/20 italic">None</span>}
+                  <td className="p-4 text-muted">
+                    {u.clinic?.name || <span className="text-muted/50 italic">None</span>}
                     {u.secondaryClinics && u.secondaryClinics.length > 0 && (
-                        <span className="ml-2 text-[10px] text-white/40 border border-white/10 px-1 rounded">
+                        <span className="ml-2 text-[10px] text-muted border border-border px-1 rounded">
                             +{u.secondaryClinics.length} more
                         </span>
                     )}
@@ -121,11 +121,11 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
 
       {deletingId && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-          <div className="bg-[#111b2d] border border-white/10 rounded-xl p-6 max-w-sm w-full shadow-2xl">
-            <h3 className="text-lg font-semibold text-white mb-2 text-red-400">Delete User?</h3>
-            <p className="text-white/60 text-sm mb-6">Action cannot be undone.</p>
+          <div className="bg-surface border border-border rounded-xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 className="text-lg font-semibold text-foreground mb-2 text-red-400">Delete User?</h3>
+            <p className="text-muted text-sm mb-6">Action cannot be undone.</p>
             <div className="flex justify-end gap-3">
-              <button onClick={() => setDeletingId(null)} disabled={isDeleting} className="px-4 py-2 text-white/60 hover:text-white">Cancel</button>
+              <button onClick={() => setDeletingId(null)} disabled={isDeleting} className="px-4 py-2 text-muted hover:text-foreground">Cancel</button>
               <button onClick={confirmDelete} disabled={isDeleting} className="px-4 py-2 bg-red-500 text-white rounded font-bold hover:bg-red-600">Delete</button>
             </div>
           </div>

@@ -67,7 +67,7 @@ export default function ToothSelector({ value, onChange }: ToothSelectorProps) {
         {/* Number */}
         <span className={`
           mt-2 font-bold transition-colors text-[10px] sm:text-xs
-          ${active ? "text-blue-400" : "text-white/40 group-hover:text-white/80"}
+          ${active ? "text-accent" : "text-muted group-hover:text-foreground/80"}
         `}>
           #{num}
         </span>
@@ -76,11 +76,11 @@ export default function ToothSelector({ value, onChange }: ToothSelectorProps) {
   };
 
   return (
-    <div className="w-full bg-black/40 rounded-xl border border-white/10 p-4 sm:p-6 flex flex-col items-center gap-6 select-none shadow-inner overflow-hidden">
+    <div className="w-full bg-surface rounded-xl border border-border p-4 sm:p-6 flex flex-col items-center gap-6 select-none shadow-inner overflow-hidden">
       
       {/* Upper Arch */}
       <div className="w-full flex flex-col items-center gap-2">
-        <span className="text-xs text-white/40 uppercase tracking-widest font-semibold">Upper Arch</span>
+        <span className="text-xs text-muted uppercase tracking-widest font-semibold">Upper Arch</span>
         
         {/* Container:
             - flex: Row layout
@@ -94,14 +94,14 @@ export default function ToothSelector({ value, onChange }: ToothSelectorProps) {
       </div>
 
       {/* Divider */}
-      <div className="w-2/3 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+      <div className="w-2/3 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
 
       {/* Lower Arch */}
       <div className="w-full flex flex-col items-center gap-2">
         <div className="flex w-full overflow-x-auto custom-scrollbar pb-2 px-1 gap-1 justify-between">
           {LOWER_TEETH.map((t) => <ToothImage key={t} num={t} />)}
         </div>
-        <span className="text-xs text-white/40 uppercase tracking-widest font-semibold">Lower Arch</span>
+        <span className="text-xs text-muted uppercase tracking-widest font-semibold">Lower Arch</span>
       </div>
 
       {selected.size === 0 && (

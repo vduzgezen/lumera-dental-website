@@ -30,7 +30,7 @@ export default function BillingToolbar({
   isFiltered,
 }: Props) {
   const router = useRouter();
-  const searchParams = useSearchParams(); // Get current params to preserve others if needed
+  const searchParams = useSearchParams();
 
   // Local state for debouncing
   const [filters, setFilters] = useState({
@@ -65,7 +65,7 @@ export default function BillingToolbar({
       if (filters.clinic) params.set("clinic", filters.clinic);
 
       router.replace(`?${params.toString()}`, { scroll: false });
-    }, 400); // 400ms debounce
+    }, 400);
 
     return () => clearTimeout(timer);
   }, [filters, router]);
@@ -86,21 +86,21 @@ export default function BillingToolbar({
   return (
     <div className="flex-none space-y-4 mb-6">
       <header>
-        <h1 className="text-2xl font-semibold text-white">Billing & Invoices</h1>
-        <p className="text-white/50 text-sm mt-1">
+        <h1 className="text-2xl font-semibold text-foreground">Billing & Invoices</h1>
+        <p className="text-muted text-sm mt-1">
           Manage costs, view history, and track monthly usage.
         </p>
       </header>
 
-      <div className="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
+      <div className="flex flex-wrap gap-2 items-center bg-surface p-2 rounded-xl border border-border">
         {/* Year Select */}
         <select
           value={filters.year}
           onChange={(e) => updateInstant("year", Number(e.target.value))}
-          className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none transition appearance-none cursor-pointer hover:bg-white/5"
+          className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:border-accent/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)]"
         >
           {years.map((y) => (
-            <option key={y} value={y} className="bg-[#1a1a1a]">
+            <option key={y} value={y} className="bg-surface">
               {y}
             </option>
           ))}
@@ -110,10 +110,10 @@ export default function BillingToolbar({
         <select
           value={filters.month}
           onChange={(e) => updateInstant("month", Number(e.target.value))}
-          className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none transition appearance-none cursor-pointer hover:bg-white/5"
+          className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:border-accent/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)]"
         >
           {MONTHS.map((m, i) => (
-            <option key={m} value={i + 1} className="bg-[#1a1a1a]">
+            <option key={m} value={i + 1} className="bg-surface">
               {m}
             </option>
           ))}
@@ -124,7 +124,7 @@ export default function BillingToolbar({
           value={filters.q}
           onChange={(e) => updateInstant("q", e.target.value)}
           placeholder="Search Patient or Case ID..."
-          className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-48 transition"
+          className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-accent/50 outline-none w-48 transition"
         />
 
         {/* Admin Filters */}
@@ -134,13 +134,13 @@ export default function BillingToolbar({
               value={filters.doctor}
               onChange={(e) => updateInstant("doctor", e.target.value)}
               placeholder="Filter by Doctor..."
-              className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-40 transition"
+              className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-accent/50 outline-none w-40 transition"
             />
             <input
               value={filters.clinic}
               onChange={(e) => updateInstant("clinic", e.target.value)}
               placeholder="Filter by Clinic..."
-              className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none w-40 transition"
+              className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-accent/50 outline-none w-40 transition"
             />
           </>
         )}
@@ -148,7 +148,7 @@ export default function BillingToolbar({
         {isFiltered && (
           <Link
             href="/portal/billing"
-            className="px-3 py-1.5 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition"
+            className="px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-[var(--accent-dim)] rounded-lg transition"
           >
             Reset
           </Link>

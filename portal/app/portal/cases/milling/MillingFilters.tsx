@@ -71,10 +71,10 @@ export default function MillingFilters({ uniqueDoctors, uniqueZips }: Props) {
   };
 
   return (
-    <div className="flex flex-wrap gap-2 items-center bg-black/20 p-2 rounded-xl border border-white/5">
+    <div className="flex flex-wrap gap-2 items-center bg-surface p-2 rounded-xl border border-border">
       {/* Status Checkboxes */}
-      <div className="flex items-center gap-2 px-3 py-1.5 bg-black/40 border border-white/10 rounded-lg">
-        <label className="flex items-center gap-2 text-sm text-white cursor-pointer select-none">
+      <div className="flex items-center gap-2 px-3 py-1.5 bg-surface border border-border rounded-lg">
+        <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
           <input 
             type="checkbox" 
             checked={currentStatuses.has("APPROVED")} 
@@ -83,8 +83,8 @@ export default function MillingFilters({ uniqueDoctors, uniqueZips }: Props) {
           />
           Approved
         </label>
-        <div className="w-px h-4 bg-white/10 mx-1" />
-        <label className="flex items-center gap-2 text-sm text-white cursor-pointer select-none">
+        <div className="w-px h-4 bg-border mx-1" />
+        <label className="flex items-center gap-2 text-sm text-foreground cursor-pointer select-none">
           <input 
             type="checkbox" 
             checked={currentStatuses.has("IN_MILLING")} 
@@ -95,11 +95,11 @@ export default function MillingFilters({ uniqueDoctors, uniqueZips }: Props) {
         </label>
       </div>
 
-      <div className="w-px h-6 bg-white/10 mx-2" />
+      <div className="w-px h-6 bg-border mx-2" />
 
       {/* Doctor Filter */}
       <select
-        className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-blue-500 transition-colors"
+        className="bg-surface border border-border rounded-lg px-3 py-1.5 text-sm text-foreground outline-none focus:border-accent transition-colors"
         value={doctorFilter}
         onChange={(e) => update({ doctor: e.target.value })}
       >
@@ -111,7 +111,7 @@ export default function MillingFilters({ uniqueDoctors, uniqueZips }: Props) {
 
       {/* Zip Filter */}
       <select
-        className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none focus:border-blue-500 transition-colors"
+        className="bg-surface border border-border rounded-lg px-3 py-1.5 text-sm text-foreground outline-none focus:border-accent transition-colors"
         value={zipFilter}
         onChange={(e) => update({ zip: e.target.value })}
       >
@@ -121,15 +121,15 @@ export default function MillingFilters({ uniqueDoctors, uniqueZips }: Props) {
         ))}
       </select>
 
-      <div className="w-px h-6 bg-white/10 mx-2" />
+      <div className="w-px h-6 bg-border mx-2" />
 
       {/* Show Shipped Toggle */}
-      <label className="flex items-center gap-2 px-3 py-1.5 bg-black/40 border border-white/10 rounded-lg text-sm text-white cursor-pointer select-none hover:bg-white/5 transition">
+      <label className="flex items-center gap-2 px-3 py-1.5 bg-surface border border-border rounded-lg text-sm text-foreground cursor-pointer select-none hover:bg-[var(--accent-dim)] transition">
         <input 
             type="checkbox" 
             checked={showShipped} 
             onChange={() => update({ showShipped: !showShipped })} 
-            className="accent-blue-500" 
+            className="accent-accent" 
         />
         Show Shipped
       </label>
@@ -138,7 +138,7 @@ export default function MillingFilters({ uniqueDoctors, uniqueZips }: Props) {
       {(doctorFilter !== "ALL" || zipFilter !== "ALL") && (
         <button
           onClick={() => update({ doctor: "ALL", zip: "ALL" })}
-          className="px-3 py-1.5 text-sm text-white/60 hover:text-white hover:bg-white/10 rounded-lg transition"
+          className="px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-[var(--accent-dim)] rounded-lg transition"
         >
           Clear
         </button>

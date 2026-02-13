@@ -52,13 +52,13 @@ export default function ShippingModal({
 
   return (
     <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="w-full max-w-md bg-[#111b2d] border border-white/10 rounded-xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
+      <div className="w-full max-w-md bg-surface border border-border rounded-xl p-6 shadow-2xl space-y-5 animate-in fade-in zoom-in-95 duration-200 overflow-hidden">
         
         {/* Header */}
         <div>
-            <h3 className="text-lg font-semibold text-white">Ship Batch</h3>
-            <p className="text-sm text-white/60">
-            Applying shipment to <span className="text-white font-bold">{count}</span> cases.
+            <h3 className="text-lg font-semibold text-foreground">Ship Batch</h3>
+            <p className="text-sm text-muted">
+            Applying shipment to <span className="text-foreground font-bold">{count}</span> cases.
             </p>
         </div>
 
@@ -70,8 +70,8 @@ export default function ShippingModal({
                 </svg>
                 <div>
                     <h4 className="text-sm font-bold text-yellow-500">Mixed Clinic Batch</h4>
-                    <p className="text-xs text-white/70 mt-1 leading-relaxed">
-                        You selected cases from <strong className="text-white">{uniqueClinics.length} different clinics</strong>. 
+                    <p className="text-xs text-foreground/70 mt-1 leading-relaxed">
+                        You selected cases from <strong className="text-foreground">{uniqueClinics.length} different clinics</strong>. 
                         Ensure you are physically shipping these to the same location, or create separate batches.
                     </p>
                     <div className="mt-2 flex flex-wrap gap-1">
@@ -119,13 +119,13 @@ export default function ShippingModal({
         )}
 
         {/* 💰 Batch Value */}
-        <div className="bg-black/20 rounded-lg p-3 border border-white/5 space-y-2">
+        <div className="bg-surface rounded-lg p-3 border border-border space-y-2">
             <div className="flex justify-between items-center text-sm">
-                <span className="text-white/50">Batch Value (Haus)</span>
-                <span className="font-bold text-white">{formatMoney(batchValue)}</span>
+                <span className="text-muted">Batch Value (Haus)</span>
+                <span className="font-bold text-foreground">{formatMoney(batchValue)}</span>
             </div>
             
-            <div className={`p-2 rounded text-xs font-bold text-center border border-white/5 ${tier.bg} ${tier.color}`}>
+            <div className={`p-2 rounded text-xs font-bold text-center border border-border ${tier.bg} ${tier.color}`}>
                 {tier.label}
             </div>
         </div>
@@ -134,9 +134,9 @@ export default function ShippingModal({
         <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
                 <div className="col-span-2 sm:col-span-1">
-                    <label className="text-xs font-bold text-white/50 uppercase block mb-1">Carrier</label>
+                    <label className="text-xs font-bold text-muted uppercase block mb-1">Carrier</label>
                     <select
-                        className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500"
+                        className="w-full bg-surface-highlight border border-border rounded-lg p-2 text-foreground outline-none focus:border-accent"
                         value={carrier}
                         onChange={(e) => setCarrier(e.target.value)}
                     >
@@ -149,9 +149,9 @@ export default function ShippingModal({
                 </div>
                 
                 <div className="col-span-2 sm:col-span-1">
-                    <label className="text-xs font-bold text-white/50 uppercase block mb-1">Tracking</label>
+                    <label className="text-xs font-bold text-muted uppercase block mb-1">Tracking</label>
                     <input
-                        className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500"
+                        className="w-full bg-surface-highlight border border-border rounded-lg p-2 text-foreground outline-none focus:border-accent"
                         placeholder="1ZA..."
                         value={tracking}
                         onChange={(e) => setTracking(e.target.value)}
@@ -161,7 +161,7 @@ export default function ShippingModal({
 
             {carrier === "Other" && (
                 <input
-                    className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500"
+                    className="w-full bg-surface-highlight border border-border rounded-lg p-2 text-foreground outline-none focus:border-accent"
                     placeholder="Enter Carrier Name..."
                     value={otherCarrier}
                     onChange={(e) => setOtherCarrier(e.target.value)}
@@ -173,7 +173,7 @@ export default function ShippingModal({
                     <label className="text-xs font-bold text-orange-400 uppercase block mb-1">Shipping Cost ($)</label>
                     <input
                         type="number"
-                        className="w-full bg-black/40 border border-orange-500/30 rounded-lg p-2 text-white outline-none focus:border-orange-500"
+                        className="w-full bg-surface-highlight border border-orange-500/30 rounded-lg p-2 text-foreground outline-none focus:border-orange-500"
                         placeholder="0.00"
                         value={shippingCost}
                         onChange={(e) => setShippingCost(e.target.value)}
@@ -183,10 +183,10 @@ export default function ShippingModal({
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-2 pt-2 border-t border-white/5">
+        <div className="flex justify-end gap-2 pt-2 border-t border-border">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-white/60 hover:text-white transition"
+            className="px-4 py-2 text-muted hover:text-foreground transition"
             disabled={isSaving}
           >
             Cancel
@@ -194,7 +194,7 @@ export default function ShippingModal({
           <button
             onClick={handleSubmit}
             disabled={isSaving || !tracking || (carrier === "Other" && !otherCarrier)}
-            className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 transition disabled:opacity-50"
+            className="px-6 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent/80 transition disabled:opacity-50"
           >
             {isSaving ? "Saving..." : "Confirm Shipment"}
           </button>

@@ -13,6 +13,20 @@ export const metadata: Metadata = {
   },
 };
 
+// FOUC Prevention Script - runs before hydration
+const foucPreventionScript = `
+  (function() {
+    try {
+      const theme = localStorage.getItem("lumera_theme");
+      if (theme === "light") {
+        document.documentElement.classList.add("light");
+      }
+    } catch (e) {
+      // localStorage not available
+    }
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,6 +34,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: foucPreventionScript }} />
+      </head>
       <body className="font-sans antialiased bg-background text-foreground">
         <ThemeProvider>
           {children}

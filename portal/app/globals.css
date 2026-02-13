@@ -1,34 +1,59 @@
-/* portal/app/globals.css*/
 @import "tailwindcss";
 
 :root {
-  /* Default: Midnight Blue (Dark) */
-  --background: #0a1020;
-  --foreground: #f5f7fb;
-  --surface: #111b2d;
+  /* --- DARK MODE (Midnight Hierarchy) --- */
+  /* Level 1: Page Background (Deepest) */
+  --background: #020617; /* Slate 950 */
+  
+  /* Level 2: Sidebar (Mid-Tone) - Distinct from BG and Table */
+  --sidebar-bg: #0f172a; /* Slate 900 */
+  
+  /* Level 3: Surface/Tables (Elevated/Lightest) */
+  --surface: #1e293b;    /* Slate 800 */
+  
+  /* Inputs & Highlights */
+  --surface-highlight: #334155; /* Slate 700 */
+  
+  /* Text & Borders */
+  --foreground: #f8fafc; /* Slate 50 */
+  --muted: #94a3b8;      /* Slate 400 */
+  --border: rgba(255, 255, 255, 0.1); 
+  
+  /* Brand */
   --accent: #9696e2;
-  /* Glassy Accent: ~15% opacity of #9696e2 */
-  --accent-dim: rgba(150, 150, 226, 0.15); 
+  --accent-dim: rgba(150, 150, 226, 0.15);
+  
+  /* Glass */
+  --glass-bg: rgba(15, 23, 42, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
-  --glass-bg: rgba(17, 27, 45, 0.6);
-  --muted: #94a3b8;
-  --sidebar-bg: #0a1020;
-  --sidebar-border: rgba(255, 255, 255, 0.1);
 }
 
 .light {
-  /* Porcelain/Lilac (Light) */
-  --background: #f8f9ff;
-  --foreground: #1a1a2e;
-  --surface: #ffffff;
-  --accent: #6366f1;
-  /* Glassy Accent: ~15% opacity of #6366f1 */
-  --accent-dim: rgba(99, 102, 241, 0.15);
-  --glass-border: rgba(150, 150, 226, 0.3);
+  /* --- LIGHT MODE (High Contrast Hierarchy) --- */
+  /* Level 1: Page Background (Darkest of the light shades) */
+  --background: #f1f5f9; /* Slate 100 - Cool Grey */
+  
+  /* Level 2: Sidebar (Off-White) */
+  --sidebar-bg: #f8fafc; /* Slate 50 */
+  
+  /* Level 3: Surface/Tables (Pure White - Pops out) */
+  --surface: #ffffff;    
+  
+  /* Inputs */
+  --surface-highlight: #f1f5f9; /* Slate 100 */
+  
+  /* Text & Borders */
+  --foreground: #0f172a; /* Slate 900 */
+  --muted: #64748b;      /* Slate 500 */
+  --border: #cbd5e1;     /* Slate 300 (Visible Borders) */
+  
+  /* Brand */
+  --accent: #6366f1;     /* Indigo 500 */
+  --accent-dim: rgba(99, 102, 241, 0.1);
+  
+  /* Glass */
   --glass-bg: rgba(255, 255, 255, 0.8);
-  --muted: #64748b;
-  --sidebar-bg: #ffffff;
-  --sidebar-border: transparent;
+  --glass-border: #cbd5e1;
 }
 
 body {
@@ -40,43 +65,26 @@ body {
 }
 
 /* --- UTILITIES --- */
-.glass-panel {
-  background: var(--glass-bg);
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(12px);
-}
-
-.perspective-1000 {
-  perspective: 1000px;
-}
-
-/* --- ANIMATIONS --- */
-.reveal {
-  opacity: 0;
-  transform: translateY(20px);
-  transition: opacity 0.8s ease, transform 0.8s ease;
-}
-
-.reveal.in {
-  opacity: 1;
-  transform: translateY(0);
-}
+.bg-sidebar { background-color: var(--sidebar-bg); }
+.bg-surface { background-color: var(--surface); }
+.bg-surface-highlight { background-color: var(--surface-highlight); }
+.bg-background { background-color: var(--background); }
+.border-border { border-color: var(--border); }
+.text-muted { color: var(--muted); }
+.text-foreground { color: var(--foreground); }
 
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-track {
   background: transparent;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: var(--glass-border);
+  background: var(--border);
   border-radius: 4px;
 }
-
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }

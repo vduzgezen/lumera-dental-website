@@ -22,7 +22,7 @@ type BillingCase = {
 type Props = {
   cases: BillingCase[];
   isAdminOrLab: boolean;
-  totalCount: number; // ✅
+  totalCount: number;
 };
 
 type SortConfig = {
@@ -38,7 +38,7 @@ const SortableHeader = ({
     <th 
       className={`
         p-4 font-medium cursor-pointer transition-colors select-none group border-b-2 outline-none whitespace-nowrap
-        ${isActive ? "text-white border-accent" : "border-transparent hover:text-white"}
+        ${isActive ? "text-accent border-accent" : "text-muted border-transparent hover:text-foreground"}
         ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}
         ${className}
       `}
@@ -105,11 +105,11 @@ export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) 
   };
 
   return (
-    // ✅ FIX: Rounded corners & Overflow handling
-    <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl">
+    // ✅ Fixed: Using semantic border and bg colors
+    <div className="flex-1 min-h-0 rounded-xl border border-border bg-surface overflow-hidden flex flex-col shadow-2xl">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <table className="w-full text-sm text-left border-collapse">
-          <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
+          <thead className="bg-surface text-muted sticky top-0 backdrop-blur-md z-10 border-b border-border">
             <tr>
               <SortableHeader label="Created On" colKey="date" sortConfig={sortConfig} onSort={handleSort} />
               {isAdminOrLab && <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />}
@@ -121,10 +121,10 @@ export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) 
               <SortableHeader label="Cost" colKey="cost" sortConfig={sortConfig} onSort={handleSort} align="right" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-border">
              {sortedCases.length === 0 ? (
               <tr>
-                <td colSpan={isAdminOrLab ? 8 : 6} className="p-12 text-center text-white/40">
+                <td colSpan={isAdminOrLab ? 8 : 6} className="p-12 text-center text-muted">
                    No records found matching your filters.
                 </td>
               </tr>
@@ -132,18 +132,18 @@ export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) 
               sortedCases.map((c) => {
                 const isWarranty = c.billingType === BillingType.WARRANTY;
                 return (
-                  <tr key={c.id} className="hover:bg-white/5 transition-colors">
-                    <td className="p-4 text-white/70">{new Date(c.orderDate).toLocaleDateString()}</td>
-                    {isAdminOrLab && <td className="p-4 text-white/70">{c.clinic.name}</td>}
-                    <td className="p-4 font-medium text-white">{c.patientLastName}, {c.patientFirstName}</td>
-                    <td className="p-4 font-mono text-xs text-white/60">{c.patientAlias}</td>
-                    {isAdminOrLab && <td className="p-4 text-white/60">{c.doctorName || "—"}</td>}
-                    <td className="p-4 text-white/60">
+                  <tr key={c.id} className="hover:bg-[var(--accent-dim)] transition-colors">
+                    <td className="p-4 text-muted">{new Date(c.orderDate).toLocaleDateString()}</td>
+                    {isAdminOrLab && <td className="p-4 text-muted">{c.clinic.name}</td>}
+                    <td className="p-4 font-medium text-foreground">{c.patientLastName}, {c.patientFirstName}</td>
+                    <td className="p-4 font-mono text-xs text-muted">{c.patientAlias}</td>
+                    {isAdminOrLab && <td className="p-4 text-muted">{c.doctorName || "—"}</td>}
+                    <td className="p-4 text-muted">
                       {c.product.replace(/_/g, " ")}
-                      {isWarranty && <span className="ml-2 px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-400 border border-yellow-500/20 uppercase tracking-wide">Warranty</span>}
+                      {isWarranty && <span className="ml-2 px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 uppercase tracking-wide">Warranty</span>}
                     </td>
-                    <td className="p-4 text-center text-white/60">{c.units}</td>
-                    <td className={`p-4 text-right font-mono ${isWarranty ? "text-white/30 decoration-line-through" : "text-emerald-400"}`}>
+                    <td className="p-4 text-center text-muted">{c.units}</td>
+                    <td className={`p-4 text-right font-mono ${isWarranty ? "text-muted line-through" : "text-emerald-600"}`}>
                       {formatCurrency(Number(c.cost))}
                     </td>
                   </tr>
@@ -154,9 +154,9 @@ export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) 
         </table>
       </div>
 
-      {/* ✅ UNIFIED FOOTER: SAME ROW */}
-      <div className="flex-none h-14 p-3 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
-        <span className="text-xs text-white/40 pl-2">
+      {/* ✅ UNIFIED FOOTER: Using semantic colors */}
+      <div className="flex-none h-14 p-3 border-t border-border bg-surface flex items-center justify-between">
+        <span className="text-xs text-muted pl-2">
           Showing {cases.length} of {totalCount} records
         </span>
         
@@ -164,11 +164,11 @@ export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) 
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-colors flex items-center gap-2"
+            className="px-4 py-1.5 rounded-lg bg-surface border border-border hover:bg-[var(--accent-dim)] text-xs font-bold text-foreground transition-colors flex items-center gap-2"
           >
             {loadingMore ? (
               <>
-                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-3 h-3 border-2 border-muted border-t-foreground rounded-full animate-spin" />
                 Loading...
               </>
             ) : "Load More"}

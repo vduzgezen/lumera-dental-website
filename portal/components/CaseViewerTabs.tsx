@@ -10,7 +10,7 @@ import type { Role, CaseStatus } from "@/lib/types";
 const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
   ssr: false, 
   loading: () => (
-    <div className="w-full h-full bg-[#0a1020] animate-pulse flex items-center justify-center text-white/30 text-sm">
+    <div className="w-full h-full bg-background animate-pulse flex items-center justify-center text-muted text-sm">
       Loading 3D Viewer...
     </div>
   ),
@@ -43,12 +43,13 @@ const StableIframeComponent = ({ url, title }: { url: string; title: string }) =
       const iframe = e.target as HTMLIFrameElement;
       const doc = iframe.contentDocument;
       if (doc) {
-        doc.body.style.backgroundColor = "#0a1020";
+        // Theme-aware background injection - uses CSS variable
+        doc.body.style.backgroundColor = "var(--background)";
         const style = doc.createElement("style");
         style.textContent = `
-          body, html { background-color: #0a1020 !important; }
-          #background { background-color: #0a1020 !important; }
-          .webviewer-canvas-container { background-color: #0a1020 !important; }
+          body, html { background-color: var(--background) !important; }
+          #background { background-color: var(--background) !important; }
+          .webviewer-canvas-container { background-color: var(--background) !important; }
         `;
         doc.head.appendChild(style);
       }
@@ -58,7 +59,7 @@ const StableIframeComponent = ({ url, title }: { url: string; title: string }) =
   };
 
   return (
-    <div className="w-full h-full bg-[#0a1020] rounded-lg overflow-hidden">
+    <div className="w-full h-full bg-background rounded-lg overflow-hidden">
       <iframe 
         src={url} 
         className="w-full h-full border-0 block" 
@@ -141,8 +142,8 @@ export default function CaseViewerTabs({
           active
             ? "border-accent text-accent" 
             : disabled
-            ? "border-transparent text-white/20 cursor-not-allowed"
-            : "border-transparent text-white/60 hover:text-white"
+            ? "border-transparent text-muted/30 cursor-not-allowed"
+            : "border-transparent text-muted hover:text-foreground"
         }
       `}
     >
@@ -163,8 +164,8 @@ export default function CaseViewerTabs({
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0a1020] flex flex-col h-full overflow-hidden shadow-2xl">
-      <div className="flex items-center border-b border-white/10 px-2 bg-white/5 h-14 shrink-0">
+    <div className="rounded-xl border border-border bg-background flex flex-col h-full overflow-hidden shadow-2xl">
+      <div className="flex items-center border-b border-border px-2 bg-surface h-14 shrink-0">
         {tabBtn("scan", "Scan", tab === "scan", !hasScanViewer)}
         {tabBtn("design_with_model", "Design + Model", tab === "design_with_model", !hasDesignViewer)}
         {tabBtn("design_only", "Design Only", tab === "design_only", !hasDesignOnlyViewer)}
@@ -178,7 +179,7 @@ export default function CaseViewerTabs({
         </div>
       </div>
 
-      <div className="flex-1 p-2 relative min-h-0 bg-[#0a1020]">
+      <div className="flex-1 p-2 relative min-h-0 bg-background">
         {renderContent()}
       </div>
     </div>

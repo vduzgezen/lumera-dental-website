@@ -156,7 +156,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
   const statusColor = 
     item.status === "CHANGES_REQUESTED" ? "text-red-400" :
     item.status === "COMPLETED" || item.status === "DELIVERED" ? "text-emerald-400" :
-    "text-white";
+    "text-foreground";
 
   return (
     <section className="h-full w-full flex flex-col p-4 overflow-hidden">
@@ -174,22 +174,22 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-semibold">{item.patientAlias}</h1>
-            <div className="text-white/70 text-xs mt-1 flex flex-wrap items-center gap-x-3">
-              <span>Clinic: <span className="text-white">{item.clinic.name}</span></span>
+            <div className="text-muted text-xs mt-1 flex flex-wrap items-center gap-x-3">
+              <span>Clinic: <span className="text-foreground">{item.clinic.name}</span></span>
               <span>•</span>
               
               {isLabOrAdmin && item.doctorName && (
-                <><span>Doctor: <span className="text-white">{item.doctorName}</span></span><span>•</span></>
+                <><span>Doctor: <span className="text-foreground">{item.doctorName}</span></span><span>•</span></>
               )}
 
               {isLabOrAdmin && item.assigneeUser && (
                 <>
-                  <span>Designer: <span className="text-white">{item.assigneeUser.name || item.assigneeUser.email}</span></span>
+                  <span>Designer: <span className="text-foreground">{item.assigneeUser.name || item.assigneeUser.email}</span></span>
                   <span>•</span>
                 </>
               )}
 
-              <span>Teeth: <span className="text-white">{item.toothCodes}</span></span>
+              <span>Teeth: <span className="text-foreground">{item.toothCodes}</span></span>
               <span>•</span>
               <span>Status: <span className={`${statusColor} font-medium`}>{item.status.replace(/_/g, " ")}</span></span>
               <span>•</span>
@@ -199,7 +199,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
             </div>
           </div>
           
-          <Link href="/portal/cases" className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition text-xs font-medium text-white/80">
+          <Link href="/portal/cases" className="px-3 py-1.5 rounded-lg bg-surface border border-border hover:bg-[var(--accent-dim)] transition text-xs font-medium text-muted">
             ← Cases
           </Link>
         </div>

@@ -25,7 +25,7 @@ const SortableHeader = ({
     <th 
       className={`
         h-12 p-0 font-medium cursor-pointer transition-colors duration-200 select-none group border-b-2 outline-none whitespace-nowrap align-middle
-        ${isActive ? "text-white border-accent" : "border-transparent hover:text-white"}
+        ${isActive ? "text-accent border-accent" : "text-muted border-transparent hover:text-foreground"}
         ${className}
       `}
       onClick={() => onSort(colKey)}
@@ -94,10 +94,10 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
   };
 
   return (
-    <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl">
+    <div className="flex-1 min-h-0 rounded-xl border border-border bg-surface overflow-hidden flex flex-col shadow-2xl">
       <div className="flex-1 overflow-auto custom-scrollbar">
         <table className="w-full text-left text-sm min-w-[1800px]">
-          <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10 h-12">
+          <thead className="bg-surface text-muted sticky top-0 backdrop-blur-md z-10 border-b border-border h-12">
             <tr>
                 <SortableHeader label="Case Alias" colKey="alias" sortConfig={sortConfig} onSort={handleSort} className="w-[100px]" />
                 <SortableHeader label="Case ID" colKey="id" sortConfig={sortConfig} onSort={handleSort} className="w-[100px]" />
@@ -115,20 +115,20 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
                 <SortableHeader label="Margin" colKey="margin" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px]" align="right" />
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-border">
             {sortedRows.length === 0 && (
                 <tr>
-                    <td colSpan={14} className="p-12 text-center text-white/40">No records found for this period.</td>
+                    <td colSpan={14} className="p-12 text-center text-muted">No records found for this period.</td>
                 </tr>
             )}
             {sortedRows.map(r => (
-                <tr key={r.id} className="hover:bg-white/5 transition-colors group h-12">
-                    <td className="px-4 font-medium text-white truncate">{r.patientAlias}</td>
+                <tr key={r.id} className="hover:bg-[var(--accent-dim)] transition-colors group h-12">
+                    <td className="px-4 font-medium text-foreground truncate">{r.patientAlias}</td>
                     <td className="px-4"><CopyableId id={r.id} truncate /></td>
-                    <td className="px-4 text-white/80 truncate">{r.doctorName || "—"}</td>
-                    <td className="px-4 text-white/70 text-xs truncate">{r.clinic.name}</td>
-                    <td className="px-4 text-white/60 text-xs font-mono">{new Date(r.createdAt).toLocaleDateString()}</td>
-                    <td className="px-4 text-white/70">
+                    <td className="px-4 text-foreground/80 truncate">{r.doctorName || "—"}</td>
+                    <td className="px-4 text-muted text-xs truncate">{r.clinic.name}</td>
+                    <td className="px-4 text-muted text-xs font-mono">{new Date(r.createdAt).toLocaleDateString()}</td>
+                    <td className="px-4 text-muted">
                         {r.designerName ? (
                             <div className="flex items-center gap-2">
                                 <div className="w-5 h-5 rounded-full bg-purple-500/10 text-purple-300 text-[10px] font-bold flex items-center justify-center border border-purple-500/20 shrink-0">
@@ -147,16 +147,16 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
                             </div>
                         ) : <span className="text-white/20 italic text-xs">-</span>}
                     </td>
-                    <td className="px-4 text-white">
+                    <td className="px-4 text-foreground">
                         <div className="text-xs font-medium truncate">{r.product.replace(/_/g, " ")}</div>
-                        {r.material && <div className="text-[10px] text-white/40 truncate">{r.material}</div>}
+                        {r.material && <div className="text-[10px] text-muted truncate">{r.material}</div>}
                     </td>
-                    <td className="px-4 text-center text-white/60">{r.units}</td>
+                    <td className="px-4 text-center text-muted">{r.units}</td>
                     <td className="px-4 text-right font-medium text-emerald-400/90">{formatMoney(Number(r.cost))}</td>
                     <td className="px-4 text-right text-blue-300/80">{formatMoney(r.millingCost)}</td>
                     <td className="px-4 text-right text-purple-300/80">{formatMoney(r.designCost)}</td>
                     <td className="px-4 text-right text-orange-300/80">{formatMoney(r.commissionCost)}</td>
-                    <td className="px-4 text-right font-bold text-white/90">{formatMoney(r.margin)}</td>
+                    <td className="px-4 text-right font-bold text-foreground">{formatMoney(r.margin)}</td>
                 </tr>
             ))}
           </tbody>
@@ -164,8 +164,8 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
       </div>
 
       {/* ✅ UNIFIED FOOTER: SAME ROW */}
-      <div className="flex-none h-14 p-3 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
-        <span className="text-xs text-white/40 pl-2">
+      <div className="flex-none h-14 p-3 border-t border-border bg-surface flex items-center justify-between">
+        <span className="text-xs text-muted pl-2">
           Showing {rows.length} of {totalCount} records
         </span>
         
@@ -173,11 +173,11 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="px-4 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-bold text-white transition-colors flex items-center gap-2"
+            className="px-4 py-1.5 rounded-lg bg-surface hover:bg-[var(--accent-dim)] text-xs font-bold text-foreground transition-colors flex items-center gap-2 border border-border"
           >
             {loadingMore ? (
               <>
-                <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                <div className="w-3 h-3 border-2 border-muted border-t-foreground rounded-full animate-spin" />
                 Loading...
               </>
             ) : "Load More"}

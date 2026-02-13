@@ -65,22 +65,22 @@ export default function Comments({ caseId }: { caseId: string }) {
   return (
     <div className="space-y-4">
       {loading ? (
-        <p className="text-white/60 text-sm">Loading comments…</p>
+        <p className="text-muted text-sm">Loading comments…</p>
       ) : error ? (
         <p className="text-red-400 text-sm">{error}</p>
       ) : (
         <div className="space-y-3">
-          {items.length === 0 && <p className="text-white/60 text-sm">No comments yet.</p>}
+          {items.length === 0 && <p className="text-muted text-sm">No comments yet.</p>}
           {items.map((c) => {
             const { imageUrl, text } = extractImage(c.body);
             return (
-              <div key={c.id} className="rounded-lg border border-white/10 p-3 bg-white/5">
-                <div className="text-[10px] uppercase tracking-wide text-white/40 mb-2">
+              <div key={c.id} className="rounded-lg border border-border p-3 bg-surface-highlight">
+                <div className="text-[10px] uppercase tracking-wide text-muted/60 mb-2">
                   {new Date(c.createdAt).toLocaleString()}
                 </div>
                 
                 {imageUrl && (
-                  <div className="mb-2 rounded overflow-hidden border border-white/10 bg-black/50">
+                  <div className="mb-2 rounded overflow-hidden border border-border bg-surface">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img 
                       src={imageUrl} 
@@ -90,25 +90,25 @@ export default function Comments({ caseId }: { caseId: string }) {
                   </div>
                 )}
                 
-                {text && <div className="whitespace-pre-wrap text-sm text-white/90">{text}</div>}
+                {text && <div className="whitespace-pre-wrap text-sm text-foreground/90">{text}</div>}
               </div>
             );
           })}
         </div>
       )}
 
-      <div className="flex gap-2 items-start pt-2 border-t border-white/10">
+      <div className="flex gap-2 items-start pt-2 border-t border-border">
         <input
           value={body}
           onChange={(e) => setBody(e.target.value)}
           placeholder="Write a comment…"
-          className="flex-1 rounded-lg p-2 bg-black/40 border border-white/10 text-white text-sm focus:border-white/30 outline-none transition"
+          className="flex-1 rounded-lg p-2 bg-surface-highlight border border-border text-foreground text-sm focus:border-accent/50 outline-none transition"
           onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && post()}
         />
         <button
           onClick={post}
           disabled={posting || !body.trim()}
-          className="rounded-lg px-3 py-2 bg-white text-black text-sm font-medium disabled:opacity-50 hover:bg-white/90 transition"
+          className="rounded-lg px-3 py-2 bg-accent text-white text-sm font-medium disabled:opacity-50 hover:bg-accent/80 transition"
         >
           {posting ? "..." : "Post"}
         </button>

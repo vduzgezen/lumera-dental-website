@@ -21,8 +21,8 @@ export default function STLViewer({ url }: { url: string }) {
 
     // 1. Scene Setup
     const scene = new THREE.Scene();
-    // FIX: Set background to Midnight Blue (0x0a1020)
-    scene.background = new THREE.Color(0x0a1020);
+    // Use transparent background to let CSS variable show through
+    scene.background = null;
 
     // 2. Camera
     const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
@@ -32,6 +32,8 @@ export default function STLViewer({ url }: { url: string }) {
     const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    // Add alpha to renderer to support transparency
+    renderer.setClearColor(0x000000, 0);
     
     while (container.firstChild) {
       container.removeChild(container.firstChild);
@@ -183,11 +185,11 @@ export default function STLViewer({ url }: { url: string }) {
 
   return (
     // FIX: Container background also Midnight Blue to match scene
-    <div className="relative w-full h-full bg-[#0a1020]">
+    <div className="relative w-full h-full bg-background">
       <div ref={ref} className="w-full h-full cursor-move" />
       {error && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10">
-          <p className="text-sm text-red-400 font-medium px-4 py-2 bg-black/80 rounded-md border border-red-500/30">
+        <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
+          <p className="text-sm text-red-400 font-medium px-4 py-2 bg-surface rounded-md border border-red-500/30">
             {error}
           </p>
         </div>
