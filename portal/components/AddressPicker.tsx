@@ -96,10 +96,10 @@ export default function AddressPicker({ value, onChange }: Props) {
   }
 
   return (
-    <div className="space-y-4 pt-2 border-t border-white/5">
+    <div className="space-y-4 pt-2 border-t border-border">
       <div className="flex items-center justify-between">
         <h4 className="text-xs font-bold text-accent uppercase tracking-wider">Address</h4>
-        <span className="text-[10px] text-white/40">Search or enter new</span>
+        <span className="text-[10px] text-muted">Search or enter new</span>
       </div>
 
       {/* Search Bar with Live Search */}
@@ -116,26 +116,26 @@ export default function AddressPicker({ value, onChange }: Props) {
       <div>
         <input 
           placeholder="Street Address" 
-          className="w-full bg-white/5 border border-white/10 rounded-lg px-4 py-2 text-white text-sm focus:border-accent/50 outline-none mb-2 placeholder-white/30"
+          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2 text-foreground text-sm focus:border-accent/50 outline-none mb-2 placeholder-muted"
           value={value.street}
           onChange={(e) => handleChangeField("street", e.target.value)}
         />
         <div className="grid grid-cols-3 gap-2">
           <input 
             placeholder="City" 
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-accent/50 outline-none placeholder-white/30"
+            className="bg-surface-highlight border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-accent/50 outline-none placeholder-muted"
             value={value.city}
             onChange={(e) => handleChangeField("city", e.target.value)}
           />
           <input 
             placeholder="State" 
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-accent/50 outline-none placeholder-white/30"
+            className="bg-surface-highlight border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-accent/50 outline-none placeholder-muted"
             value={value.state}
             onChange={(e) => handleChangeField("state", e.target.value)}
           />
           <input 
             placeholder="Zip" 
-            className="bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-white text-sm focus:border-accent/50 outline-none placeholder-white/30"
+            className="bg-surface-highlight border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-accent/50 outline-none placeholder-muted"
             value={value.zipCode}
             onChange={(e) => handleChangeField("zipCode", e.target.value)}
           />

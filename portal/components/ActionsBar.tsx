@@ -53,14 +53,14 @@ export default function ActionsBar({
   }
 
   return (
-    <div className="rounded-xl border border-white/10 p-4">
+    <div className="rounded-xl border border-border p-4 bg-surface">
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="text"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="Optional note…"
-          className="px-3 py-1.5 rounded-md bg-white/10 border border-white/10 text-sm flex-1 min-w-[200px]"
+          className="px-3 py-1.5 rounded-md bg-surface-highlight border border-border text-sm flex-1 min-w-[200px] text-foreground placeholder:text-muted"
         />
 
         {/* Doctor actions */}
@@ -89,14 +89,14 @@ export default function ActionsBar({
             <button
               disabled={busy}
               onClick={() => send("READY_FOR_REVIEW")}
-              className="px-3 py-1.5 rounded-md bg-white text-black text-sm"
+              className="px-3 py-1.5 rounded-md bg-accent text-white text-sm hover:bg-accent/80 transition"
             >
               Ready for Review
             </button>
             <button
               disabled={busy}
               onClick={() => send("IN_DESIGN")}
-              className="px-3 py-1.5 rounded-md bg-white/80 text-black text-sm"
+              className="px-3 py-1.5 rounded-md bg-surface-highlight text-foreground text-sm border border-border hover:bg-[var(--accent-dim)] transition"
             >
               Back to Design
             </button>
@@ -107,7 +107,7 @@ export default function ActionsBar({
       {msg && <p className="text-emerald-400 text-sm mt-2">{msg}</p>}
       {err && <p className="text-red-400 text-sm mt-2">{err}</p>}
 
-      <p className="text-white/50 text-xs mt-2">
+      <p className="text-muted text-xs mt-2">
         Status now: <b>{status}</b>
       </p>
     </div>

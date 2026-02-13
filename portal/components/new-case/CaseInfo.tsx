@@ -29,12 +29,12 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-6 shadow-lg">
-      <div className="flex justify-between items-center border-b border-white/5 pb-2">
-        <h2 className="text-lg font-medium text-white/90">Case Information</h2>
+    <div className="rounded-xl border border-border bg-surface p-6 space-y-6 shadow-lg">
+      <div className="flex justify-between items-center border-b border-border pb-2">
+        <h2 className="text-lg font-medium text-foreground">Case Information</h2>
         {/* Live Alias Preview */}
         <div className="flex items-center gap-2">
-           <span className="text-[10px] uppercase text-white/40 tracking-wider">Auto-ID:</span>
+           <span className="text-[10px] uppercase text-muted tracking-wider">Auto-ID:</span>
            <span className="font-mono text-sm font-bold text-blue-400 bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20">
              {data.patientAlias || "Waiting for data..."}
            </span>
@@ -44,23 +44,23 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
       {/* Name Fields */}
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-white/70">Patient First Name</label>
+          <label className="text-sm font-medium text-muted">Patient First Name</label>
           <input
             required
             value={data.patientFirstName}
             onChange={(e) => update({ patientFirstName: e.target.value })}
             placeholder="e.g. John"
-            className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-white/70">Patient Last Name</label>
+          <label className="text-sm font-medium text-muted">Patient Last Name</label>
           <input
             required
             value={data.patientLastName}
             onChange={(e) => update({ patientLastName: e.target.value })}
             placeholder="e.g. Doe"
-            className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
           />
         </div>
       </div>
@@ -68,23 +68,23 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
       {/* Dates */}
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-white/70">Date of Order</label>
+          <label className="text-sm font-medium text-muted">Date of Order</label>
           <input
             type="date"
             required
             value={data.orderDate}
             onChange={handleOrderDateChange} // ✅ Updates both dates
-            className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition [color-scheme:dark]"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
           />
         </div>
         <div className="space-y-2">
-          <label className="text-sm font-medium text-white/70">Due Date</label>
+          <label className="text-sm font-medium text-muted">Due Date</label>
           <input
             type="date"
             required
             value={data.dueDate} // ✅ Bound to editable state
             onChange={(e) => update({ dueDate: e.target.value })} // ✅ Allow manual edit
-            className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition [color-scheme:dark]"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
           />
         </div>
       </div>

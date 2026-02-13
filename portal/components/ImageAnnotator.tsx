@@ -97,21 +97,21 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/90 flex flex-col items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 bg-background/95 flex flex-col items-center justify-center p-4">
       {/* Toolbar */}
-      <div className="w-full max-w-4xl flex justify-between items-center mb-4 text-white">
+      <div className="w-full max-w-4xl flex justify-between items-center mb-4 text-foreground">
         <h3 className="text-lg font-medium">Draw on Image</h3>
         <div className="flex gap-3">
           <button 
             onClick={onCancel}
-            className="px-4 py-2 rounded-lg hover:bg-white/10"
+            className="px-4 py-2 rounded-lg hover:bg-[var(--accent-dim)] transition"
           >
             Cancel
           </button>
           <button 
             onClick={handleSave}
             disabled={!imageLoaded}
-            className="px-6 py-2 bg-red-500 hover:bg-red-600 rounded-lg font-bold"
+            className="px-6 py-2 bg-accent hover:bg-accent/80 rounded-lg font-bold text-white transition"
           >
             Save Annotation
           </button>
@@ -121,7 +121,7 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
       {/* Canvas Container */}
       <div 
         ref={containerRef}
-        className="relative bg-[#1a1a1a] rounded-lg overflow-hidden shadow-2xl border border-white/10"
+        className="relative bg-surface rounded-lg overflow-hidden shadow-2xl border border-border"
       >
         <canvas
           ref={canvasRef}
@@ -135,13 +135,13 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
           className="cursor-crosshair block"
         />
         {!imageLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center text-white/50">
+          <div className="absolute inset-0 flex items-center justify-center text-muted">
             Loading image...
           </div>
         )}
       </div>
       
-      <p className="mt-4 text-white/40 text-sm">
+      <p className="mt-4 text-muted text-sm">
         Click and drag to draw. Ideal for marking margins or contacts.
       </p>
     </div>

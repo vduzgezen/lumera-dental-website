@@ -31,17 +31,17 @@ export default function RequestListClient({ requests }: { requests: any[] }) {
       {/* Header */}
       <div className="flex-none flex items-center justify-between">
          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold text-white hidden sm:block">Admin</h1>
-            <div className="h-6 w-px bg-white/10 hidden sm:block" />
+            <h1 className="text-2xl font-semibold text-foreground hidden sm:block">Admin</h1>
+            <div className="h-6 w-px bg-border hidden sm:block" />
             <AdminTabs />
          </div>
       </div>
 
       {/* Table Container */}
-      <div className="flex-1 min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden flex flex-col shadow-2xl shadow-black/50">
+      <div className="flex-1 min-h-0 rounded-xl border border-border bg-surface overflow-hidden flex flex-col shadow-2xl">
         <div className="flex-1 overflow-auto custom-scrollbar">
           <table className="w-full text-left text-sm min-w-[800px]">
-            <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
+            <thead className="bg-surface text-muted sticky top-0 backdrop-blur-md z-10 border-b border-border">
               <tr>
                 <th className="p-4 font-medium">Name</th>
                 <th className="p-4 font-medium">Email</th>
@@ -50,23 +50,23 @@ export default function RequestListClient({ requests }: { requests: any[] }) {
                 <th className="p-4 font-medium text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-white/5">
+            <tbody className="divide-y divide-border">
               {requests.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="p-12 text-center text-white/40">
+                  <td colSpan={5} className="p-12 text-center text-muted">
                     No pending requests.
                   </td>
                 </tr>
               )}
               {requests.map((r) => (
-                <tr key={r.id} className="hover:bg-white/5 transition-colors">
-                  <td className="p-4 font-medium text-white">{r.name}</td>
-                  <td className="p-4 text-white/60">{r.email}</td>
-                  <td className="p-4 text-white/60">
-                    <div className="text-white font-medium">{r.clinicName}</div>
+                <tr key={r.id} className="hover:bg-[var(--accent-dim)] transition-colors">
+                  <td className="p-4 font-medium text-foreground">{r.name}</td>
+                  <td className="p-4 text-muted">{r.email}</td>
+                  <td className="p-4 text-muted">
+                    <div className="text-foreground font-medium">{r.clinicName}</div>
                     <div className="text-xs opacity-70">{r.city}, {r.state}</div>
                   </td>
-                  <td className="p-4 text-white/40">{new Date(r.createdAt).toLocaleDateString()}</td>
+                  <td className="p-4 text-muted">{new Date(r.createdAt).toLocaleDateString()}</td>
                   <td className="p-4 text-right">
                     <div className="flex justify-end gap-2">
                       <button 

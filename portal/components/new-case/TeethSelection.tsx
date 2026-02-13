@@ -84,15 +84,15 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
   const currentPrice = getPrice();
 
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-6 shadow-lg">
-      <h2 className="text-lg font-medium text-white/90 border-b border-white/5 pb-2">
+    <div className="rounded-xl border border-border bg-surface p-6 space-y-6 shadow-lg">
+      <h2 className="text-lg font-medium text-foreground border-b border-border pb-2">
         Prescription & Teeth
       </h2>
 
       {/* 1. PRODUCT & MATERIAL ROW */}
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-2">
-          <label className="text-sm font-medium text-white/70">Product</label>
+          <label className="text-sm font-medium text-muted">Product</label>
           <div className="grid grid-cols-2 gap-2">
               {(["ZIRCONIA", "EMAX", "NIGHTGUARD", "INLAY_ONLAY"] as ProductType[]).map((type) => (
                <button
@@ -101,8 +101,8 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                  onClick={() => handleProductChange(type)}
                  className={`px-3 py-2 rounded-lg text-xs font-bold transition-all border
                    ${data.product === type 
-                     ? "bg-blue-600 border-blue-500 text-white" 
-                     : "bg-black/40 border-white/10 text-white/50 hover:bg-white/10"
+                     ? "bg-accent border-accent text-white" 
+                     : "bg-surface border-border text-muted hover:bg-[var(--accent-dim)]"
                    }`}
               >
                  {type.replace("_", " ")}
@@ -114,11 +114,11 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
         <div className="space-y-4">
            {data.product === "ZIRCONIA" && (
              <div className="space-y-2">
-               <label className="text-sm font-medium text-white/70">Zirconia Material</label>
+               <label className="text-sm font-medium text-muted">Zirconia Material</label>
                <div className="flex gap-2">
                  {(["HT", "ML"] as MaterialType[]).map(m => (
                     <button key={m} type="button" onClick={() => update({ material: m })}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold border ${data.material === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-black/40 border-white/10 text-white/40"}`}>
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold border ${data.material === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-surface border-border text-muted"}`}>
                       {m}
                     </button>
                  ))}
@@ -128,11 +128,11 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
            
            {isNightguard && (
              <div className="space-y-2">
-               <label className="text-sm font-medium text-white/70">Material Hardness</label>
+               <label className="text-sm font-medium text-muted">Material Hardness</label>
                <div className="flex gap-2">
                  {(["HARD", "SOFT"] as MaterialType[]).map(m => (
                     <button key={m} type="button" onClick={() => update({ material: m })}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold border ${data.material === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-black/40 border-white/10 text-white/40"}`}>
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold border ${data.material === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-surface border-border text-muted"}`}>
                       {m}
                     </button>
                  ))}
@@ -143,34 +143,34 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
            {/* SHADE LAYERING */}
            {!isNightguard && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-white/70">Shade Layering</label>
+                <label className="text-sm font-medium text-muted">Shade Layering</label>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
                     <input
                       value={shadeParts.body}
                       onChange={(e) => updateShade("body", e.target.value)}
                       placeholder="Body (A2)"
-                      className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white outline-none focus:border-blue-500/50 text-center placeholder-white/20"
+                      className="w-full rounded-lg bg-surface-highlight border border-border px-3 py-2 text-foreground outline-none focus:border-accent/50 text-center placeholder-muted"
                     />
-                    <div className="text-[10px] text-blue-400 text-center font-bold uppercase tracking-wider">Body *</div>
+                    <div className="text-[10px] text-accent text-center font-bold uppercase tracking-wider">Body *</div>
                   </div>
                   <div className="space-y-1">
                     <input
                       value={shadeParts.incisal}
                       onChange={(e) => updateShade("incisal", e.target.value)}
                       placeholder="Matching Body"
-                      className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white outline-none focus:border-blue-500/50 text-center placeholder-white/20"
+                      className="w-full rounded-lg bg-surface-highlight border border-border px-3 py-2 text-foreground outline-none focus:border-accent/50 text-center placeholder-muted"
                     />
-                    <div className="text-[10px] text-white/30 text-center uppercase tracking-wider">Incisal</div>
+                    <div className="text-[10px] text-muted text-center uppercase tracking-wider">Incisal</div>
                   </div>
                   <div className="space-y-1">
                     <input
                       value={shadeParts.gingival}
                       onChange={(e) => updateShade("gingival", e.target.value)}
                       placeholder="Matching Body"
-                      className="w-full rounded-lg bg-black/40 border border-white/10 px-3 py-2 text-white outline-none focus:border-blue-500/50 text-center placeholder-white/20"
+                      className="w-full rounded-lg bg-surface-highlight border border-border px-3 py-2 text-foreground outline-none focus:border-accent/50 text-center placeholder-muted"
                     />
-                    <div className="text-[10px] text-white/30 text-center uppercase tracking-wider">Gingival</div>
+                    <div className="text-[10px] text-muted text-center uppercase tracking-wider">Gingival</div>
                   </div>
                 </div>
              </div>
@@ -179,26 +179,26 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
       </div>
 
       {/* 2. PRICING TIER */}
-      <div className="p-4 rounded-lg bg-white/5 border border-white/10">
+      <div className="p-4 rounded-lg bg-surface border border-border">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
            <div className="flex gap-4 w-full md:w-auto">
               {(["IN_HOUSE", "STANDARD"] as ServiceLevel[]).map((level) => (
-                <label key={level} className={`flex-1 md:flex-none flex items-center gap-2 cursor-pointer p-3 rounded-lg border transition-all ${data.serviceLevel === level ? "bg-blue-500/10 border-blue-500/50" : "border-transparent hover:bg-white/5"}`}>
+                <label key={level} className={`flex-1 md:flex-none flex items-center gap-2 cursor-pointer p-3 rounded-lg border transition-all ${data.serviceLevel === level ? "bg-accent/10 border-accent/50" : "border-transparent hover:bg-[var(--accent-dim)]"}`}>
                    <input 
                     type="radio" 
                     name="serviceLevel" 
                     checked={data.serviceLevel === level}
                     onChange={() => update({ serviceLevel: level })}
-                    className="accent-blue-500"
+                    className="accent-accent"
                   />
-                  <span className={`text-sm font-bold ${data.serviceLevel === level ? "text-blue-400" : "text-white/60"}`}>
+                  <span className={`text-sm font-bold ${data.serviceLevel === level ? "text-accent" : "text-muted"}`}>
                     {level.replace("_", " ")}
                   </span>
                 </label>
               ))}
            </div>
            <div className="text-right">
-              <span className="text-xs text-white/40 block">Estimated Unit Price</span>
+              <span className="text-xs text-muted block">Estimated Unit Price</span>
              <span className="text-2xl font-bold text-emerald-400">${currentPrice}</span>
            </div>
         </div>
@@ -208,13 +208,13 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
       {!isNightguard && (
         <div className="space-y-2">
            <div className="flex justify-between items-center px-1">
-              <h3 className="text-sm font-medium text-white/70">Select Teeth <span className="text-blue-400">*</span></h3>
-              <span className="text-xs text-white/40">
+              <h3 className="text-sm font-medium text-muted">Select Teeth <span className="text-accent">*</span></h3>
+              <span className="text-xs text-muted">
                  {data.toothCodes.length > 0 ? `${data.toothCodes.length} selected` : "None"}
               </span>
            </div>
            
-           <div className="bg-black/40 rounded-xl border border-white/10 p-4 flex justify-center">
+           <div className="bg-surface rounded-xl border border-border p-4 flex justify-center">
               <ToothSelector 
                 value={data.toothCodes.join(",")} 
                 onChange={(val) => update({ toothCodes: val.split(",").map(t => t.trim()).filter(Boolean) })} 
@@ -226,14 +226,14 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
       {/* 4. DESIGN PREFERENCES */}
       <div className="space-y-2">
          <div className="flex justify-between items-center">
-             <label className="text-sm font-medium text-white/70">Designer Preferences</label>
-             <span className="text-[10px] text-white/40">Auto-filled from doctor profile</span>
+             <label className="text-sm font-medium text-muted">Designer Preferences</label>
+             <span className="text-[10px] text-muted">Auto-filled from doctor profile</span>
          </div>
          <textarea
            value={data.designPreferences}
            onChange={(e) => update({ designPreferences: e.target.value })}
            placeholder="E.g. Contacts heavy, light occlusion, open embrasures..."
-           className="w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-white focus:border-blue-500/50 outline-none transition h-24 resize-none"
+           className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition h-24 resize-none"
          />
       </div>
 

@@ -10,7 +10,7 @@ import type { Role, CaseStatus } from "@/lib/types";
 const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
   ssr: false, 
   loading: () => (
-    <div className="w-full h-full bg-[#0a1020] animate-pulse flex items-center justify-center text-white/30 text-sm">
+    <div className="w-full h-full bg-surface animate-pulse flex items-center justify-center text-muted text-sm">
       Loading 3D Viewer...
     </div>
   ),
@@ -145,8 +145,8 @@ export default function CaseViewerTabs({
           active
             ? "border-accent text-accent" 
             : disabled
-            ? "border-transparent text-white/20 cursor-not-allowed"
-            : "border-transparent text-white/60 hover:text-white"
+            ? "border-transparent text-muted/50 cursor-not-allowed"
+            : "border-transparent text-muted hover:text-foreground"
         }
       `}
     >
@@ -173,8 +173,8 @@ export default function CaseViewerTabs({
   };
 
   return (
-    <div className="rounded-xl border border-white/10 bg-[#0a1020] flex flex-col h-full overflow-hidden shadow-2xl">
-      <div className="flex items-center border-b border-white/10 px-2 bg-white/5 h-14 shrink-0">
+    <div className="rounded-xl border border-border bg-surface flex flex-col h-full overflow-hidden shadow-2xl">
+      <div className="flex items-center border-b border-border px-2 bg-surface-highlight h-14 shrink-0">
         {tabBtn("scan", "Scan", tab === "scan", !hasScanViewer)}
         {tabBtn("design_with_model", "Design + Model", tab === "design_with_model", !hasDesignViewer)}
         {tabBtn("design_only", "Design Only", tab === "design_only", !hasDesignOnlyViewer)}

@@ -12,18 +12,18 @@ export default function Case3DPanel({ url }: { url: string | null }) {
     setMounted(true);
   }, []);
 
-  if (!mounted) return <div className="w-full h-full bg-black/20 animate-pulse" />;
+  if (!mounted) return <div className="w-full h-full bg-surface animate-pulse" />;
 
   if (!url) {
     return (
-      <div className="w-full h-full flex items-center justify-center text-white/30 text-sm">
+      <div className="w-full h-full flex items-center justify-center text-muted text-sm">
         No 3D model available
       </div>
     );
   }
 
   return (
-    <div className="w-full h-full bg-[#1e1e1e] relative">
+    <div className="w-full h-full bg-surface relative">
       <STLViewer url={url} />
     </div>
   );

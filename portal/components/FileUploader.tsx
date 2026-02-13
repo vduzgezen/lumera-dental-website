@@ -99,20 +99,20 @@ export default function FileUploader({
 
   return (
     <div className="space-y-2">
-      <div className="text-xs text-white/60 capitalize">{labelText}</div>
+      <div className="text-xs text-muted capitalize">{labelText}</div>
 
-      <label className="flex items-center justify-between gap-3 rounded-lg p-2 bg-black/40 border border-white/10 cursor-pointer hover:border-white/20 transition-colors">
-        <div className="flex-1 min-w-0 text-white/80">
+      <label className="flex items-center justify-between gap-3 rounded-lg p-2 bg-surface border border-border cursor-pointer hover:border-accent/30 transition-colors">
+        <div className="flex-1 min-w-0 text-foreground/80">
           {file ? (
             <>
               <div className="font-medium text-xs truncate" title={file.name}>{file.name}</div>
-              <div className="text-[10px] text-white/60">{(file.size / (1024 * 1024)).toFixed(2)} MB</div>
+              <div className="text-[10px] text-muted">{(file.size / (1024 * 1024)).toFixed(2)} MB</div>
             </>
           ) : (
-            <div className="text-xs text-white/60 truncate">Choose file…</div>
+            <div className="text-xs text-muted truncate">Choose file…</div>
           )}
         </div>
-        <div className="shrink-0 rounded-md bg-white text-black px-3 py-1.5 text-xs font-medium">Browse</div>
+        <div className="shrink-0 rounded-md bg-accent text-white px-3 py-1.5 text-xs font-medium">Browse</div>
         <input type="file" accept={finalAccept} onChange={onFileChange} className="hidden" />
       </label>
 
@@ -120,7 +120,7 @@ export default function FileUploader({
         <button
           onClick={send}
           disabled={busy || !file}
-          className="rounded-lg px-3 py-1.5 bg-white text-black text-xs font-bold disabled:opacity-50 hover:bg-gray-200 transition-colors"
+          className="rounded-lg px-3 py-1.5 bg-accent text-white text-xs font-bold disabled:opacity-50 hover:bg-accent/80 transition-colors"
         >
           {busy ? "Uploading…" : "Upload"}
         </button>

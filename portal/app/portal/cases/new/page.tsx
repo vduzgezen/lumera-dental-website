@@ -60,21 +60,21 @@ export default async function NewCasePage() {
   let currentUserData = null;
 
   return (
-    <div className="h-full flex flex-col overflow-hidden bg-[#0a1020]">
+    <div className="h-full flex flex-col overflow-hidden bg-background">
       
-      <div className="flex-none h-16 border-b border-white/10 flex items-center justify-between px-6 bg-black/20">
+      <div className="flex-none h-16 border-b border-border flex items-center justify-between px-6 bg-surface">
         <div className="flex items-center gap-4">
           <Link 
             href="/portal/cases" 
-            className="flex items-center gap-2 text-white/60 hover:text-white transition-colors text-sm font-medium"
+            className="flex items-center gap-2 text-muted hover:text-foreground transition-colors text-sm font-medium"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Back to Cases
           </Link>
-          <div className="h-6 w-px bg-white/10" />
-          <h1 className="text-lg font-semibold text-white">Create New Case</h1>
+          <div className="h-6 w-px bg-border" />
+          <h1 className="text-lg font-semibold text-foreground">Create New Case</h1>
         </div>
       </div>
 

@@ -58,14 +58,14 @@ export default function ReviewToggle({
             <button
               onClick={request}
               disabled={busy}
-              className="rounded-lg px-3 py-2 border border-white/20"
+              className="rounded-lg px-3 py-2 border border-border hover:bg-[var(--accent-dim)] transition"
             >
               Update question
             </button>
             <button
               onClick={clearReview}
               disabled={busy}
-              className="rounded-lg px-3 py-2 bg-white text-black"
+              className="rounded-lg px-3 py-2 bg-accent text-white hover:bg-accent/80 transition"
             >
               Clear review
             </button>
@@ -75,7 +75,7 @@ export default function ReviewToggle({
         <button
           onClick={request}
           disabled={busy}
-          className="rounded-lg px-3 py-2 border border-white/20"
+          className="rounded-lg px-3 py-2 border border-border bg-surface"
         >
           Request Doctor Review
         </button>

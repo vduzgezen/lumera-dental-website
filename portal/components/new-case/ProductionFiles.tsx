@@ -24,8 +24,8 @@ const FileInput = ({
 }) => (
   <div className="space-y-1">
     <div className="flex justify-between items-end gap-2 overflow-hidden">
-      <label className="text-xs font-medium text-white/70 uppercase tracking-wider shrink-0">
-        {label} {req && <span className="text-blue-400">*</span>}
+      <label className="text-xs font-medium text-muted uppercase tracking-wider shrink-0">
+        {label} {req && <span className="text-accent">*</span>}
       </label>
       
       {/* ✅ FIX: CSS Truncation ensures this never breaks layout */}
@@ -42,13 +42,13 @@ const FileInput = ({
           accept={accept}
           onChange={(e) => onChange(e.target.files?.[0] || null)}
           className="
-          w-full text-sm text-white/60
+          w-full text-sm text-foreground
           file:mr-4 file:py-2.5 file:px-4
           file:rounded-lg file:border-0
           file:text-sm file:font-semibold
-          file:bg-blue-600 file:text-white
-          hover:file:bg-blue-500 file:transition-colors
-          cursor-pointer bg-black/40 rounded-lg border border-white/10 p-2
+          file:bg-accent file:text-white
+          hover:file:bg-accent/80 file:transition-colors
+          cursor-pointer bg-surface-highlight rounded-lg border border-border p-2
           "
       />
     </div>
@@ -57,8 +57,8 @@ const FileInput = ({
 
 export default function ProductionFiles({ data, update }: ProductionFilesProps) {
   return (
-    <div className="rounded-xl border border-white/10 bg-black/20 p-6 space-y-4 shadow-lg">
-      <h2 className="text-lg font-medium text-white/90 border-b border-white/5 pb-2">
+    <div className="rounded-xl border border-border bg-surface p-6 space-y-4 shadow-lg">
+      <h2 className="text-lg font-medium text-foreground border-b border-border pb-2">
          Production Files
       </h2>
       <div className="grid grid-cols-1 gap-6">
@@ -80,11 +80,11 @@ export default function ProductionFiles({ data, update }: ProductionFilesProps) 
             />
          </div>
 
-         <div className="w-full h-px bg-white/5" />
+         <div className="w-full h-px bg-border" />
 
          {/* Optional / Construction Files */}
          <div>
-            <span className="text-[10px] uppercase tracking-wider text-white/40 mb-2 block">
+            <span className="text-[10px] uppercase tracking-wider text-muted mb-2 block">
               Optional now (Required before Milling)
             </span>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

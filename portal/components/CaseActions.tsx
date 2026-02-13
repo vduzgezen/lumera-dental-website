@@ -59,7 +59,7 @@ export default function CaseActions({ caseId, role, currentStatus }: Props) {
         <button 
           onClick={() => change("CHANGES_REQUESTED")} 
           disabled={busy}
-          className="px-3 py-1.5 rounded-md border border-white/20 hover:bg-white/10 transition text-white text-xs font-medium disabled:opacity-50"
+          className="px-3 py-1.5 rounded-md border border-border hover:bg-[var(--accent-dim)] transition text-foreground text-xs font-medium disabled:opacity-50"
         >
           Request Changes
         </button>
@@ -69,7 +69,7 @@ export default function CaseActions({ caseId, role, currentStatus }: Props) {
         <button 
           onClick={() => change("APPROVED")} 
           disabled={busy}
-          className="px-3 py-1.5 rounded-md bg-white text-black text-xs font-bold hover:bg-gray-200 transition shadow-lg shadow-white/5 disabled:opacity-50"
+          className="px-3 py-1.5 rounded-md bg-accent text-white text-xs font-bold hover:bg-accent/80 transition shadow-lg disabled:opacity-50"
         >
           {busy ? "Updating..." : "Approve Design"}
         </button>
@@ -77,7 +77,7 @@ export default function CaseActions({ caseId, role, currentStatus }: Props) {
 
       {/* FIX: 'absolute' takes it out of flow so it doesn't stretch the header */}
       {err && (
-        <div className="absolute top-full right-0 mt-3 z-50 w-max max-w-[250px] bg-[#1a1a1a] border border-red-500/30 text-red-200 text-xs px-3 py-2 rounded-lg shadow-2xl animate-in fade-in slide-in-from-top-1">
+        <div className="absolute top-full right-0 mt-3 z-50 w-max max-w-[250px] bg-surface border border-red-500/30 text-red-200 text-xs px-3 py-2 rounded-lg shadow-2xl animate-in fade-in slide-in-from-top-1">
           <div className="flex items-center gap-2">
             <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -85,7 +85,7 @@ export default function CaseActions({ caseId, role, currentStatus }: Props) {
             <span>{err}</span>
           </div>
           {/* Little arrow pointing up */}
-          <div className="absolute -top-1 right-4 w-2 h-2 bg-[#1a1a1a] border-t border-l border-red-500/30 rotate-45" />
+          <div className="absolute -top-1 right-4 w-2 h-2 bg-surface border-t border-l border-red-500/30 rotate-45" />
         </div>
       )}
     </div>

@@ -16,7 +16,7 @@ export default function ProgressTracker({
   const activeIdx = STAGES.indexOf(stage);
 
   return (
-    <div className="rounded-xl border border-white/10 p-4">
+    <div className="rounded-xl border border-border p-4 bg-surface">
       <div className="flex items-center justify-between gap-2">
         {STAGES.map((s, i) => {
           const done = i < activeIdx;
@@ -32,11 +32,11 @@ export default function ProgressTracker({
               className={`
                 flex-1 py-2 rounded-lg text-xs font-medium border transition-all
                 ${active
-                  ? "bg-white text-black border-white shadow-md scale-105"
+                  ? "bg-accent text-white border-accent shadow-md scale-105"
                   : done
-                  ? "bg-white/20 text-white border-white/20"
-                  : "bg-white/5 text-white/40 border-white/5"}
-                ${isClickable ? "cursor-pointer hover:bg-white/10" : "cursor-default"}
+                  ? "bg-accent/20 text-foreground border-accent/30"
+                  : "bg-surface text-muted border-border"}
+                ${isClickable ? "cursor-pointer hover:bg-[var(--accent-dim)]" : "cursor-default"}
               `}
             >
               {s.replace("_", " ")}

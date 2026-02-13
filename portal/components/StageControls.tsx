@@ -51,7 +51,7 @@ export default function StageControls({
         onClickStage={canEdit ? setStage : undefined}
       />
       {!canEdit && (
-        <p className="mt-3 text-center text-xs text-white/40">
+        <p className="mt-3 text-center text-xs text-muted/60">
           Tracking status updated by laboratory.
         </p>
       )}

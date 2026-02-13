@@ -192,11 +192,11 @@ export default function CaseProcessBar({
   }
 
   return (
-    <div className="bg-black/20 border-b border-white/10 p-4">
+    <div className="bg-surface border-b border-border p-4">
       <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
         <div>
-          <h2 className="text-sm font-semibold text-white/90">Manufacturing Process</h2>
-          <p className="text-xs text-white/50">Current: {STAGE_LABEL[stage]}</p>
+          <h2 className="text-sm font-semibold text-foreground">Manufacturing Process</h2>
+          <p className="text-xs text-muted">Current: {STAGE_LABEL[stage]}</p>
         </div>
 
         {/* TRACKING */}
@@ -213,12 +213,12 @@ export default function CaseProcessBar({
                             {carrier || "Shipped"} Tracking
                         </div>
                         {canEdit && (
-                            <button onClick={() => setShowShipModal(true)} className="text-white/30 hover:text-white transition" title="Edit Tracking">
+                            <button onClick={() => setShowShipModal(true)} className="text-muted hover:text-foreground transition" title="Edit Tracking">
                                 <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
                             </button>
                         )}
                     </div>
-                    <a href={getTrackingLink(tracking, carrier)} target="_blank" rel="noopener noreferrer" className="text-sm font-mono font-medium text-white hover:text-blue-300 flex items-center gap-1 group transition-colors">
+                    <a href={getTrackingLink(tracking, carrier)} target="_blank" rel="noopener noreferrer" className="text-sm font-mono font-medium text-foreground hover:text-accent flex items-center gap-1 group transition-colors">
                         {tracking}
                         <svg className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                     </a>
@@ -235,8 +235,8 @@ export default function CaseProcessBar({
               className={`
                 px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2
                 ${canAdvance 
-                  ? "bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-900/20" 
-                  : "bg-white/5 text-white/30 cursor-not-allowed border border-white/5"}
+                  ? "bg-accent hover:bg-accent/80 text-white shadow-lg" 
+                  : "bg-surface text-muted cursor-not-allowed border border-border"}
               `}
             >
               {busy ? "Updating..." : (
@@ -254,7 +254,7 @@ export default function CaseProcessBar({
 
       {/* PROGRESS CIRCLES */}
       <div className="relative flex items-center mx-2">
-        <div className="absolute left-0 right-0 h-0.5 bg-white/10 top-3" />
+        <div className="absolute left-0 right-0 h-0.5 bg-border top-3" />
         <ol className="relative z-10 flex w-full justify-between">
            {STAGE_ORDER.map((s, idx) => {
             const isDone = idx < currentIndex || status === "DELIVERED";
@@ -267,15 +267,15 @@ export default function CaseProcessBar({
                   className={`
                     w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-colors
                     ${check 
-                      ? "bg-blue-500 border-blue-500 text-white" 
+                      ? "bg-accent border-accent text-white" 
                       : isCurrent 
-                        ? "bg-black border-blue-500 text-blue-400" 
-                        : "bg-black border-white/20 text-white/30"}
+                        ? "bg-surface border-accent text-accent" 
+                        : "bg-surface border-border text-muted"}
                   `}
                 >
                   {check ? "✓" : idx + 1}
                 </div>
-                <span className={`text-[10px] font-medium tracking-wide uppercase ${isCurrent ? "text-blue-300" : "text-white/40"}`}>
+                <span className={`text-[10px] font-medium tracking-wide uppercase ${isCurrent ? "text-accent" : "text-muted"}`}>
                   {STAGE_LABEL[s]}
                 </span>
               </li>
@@ -286,27 +286,27 @@ export default function CaseProcessBar({
 
       {/* MODAL */}
       {showShipModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div className="w-full max-w-sm bg-[#111b2d] border border-white/10 rounded-xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
-                <h3 className="text-lg font-semibold text-white">Shipment Details</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-4">
+            <div className="w-full max-w-sm bg-surface border border-border rounded-xl p-6 shadow-2xl space-y-4 animate-in fade-in zoom-in-95">
+                <h3 className="text-lg font-semibold text-foreground">Shipment Details</h3>
                 <div className="space-y-3">
                     <div>
-                        <label className="block text-xs font-bold text-white/50 uppercase mb-1">Carrier</label>
-                        <select className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500" value={shipForm.carrier} onChange={(e) => setShipForm({ ...shipForm, carrier: e.target.value })}>
+                        <label className="block text-xs font-bold text-muted uppercase mb-1">Carrier</label>
+                        <select className="w-full bg-surface-highlight border border-border rounded-lg p-2 text-foreground outline-none focus:border-accent" value={shipForm.carrier} onChange={(e) => setShipForm({ ...shipForm, carrier: e.target.value })}>
                             <option value="UPS">UPS</option><option value="FedEx">FedEx</option><option value="USPS">USPS</option><option value="DHL">DHL</option><option value="Other">Other</option>
                         </select>
                     </div>
                     {shipForm.carrier === "Other" && (
-                        <input placeholder="Enter Carrier Name" className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500" value={shipForm.otherCarrier} onChange={(e) => setShipForm({ ...shipForm, otherCarrier: e.target.value })} />
+                        <input placeholder="Enter Carrier Name" className="w-full bg-surface-highlight border border-border rounded-lg p-2 text-foreground outline-none focus:border-accent" value={shipForm.otherCarrier} onChange={(e) => setShipForm({ ...shipForm, otherCarrier: e.target.value })} />
                     )}
                     <div>
-                        <label className="block text-xs font-bold text-white/50 uppercase mb-1">Tracking Number</label>
-                        <input placeholder="1Z999..." className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-white outline-none focus:border-blue-500" value={shipForm.tracking} onChange={(e) => setShipForm({ ...shipForm, tracking: e.target.value })} />
+                        <label className="block text-xs font-bold text-muted uppercase mb-1">Tracking Number</label>
+                        <input placeholder="1Z999..." className="w-full bg-surface-highlight border border-border rounded-lg p-2 text-foreground outline-none focus:border-accent" value={shipForm.tracking} onChange={(e) => setShipForm({ ...shipForm, tracking: e.target.value })} />
                     </div>
                 </div>
                 <div className="flex justify-end gap-2 pt-2">
-                    <button onClick={() => setShowShipModal(false)} className="px-4 py-2 text-white/60 hover:text-white transition" disabled={busy}>Cancel</button>
-                    <button onClick={submitShipping} disabled={busy || !shipForm.tracking} className="px-6 py-2 bg-blue-600 text-white font-bold rounded-lg hover:bg-blue-500 transition disabled:opacity-50">{busy ? "Saving..." : "Confirm & Ship"}</button>
+                    <button onClick={() => setShowShipModal(false)} className="px-4 py-2 text-muted hover:text-foreground transition" disabled={busy}>Cancel</button>
+                    <button onClick={submitShipping} disabled={busy || !shipForm.tracking} className="px-6 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent/80 transition disabled:opacity-50">{busy ? "Saving..." : "Confirm & Ship"}</button>
                 </div>
             </div>
         </div>

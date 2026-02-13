@@ -64,7 +64,7 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
 
   return (
     <div className="space-y-2 relative" ref={containerRef}>
-      {label && <label className="text-sm font-medium text-white/70">{label}</label>}
+      {label && <label className="text-sm font-medium text-muted">{label}</label>}
       
       {/* Trigger Button */}
       <button
@@ -72,42 +72,42 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
         disabled={disabled}
         onClick={handleToggle}
         className={`
-          w-full rounded-lg bg-black/40 border border-white/10 px-4 py-3 text-left flex items-center justify-between transition
-          ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-white/30 focus:border-blue-500/50"}
+          w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-left flex items-center justify-between transition
+          ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-accent/30 focus:border-accent/50"}
         `}
       >
         <div className="flex flex-col items-start truncate">
-            <span className={selectedOption ? "text-white" : "text-white/40"}>
+            <span className={selectedOption ? "text-foreground" : "text-muted"}>
             {selectedOption ? selectedOption.label : placeholder || "Select..."}
             </span>
             {selectedOption?.subLabel && (
-                <span className="text-[10px] text-white/50">{selectedOption.subLabel}</span>
+                <span className="text-[10px] text-muted">{selectedOption.subLabel}</span>
             )}
         </div>
         
-        <svg className="w-4 h-4 text-white/40 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-4 h-4 text-muted shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-[#1a1a1a] border border-white/10 rounded-lg shadow-2xl max-h-60 flex flex-col overflow-hidden">
+        <div className="absolute z-50 w-full mt-1 bg-surface border border-border rounded-lg shadow-2xl max-h-60 flex flex-col overflow-hidden">
           {/* Search Input */}
-          <div className="p-2 border-b border-white/10 sticky top-0 bg-[#1a1a1a]">
+          <div className="p-2 border-b border-border sticky top-0 bg-surface">
             <input
               autoFocus
               value={search}
               onChange={handleSearchChange}
               placeholder="Type to search..."
-              className="w-full bg-black/20 text-white text-sm rounded px-3 py-2 border border-white/5 focus:border-blue-500/50 outline-none"
+              className="w-full bg-surface-highlight text-foreground text-sm rounded px-3 py-2 border border-border focus:border-accent/50 outline-none"
             />
           </div>
 
           {/* List */}
           <div className="overflow-y-auto flex-1 custom-scrollbar">
             {displayedOptions.length === 0 ? (
-              <div className="p-3 text-sm text-white/40 text-center">No results found.</div>
+              <div className="p-3 text-sm text-muted text-center">No results found.</div>
             ) : (
               displayedOptions.map((opt) => (
                 <button
@@ -118,12 +118,12 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
                     setIsOpen(false);
                   }}
                   className={`
-                    w-full text-left px-4 py-3 text-sm border-b border-white/5 hover:bg-white/10 transition
-                    ${value === opt.id ? "bg-blue-500/10 text-blue-300" : "text-white/80"}
+                    w-full text-left px-4 py-3 text-sm border-b border-border hover:bg-[var(--accent-dim)] transition
+                    ${value === opt.id ? "bg-accent/10 text-accent" : "text-foreground/80"}
                   `}
                 >
                   <div className="font-medium">{opt.label}</div>
-                  {opt.subLabel && <div className="text-xs text-white/40">{opt.subLabel}</div>}
+                  {opt.subLabel && <div className="text-xs text-muted">{opt.subLabel}</div>}
                 </button>
               ))
             )}

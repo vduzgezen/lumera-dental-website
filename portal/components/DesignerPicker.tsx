@@ -42,7 +42,7 @@ export default function DesignerPicker({ caseId, currentAssigneeId, designers, d
   }
 
   return (
-    <div className={`flex items-center gap-3 bg-white/5 rounded-lg px-3 py-2 border border-white/10 ${disabled ? "opacity-50" : "hover:border-accent/50 transition-colors"}`}>
+    <div className={`flex items-center gap-3 bg-surface-highlight rounded-lg px-3 py-2 border border-border ${disabled ? "opacity-50" : "hover:border-accent/50 transition-colors"}`}>
       <svg className="w-4 h-4 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
       </svg>
@@ -51,13 +51,13 @@ export default function DesignerPicker({ caseId, currentAssigneeId, designers, d
           value={currentAssigneeId || ""}
           onChange={handleChange}
           disabled={busy || disabled}
-          className={`w-full bg-transparent border-none text-sm text-white focus:ring-0 p-0 ${
+          className={`w-full bg-transparent border-none text-sm text-foreground focus:ring-0 p-0 ${
             disabled ? "cursor-not-allowed" : "cursor-pointer"
           }`}
         >
-          <option value="" className="bg-[#0a1020] text-white/50">-- Unassigned --</option>
+          <option value="" className="bg-surface text-muted">-- Unassigned --</option>
           {designers.map(d => (
-            <option key={d.id} value={d.id} className="bg-[#0a1020] text-white">
+            <option key={d.id} value={d.id} className="bg-surface text-foreground">
               {d.name || d.email}
             </option>
           ))}
