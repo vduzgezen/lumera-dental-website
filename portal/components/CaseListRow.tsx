@@ -43,6 +43,7 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
     router.push(`/portal/cases/${data.id}`);
   };
 
+  // Note: Status colors remain unchanged for now as they are distinct enough.
   const getStatusColor = (s: string) => {
     const status = s.toUpperCase();
     if (status === "CHANGES_REQUESTED") return "bg-red-500/10 text-red-400 border-red-500/20";
@@ -74,28 +75,26 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
   return (
     <tr
       onClick={handleRowClick}
-      className="hover:bg-white/5 transition-colors group cursor-pointer border-t border-white/5"
+      className="hover:bg-[var(--accent-dim)] transition-colors group cursor-pointer border-t border-border"
     >
       <td className="p-3">
         <CopyableId id={data.id} truncate />
       </td>
-      <td className="p-3 font-medium text-white">
+      <td className="p-3 font-medium text-foreground">
         {data.patientAlias}
       </td>
       
-      {/* ✅ ORDER SWAPPED: Patient Name First */}
       {role === "customer" ? (
-        <td className="p-3 text-white/90">
+        <td className="p-3 text-foreground/90">
             {data.patientLastName && data.patientFirstName 
                 ? `${data.patientLastName}, ${data.patientFirstName}` 
-                : <span className="text-white/30 italic">No name</span>}
+                : <span className="text-muted italic">No name</span>}
         </td>
       ) : (
-        <td className="p-3 text-white/70">{data.doctorName ?? "—"}</td>
+        <td className="p-3 text-muted">{data.doctorName ?? "—"}</td>
       )}
 
-      {/* ✅ Clinic Name Second */}
-      <td className="p-3 text-white/70">{data.clinic.name}</td>
+      <td className="p-3 text-muted">{data.clinic.name}</td>
       
       {role !== "customer" && (
         <td className="p-3">
@@ -104,17 +103,17 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
                 <div className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center text-[10px] font-bold border border-blue-500/30">
                     {getInitials(data.assigneeUser.name, data.assigneeUser.email)}
                 </div>
-                <span className="text-white/70 text-xs truncate max-w-[100px]">
+                <span className="text-muted text-xs truncate max-w-[100px]">
                 {data.assigneeUser.name || data.assigneeUser.email.split("@")[0]}
                 </span>
             </div>
             ) : (
-            <span className="text-white/20 text-xs italic">—</span>
+            <span className="text-muted/50 text-xs italic">—</span>
             )}
         </td>
       )}
 
-      <td className="p-3 text-white/70">{data.toothCodes}</td>
+      <td className="p-3 text-muted">{data.toothCodes}</td>
       
       <td className="p-3 relative text-center">
          <span
@@ -136,8 +135,8 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
         )}
       </td>
       
-      <td className="p-3 text-white/70">{fmtDate(data.dueDate)}</td>
-      <td className="p-3 text-white/50">{fmtDate(data.createdAt)}</td> 
+      <td className="p-3 text-muted">{fmtDate(data.dueDate)}</td>
+      <td className="p-3 text-muted/70">{fmtDate(data.createdAt)}</td> 
     </tr>
   );
 }

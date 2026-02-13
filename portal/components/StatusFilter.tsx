@@ -1,4 +1,4 @@
-// portal/components/StatusFilter.tsx
+// components/StatusFilter.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
@@ -13,7 +13,6 @@ const ALL_STATUSES = [
   "DELIVERED"
 ];
 
-// ✅ Added onChange prop
 export default function StatusFilter({ 
   selected, 
   role, 
@@ -37,7 +36,6 @@ export default function StatusFilter({
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
 
-  // Sync internal state if parent prop changes (e.g. URL update)
   useEffect(() => {
     setSelection(new Set(selected));
   }, [selected]);
@@ -64,7 +62,6 @@ export default function StatusFilter({
       else next.add(status);
     }
     setSelection(next);
-    // ✅ Notify Parent Immediately
     if (onChange) onChange(Array.from(next));
   };
 
@@ -80,7 +77,7 @@ export default function StatusFilter({
 
   const getStatusColor = (s: string) => {
     if (s === "CHANGES_REQUESTED") return "text-red-400";
-    if (s === "APPROVED") return "text-lime-300";
+    if (s === "APPROVED") return "text-lime-300"; // Might need darkening for light mode
     if (s === "IN_MILLING") return "text-yellow-400"; 
     if (s === "SHIPPED") return "text-blue-400";
     if (s === "COMPLETED") return "text-emerald-400";
@@ -96,8 +93,8 @@ export default function StatusFilter({
         className={`
           flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm border transition-colors
           ${isOpen || !isDefault 
-            ? "bg-white/10 border-white/30 text-white" 
-            : "bg-black/40 border-white/10 text-white/70 hover:border-white/30"}
+            ? "bg-[var(--accent-dim)] border-accent text-accent" 
+            : "bg-background border-border text-muted hover:border-accent/50 hover:text-foreground"}
         `}
       >
         <span>{label}</span>
@@ -107,7 +104,7 @@ export default function StatusFilter({
       </button>
 
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-64 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden z-50 p-1">
+        <div className="absolute top-full left-0 mt-2 w-64 bg-surface border border-border rounded-xl shadow-2xl overflow-hidden z-50 p-1">
           <div className="max-h-[300px] overflow-y-auto custom-scrollbar">
              {ALL_STATUSES.map((status) => {
               const defaultSet = getDefaultSet();
@@ -121,11 +118,11 @@ export default function StatusFilter({
                 <div 
                   key={status} 
                   onClick={() => toggle(status)}
-                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-white/5 cursor-pointer transition-colors select-none"
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[var(--accent-dim)] cursor-pointer transition-colors select-none"
                 >
                   <div className={`
                     w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0
-                    ${isChecked ? "bg-blue-500 border-blue-500" : "border-white/30 bg-transparent"}
+                    ${isChecked ? "bg-accent border-accent" : "border-border bg-transparent"}
                   `}>
                     {isChecked && (
                       <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -140,11 +137,11 @@ export default function StatusFilter({
               );
              })}
           </div>
-          <div className="border-t border-white/10 mt-1 pt-1">
+          <div className="border-t border-border mt-1 pt-1">
             <button
               type="button"
               onClick={reset}
-              className="w-full text-left px-3 py-2 text-xs text-white/40 hover:text-white transition-colors"
+              className="w-full text-left px-3 py-2 text-xs text-muted hover:text-foreground transition-colors"
             >
               Reset to Active
             </button>
