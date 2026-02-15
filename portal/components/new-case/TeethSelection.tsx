@@ -84,7 +84,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
   const currentPrice = getPrice();
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-6 space-y-6 shadow-lg">
+    <div className="rounded-xl border border-border bg-surface p-6 space-y-6 shadow-lg transition-colors duration-200">
       <h2 className="text-lg font-medium text-foreground border-b border-border pb-2">
         Prescription & Teeth
       </h2>
@@ -99,7 +99,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                  key={type}
                  type="button"
                  onClick={() => handleProductChange(type)}
-                 className={`px-3 py-2 rounded-lg text-xs font-bold transition-all border
+                 className={`px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 border
                    ${data.product === type 
                      ? "bg-accent border-accent text-white" 
                      : "bg-surface border-border text-muted hover:bg-[var(--accent-dim)]"
@@ -118,7 +118,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                <div className="flex gap-2">
                  {(["HT", "ML"] as MaterialType[]).map(m => (
                     <button key={m} type="button" onClick={() => update({ material: m })}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold border ${data.material === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-surface border-border text-muted"}`}>
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors duration-200 ${data.material === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-surface border-border text-muted"}`}>
                       {m}
                     </button>
                  ))}
@@ -132,7 +132,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                <div className="flex gap-2">
                  {(["HARD", "SOFT"] as MaterialType[]).map(m => (
                     <button key={m} type="button" onClick={() => update({ material: m })}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold border ${data.material === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-surface border-border text-muted"}`}>
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors duration-200 ${data.material === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-surface border-border text-muted"}`}>
                       {m}
                     </button>
                  ))}
@@ -150,7 +150,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                       value={shadeParts.body}
                       onChange={(e) => updateShade("body", e.target.value)}
                       placeholder="Body (A2)"
-                      className="w-full rounded-lg bg-surface-highlight border border-border px-3 py-2 text-foreground outline-none focus:border-accent/50 text-center placeholder-muted"
+                      className="w-full rounded-lg bg-surface-highlight border border-border px-3 py-2 text-foreground outline-none focus:border-accent/50 text-center placeholder:text-muted transition-colors duration-200"
                     />
                     <div className="text-[10px] text-accent text-center font-bold uppercase tracking-wider">Body *</div>
                   </div>
@@ -159,7 +159,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                       value={shadeParts.incisal}
                       onChange={(e) => updateShade("incisal", e.target.value)}
                       placeholder="Matching Body"
-                      className="w-full rounded-lg bg-surface-highlight border border-border px-3 py-2 text-foreground outline-none focus:border-accent/50 text-center placeholder-muted"
+                      className="w-full rounded-lg bg-surface-highlight border border-border px-3 py-2 text-foreground outline-none focus:border-accent/50 text-center placeholder:text-muted transition-colors duration-200"
                     />
                     <div className="text-[10px] text-muted text-center uppercase tracking-wider">Incisal</div>
                   </div>
@@ -168,7 +168,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                       value={shadeParts.gingival}
                       onChange={(e) => updateShade("gingival", e.target.value)}
                       placeholder="Matching Body"
-                      className="w-full rounded-lg bg-surface-highlight border border-border px-3 py-2 text-foreground outline-none focus:border-accent/50 text-center placeholder-muted"
+                      className="w-full rounded-lg bg-surface-highlight border border-border px-3 py-2 text-foreground outline-none focus:border-accent/50 text-center placeholder:text-muted transition-colors duration-200"
                     />
                     <div className="text-[10px] text-muted text-center uppercase tracking-wider">Gingival</div>
                   </div>
@@ -179,11 +179,11 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
       </div>
 
       {/* 2. PRICING TIER */}
-      <div className="p-4 rounded-lg bg-surface border border-border">
+      <div className="p-4 rounded-lg bg-surface border border-border transition-colors duration-200">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
            <div className="flex gap-4 w-full md:w-auto">
               {(["IN_HOUSE", "STANDARD"] as ServiceLevel[]).map((level) => (
-                <label key={level} className={`flex-1 md:flex-none flex items-center gap-2 cursor-pointer p-3 rounded-lg border transition-all ${data.serviceLevel === level ? "bg-accent/10 border-accent/50" : "border-transparent hover:bg-[var(--accent-dim)]"}`}>
+                <label key={level} className={`flex-1 md:flex-none flex items-center gap-2 cursor-pointer p-3 rounded-lg border transition-colors duration-200 ${data.serviceLevel === level ? "bg-accent/10 border-accent/50" : "border-transparent hover:bg-[var(--accent-dim)]"}`}>
                    <input 
                     type="radio" 
                     name="serviceLevel" 
@@ -214,7 +214,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
               </span>
            </div>
            
-           <div className="bg-surface rounded-xl border border-border p-4 flex justify-center">
+           <div className="bg-surface rounded-xl border border-border p-4 flex justify-center transition-colors duration-200">
               <ToothSelector 
                 value={data.toothCodes.join(",")} 
                 onChange={(val) => update({ toothCodes: val.split(",").map(t => t.trim()).filter(Boolean) })} 
@@ -233,7 +233,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
            value={data.designPreferences}
            onChange={(e) => update({ designPreferences: e.target.value })}
            placeholder="E.g. Contacts heavy, light occlusion, open embrasures..."
-           className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition h-24 resize-none"
+           className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200 h-24 resize-none"
          />
       </div>
 

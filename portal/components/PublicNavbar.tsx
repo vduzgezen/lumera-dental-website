@@ -13,7 +13,7 @@ export default function PublicNavbar() {
     return (
       <Link
         href={path}
-        className={`text-sm font-medium transition-colors hover:text-white ${
+        className={`text-sm font-medium transition-colors hover:text-foreground ${
           isActive ? "text-foreground" : "text-muted"
         }`}
       >
@@ -55,7 +55,7 @@ export default function PublicNavbar() {
           </Link>
           <Link
             href="/contact"
-            className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-background bg-white rounded-full hover:bg-gray-100 transition shadow-[0_0_20px_rgba(255,255,255,0.2)]"
+            className="hidden sm:inline-flex items-center justify-center px-4 py-2 text-sm font-semibold text-background bg-foreground rounded-full hover:bg-foreground/90 transition-colors shadow-lg"
           >
             Send a Case
           </Link>

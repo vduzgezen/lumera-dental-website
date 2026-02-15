@@ -29,7 +29,7 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
   };
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-6 space-y-6 shadow-lg">
+    <div className="rounded-xl border border-border bg-surface p-6 space-y-6 shadow-lg transition-colors duration-200">
       <div className="flex justify-between items-center border-b border-border pb-2">
         <h2 className="text-lg font-medium text-foreground">Case Information</h2>
         {/* Live Alias Preview */}
@@ -50,7 +50,7 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
             value={data.patientFirstName}
             onChange={(e) => update({ patientFirstName: e.target.value })}
             placeholder="e.g. John"
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200"
           />
         </div>
         <div className="space-y-2">
@@ -60,7 +60,7 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
             value={data.patientLastName}
             onChange={(e) => update({ patientLastName: e.target.value })}
             placeholder="e.g. Doe"
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200"
           />
         </div>
       </div>
@@ -74,7 +74,7 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
             required
             value={data.orderDate}
             onChange={handleOrderDateChange} // ✅ Updates both dates
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200"
           />
         </div>
         <div className="space-y-2">
@@ -84,7 +84,7 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
             required
             value={data.dueDate} // ✅ Bound to editable state
             onChange={(e) => update({ dueDate: e.target.value })} // ✅ Allow manual edit
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200"
           />
         </div>
       </div>

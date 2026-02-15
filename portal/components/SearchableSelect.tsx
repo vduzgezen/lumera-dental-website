@@ -92,15 +92,15 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-surface border border-border rounded-lg shadow-2xl max-h-60 flex flex-col overflow-hidden">
+        <div className="absolute z-50 w-full mt-1 bg-surface border border-border rounded-lg shadow-2xl max-h-60 flex flex-col overflow-hidden transition-colors duration-200">
           {/* Search Input */}
-          <div className="p-2 border-b border-border sticky top-0 bg-surface">
+          <div className="p-2 border-b border-border sticky top-0 bg-surface transition-colors duration-200">
             <input
               autoFocus
               value={search}
               onChange={handleSearchChange}
               placeholder="Type to search..."
-              className="w-full bg-surface-highlight text-foreground text-sm rounded px-3 py-2 border border-border focus:border-accent/50 outline-none"
+              className="w-full bg-surface-highlight text-foreground text-sm rounded px-3 py-2 border border-border focus:border-accent/50 outline-none transition-colors duration-200"
             />
           </div>
 

@@ -54,20 +54,20 @@ export default function ShippingEditor({
     <div className="space-y-2">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <input
-          className="rounded-lg p-2 bg-surface-highlight border border-border text-foreground"
+          className="rounded-lg p-2 bg-surface-highlight border border-border text-foreground transition-colors duration-200"
           placeholder="Carrier"
           value={form.carrier}
           onChange={(e) => setForm({ ...form, carrier: e.target.value })}
         />
         <input
-          className="rounded-lg p-2 bg-surface-highlight border border-border text-foreground"
+          className="rounded-lg p-2 bg-surface-highlight border border-border text-foreground transition-colors duration-200"
           placeholder="Tracking #"
           value={form.tracking}
           onChange={(e) => setForm({ ...form, tracking: e.target.value })}
         />
         <input
           type="datetime-local"
-          className="rounded-lg p-2 bg-surface-highlight border border-border text-foreground"
+          className="rounded-lg p-2 bg-surface-highlight border border-border text-foreground transition-colors duration-200"
           value={form.eta}
           onChange={(e) => setForm({ ...form, eta: e.target.value })}
         />
@@ -76,7 +76,7 @@ export default function ShippingEditor({
       <button
         onClick={save}
         disabled={busy}
-        className="rounded-lg px-3 py-2 bg-accent text-white disabled:opacity-60 hover:bg-accent/80 transition"
+        className="rounded-lg px-3 py-2 bg-accent text-white disabled:opacity-60 hover:bg-accent/80 transition-colors duration-200"
       >
         {busy ? "Saving…" : "Save"}
       </button>

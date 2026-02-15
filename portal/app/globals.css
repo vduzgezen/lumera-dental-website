@@ -3,20 +3,21 @@
 :root {
   /* --- DARK MODE (Midnight Hierarchy) --- */
   /* Level 1: Page Background (Deepest) */
-  --background: #020617; /* Slate 950 */
+  --background: #020617; 
   
-  /* Level 2: Sidebar (Mid-Tone) - Distinct from BG and Table */
-  --sidebar-bg: #0f172a; /* Slate 900 */
+  /* Level 2: Sidebar (Mid-Tone) */
+  --sidebar-bg: #0f172a; 
   
   /* Level 3: Surface/Tables (Elevated/Lightest) */
-  --surface: #1e293b;    /* Slate 800 */
+  /* ✅ FIX: Updated to Dark Midnight #111b2d as requested */
+  --surface: #111b2d;    
   
-  /* Inputs & Highlights */
-  --surface-highlight: #334155; /* Slate 700 */
+  /* Inputs */
+  --surface-highlight: #1e293b; 
   
   /* Text & Borders */
-  --foreground: #f8fafc; /* Slate 50 */
-  --muted: #94a3b8;      /* Slate 400 */
+  --foreground: #f8fafc; /* White-ish */
+  --muted: #94a3b8;      
   --border: rgba(255, 255, 255, 0.1); 
   
   /* Brand */
@@ -24,31 +25,31 @@
   --accent-dim: rgba(150, 150, 226, 0.15);
   
   /* Glass */
-  --glass-bg: rgba(15, 23, 42, 0.7);
+  --glass-bg: rgba(17, 27, 45, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
 }
 
 .light {
   /* --- LIGHT MODE (High Contrast Hierarchy) --- */
-  /* Level 1: Page Background (Darkest of the light shades) */
-  --background: #f1f5f9; /* Slate 100 - Cool Grey */
+  /* Level 1: Page Background */
+  --background: #f1f5f9; 
   
-  /* Level 2: Sidebar (Off-White) */
-  --sidebar-bg: #f8fafc; /* Slate 50 */
+  /* Level 2: Sidebar */
+  --sidebar-bg: #f8fafc; 
   
-  /* Level 3: Surface/Tables (Pure White - Pops out) */
+  /* Level 3: Surface/Tables (Pure White) */
   --surface: #ffffff;    
   
   /* Inputs */
-  --surface-highlight: #f1f5f9; /* Slate 100 */
+  --surface-highlight: #f1f5f9; 
   
   /* Text & Borders */
-  --foreground: #0f172a; /* Slate 900 */
-  --muted: #64748b;      /* Slate 500 */
-  --border: #cbd5e1;     /* Slate 300 (Visible Borders) */
+  --foreground: #0f172a; /* Black-ish */
+  --muted: #64748b;      
+  --border: #cbd5e1;     /* Visible Slate Border */
   
   /* Brand */
-  --accent: #6366f1;     /* Indigo 500 */
+  --accent: #6366f1;     
   --accent-dim: rgba(99, 102, 241, 0.1);
   
   /* Glass */
