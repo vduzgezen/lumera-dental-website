@@ -97,7 +97,7 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
   };
 
   return (
-    <div className="rounded-xl border border-border bg-surface p-6 space-y-4 shadow-lg">
+    <div className="rounded-xl border border-border bg-surface p-6 space-y-4 shadow-lg transition-colors duration-200">
       <div className="flex items-center justify-between border-b border-border pb-2">
         <h2 className="text-lg font-medium text-foreground">Doctor & Clinic</h2>
         <span className="text-[10px] uppercase tracking-wider text-blue-400 font-bold bg-blue-500/10 px-2 py-1 rounded">Required</span>

@@ -101,7 +101,7 @@ export default function FileUploader({
     <div className="space-y-2">
       <div className="text-xs text-muted capitalize">{labelText}</div>
 
-      <label className="flex items-center justify-between gap-3 rounded-lg p-2 bg-surface border border-border cursor-pointer hover:border-accent/30 transition-colors">
+      <label className="flex items-center justify-between gap-3 rounded-lg p-2 bg-surface border border-border cursor-pointer hover:border-accent/30 transition-colors duration-200">
         <div className="flex-1 min-w-0 text-foreground/80">
           {file ? (
             <>
@@ -120,7 +120,7 @@ export default function FileUploader({
         <button
           onClick={send}
           disabled={busy || !file}
-          className="rounded-lg px-3 py-1.5 bg-accent text-white text-xs font-bold disabled:opacity-50 hover:bg-accent/80 transition-colors"
+          className="rounded-lg px-3 py-1.5 bg-accent text-white text-xs font-bold disabled:opacity-50 hover:bg-accent/80 transition-colors duration-200"
         >
           {busy ? "Uploading…" : "Upload"}
         </button>

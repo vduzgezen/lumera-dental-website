@@ -247,7 +247,7 @@ export default async function CasesPage({
             updatedAt: true,
             createdAt: true,
             doctorName: true,
-            clinic: { select: { name: true } },
+            clinic: { select: { name: true, phone: true } }, 
             assigneeUser: { select: { name: true, email: true } },
             product: true,
             material: true,
@@ -277,7 +277,11 @@ export default async function CasesPage({
           {canCreate && (
             <Link
             href="/portal/cases/new"
-            className="px-3 py-1.5 rounded-lg bg-accent text-white text-sm hover:opacity-90 transition font-medium shadow-lg"
+            // ✅ FIX: Semantic classes automatically switch:
+            // bg-surface -> White (Light) / Midnight (Dark)
+            // text-foreground -> Black (Light) / White (Dark)
+            // border-border -> Slate-300 (Light) / White-10 (Dark)
+            className="px-4 py-2 rounded-xl bg-surface text-foreground text-sm font-semibold hover:brightness-110 hover:scale-105 transition-all shadow-md border border-border"
             >
             + New Case
             </Link>

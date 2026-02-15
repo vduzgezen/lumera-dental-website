@@ -42,7 +42,7 @@ function SetupForm() {
 
   if (!token) {
     return (
-      <div className="text-center text-white/60">
+      <div className="text-center text-muted">
         <p>Invalid or missing invitation token.</p>
         <Link href="/login" className="text-accent hover:underline mt-4 block">Back to Login</Link>
       </div>
@@ -51,18 +51,18 @@ function SetupForm() {
 
   return (
     <div className="w-full max-w-sm">
-      <h1 className="text-2xl font-semibold text-white mb-2 text-center">Set Your Password</h1>
-      <p className="text-white/40 text-sm text-center mb-8">Finalize your account setup</p>
+      <h1 className="text-2xl font-semibold text-foreground mb-2 text-center">Set Your Password</h1>
+      <p className="text-muted text-sm text-center mb-8">Finalize your account setup</p>
       
-      <form onSubmit={onSubmit} className="bg-white/5 border border-white/10 rounded-2xl p-8 space-y-4">
+      <form onSubmit={onSubmit} className="bg-surface border border-border rounded-2xl p-8 space-y-4 transition-colors">
         <div>
-          <label className="block text-xs font-medium text-white/60 uppercase mb-2">New Password</label>
+          <label className="block text-xs font-medium text-muted uppercase mb-2">New Password</label>
           <input 
             type="password" 
             required 
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
+            className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors"
           />
         </div>
         <div>
@@ -72,7 +72,7 @@ function SetupForm() {
             required 
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white focus:border-accent/50 outline-none"
+            className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors"
           />
         </div>
 
@@ -81,7 +81,7 @@ function SetupForm() {
         <button 
           type="submit" 
           disabled={busy}
-          className="w-full py-3 bg-accent text-background font-bold rounded-lg hover:bg-white transition disabled:opacity-50"
+          className="w-full py-3 bg-accent text-white font-bold rounded-lg hover:bg-accent/80 transition-colors disabled:opacity-50"
         >
           {busy ? "Setting up..." : "Complete Setup"}
         </button>

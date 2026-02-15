@@ -20,19 +20,81 @@ type CaseRowData = {
   assigneeUser: { name: string | null; email: string } | null;
 };
 
-function fmtDate(d?: Date | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleDateString();
-}
+// --- HELPER 1: Designer Avatar ---
+const DesignerAvatar = ({ name, email }: { name: string | null, email: string }) => {
+  const initials = name 
+    ? (name.split(" ").length > 1 
+        ? (name.split(" ")[0][0] + name.split(" ")[name.split(" ").length - 1][0]) 
+        : name.slice(0, 2))
+    : email.slice(0, 2);
 
-function getInitials(name: string | null, email: string) {
-  if (name) {
-    const parts = name.split(" ");
-    if (parts.length > 1) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
-    return name.slice(0, 2).toUpperCase();
+  return (
+    <div className="flex items-center gap-2">
+      {/* BACKGROUND: Light Mode = Solid Gray 300. Night Mode = Transparent Blue.
+         TEXT: Uses 'text-foreground' which maps to CSS var(--foreground).
+         This GUARANTEES Black in Light Mode and White in Night Mode.
+      */}
+      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm 
+        bg-gray-300 border border-gray-400 text-foreground
+        dark:bg-blue-600/30 dark:border-blue-400/50 dark:text-white">
+        {initials.toUpperCase()}
+      </div>
+      <span className="text-muted text-xs truncate max-w-[100px]">
+        {name || email.split("@")[0]}
+      </span>
+    </div>
+  );
+};
+
+// --- HELPER 2: Status Badge ---
+const StatusBadge = ({ status }: { status: string }) => {
+  const s = status.toUpperCase();
+  
+  // Base classes
+  // We use 'text-foreground' here to bind to the global theme text color.
+  const baseClasses = "inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold border uppercase tracking-wide shadow-sm transition-colors text-foreground dark:text-white";
+
+  let colorClasses = "";
+
+  switch (s) {
+    case "APPROVED":
+      // Light: Lime 300 (Solid) | Night: Lime Transparent
+      colorClasses = "bg-lime-300 border-lime-400 dark:bg-lime-500/20 dark:border-lime-500/40";
+      break;
+    case "IN_MILLING":
+      // Light: Yellow 300 (Solid) | Night: Yellow Transparent
+      colorClasses = "bg-yellow-300 border-yellow-400 dark:bg-yellow-500/20 dark:border-yellow-500/40";
+      break;
+    case "SHIPPED":
+      // Light: Blue 300 (Solid) | Night: Blue Transparent
+      colorClasses = "bg-blue-300 border-blue-400 dark:bg-blue-500/20 dark:border-blue-500/40";
+      break;
+    case "COMPLETED":
+      // Light: Emerald 300 (Solid) | Night: Emerald Transparent
+      colorClasses = "bg-emerald-300 border-emerald-400 dark:bg-emerald-500/20 dark:border-emerald-500/40";
+      break;
+    case "DELIVERED":
+      // Light: Purple 300 (Solid) | Night: Purple Transparent
+      colorClasses = "bg-purple-300 border-purple-400 dark:bg-purple-500/20 dark:border-purple-500/40";
+      break;
+    case "CHANGES_REQUESTED":
+      // Light: Red 300 (Solid) | Night: Red Transparent
+      colorClasses = "bg-red-300 border-red-400 dark:bg-red-500/20 dark:border-red-500/40";
+      break;
+    case "IN_DESIGN":
+    case "DESIGN":
+    default:
+      // Light: Orange 300 (Solid) | Night: Orange Transparent
+      colorClasses = "bg-orange-300 border-orange-400 dark:bg-orange-500/20 dark:border-orange-500/40";
+      break;
   }
-  return email.slice(0, 2).toUpperCase();
-}
+
+  return (
+    <span className={`${baseClasses} ${colorClasses}`}>
+      {status.replace(/_/g, " ")}
+    </span>
+  );
+};
 
 export default function CaseListRow({ data, role }: { data: CaseRowData, role: string }) {
   const router = useRouter();
@@ -41,18 +103,6 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
   const handleRowClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("button, a")) return;
     router.push(`/portal/cases/${data.id}`);
-  };
-
-  // Note: Status colors remain unchanged for now as they are distinct enough.
-  const getStatusColor = (s: string) => {
-    const status = s.toUpperCase();
-    if (status === "CHANGES_REQUESTED") return "bg-red-500/10 text-red-400 border-red-500/20";
-    if (status === "DELIVERED") return "bg-purple-500/10 text-purple-400 border-purple-500/20"; 
-    if (status === "COMPLETED") return "bg-emerald-500/10 text-emerald-400 border-emerald-500/20";
-    if (status === "SHIPPED") return "bg-blue-500/10 text-blue-400 border-blue-500/20";
-    if (status === "IN_MILLING") return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20"; 
-    if (status === "APPROVED") return "bg-lime-500/10 text-lime-300 border-lime-500/20";
-    return "bg-orange-500/10 text-orange-400 border-orange-500/20";
   };
 
   const markDelivered = async (e: React.MouseEvent) => {
@@ -71,6 +121,8 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
         setBusy(false);
     }
   };
+
+  const fmtDate = (d?: Date | null) => d ? new Date(d).toLocaleDateString() : "—";
 
   return (
     <tr
@@ -99,16 +151,9 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
       {role !== "customer" && (
         <td className="p-3">
             {data.assigneeUser ? (
-            <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-300 flex items-center justify-center text-[10px] font-bold border border-blue-500/30">
-                    {getInitials(data.assigneeUser.name, data.assigneeUser.email)}
-                </div>
-                <span className="text-muted text-xs truncate max-w-[100px]">
-                {data.assigneeUser.name || data.assigneeUser.email.split("@")[0]}
-                </span>
-            </div>
+                <DesignerAvatar name={data.assigneeUser.name} email={data.assigneeUser.email} />
             ) : (
-            <span className="text-muted/50 text-xs italic">—</span>
+                <span className="text-muted/50 text-xs italic">—</span>
             )}
         </td>
       )}
@@ -116,15 +161,11 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
       <td className="p-3 text-muted">{data.toothCodes}</td>
       
       <td className="p-3 relative text-center">
-         <span
-          className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium border transition-opacity duration-200 ${getStatusColor(data.status)} ${
-             (role === "customer" && data.status === "COMPLETED") ? "group-hover:opacity-20" : ""
-          }`}
-        >
-          {data.status.replace(/_/g, " ")}
-        </span>
+         <div className={`transition-opacity duration-200 ${(role === "customer" && data.status === "COMPLETED") ? "group-hover:opacity-10" : ""}`}>
+            <StatusBadge status={data.status} />
+         </div>
 
-        {role === "customer" && data.status === "COMPLETED" && (
+         {role === "customer" && data.status === "COMPLETED" && (
             <button 
                 onClick={markDelivered}
                 disabled={busy}

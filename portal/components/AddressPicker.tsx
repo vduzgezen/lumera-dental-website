@@ -116,26 +116,26 @@ export default function AddressPicker({ value, onChange }: Props) {
       <div>
         <input 
           placeholder="Street Address" 
-          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2 text-foreground text-sm focus:border-accent/50 outline-none mb-2 placeholder-muted"
+          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2 text-foreground text-sm focus:border-accent/50 outline-none mb-2 placeholder:text-muted transition-colors duration-200"
           value={value.street}
           onChange={(e) => handleChangeField("street", e.target.value)}
         />
         <div className="grid grid-cols-3 gap-2">
           <input 
             placeholder="City" 
-            className="bg-surface-highlight border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-accent/50 outline-none placeholder-muted"
+            className="bg-surface-highlight border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-accent/50 outline-none placeholder:text-muted transition-colors duration-200"
             value={value.city}
             onChange={(e) => handleChangeField("city", e.target.value)}
           />
           <input 
             placeholder="State" 
-            className="bg-surface-highlight border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-accent/50 outline-none placeholder-muted"
+            className="bg-surface-highlight border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-accent/50 outline-none placeholder:text-muted transition-colors duration-200"
             value={value.state}
             onChange={(e) => handleChangeField("state", e.target.value)}
           />
           <input 
             placeholder="Zip" 
-            className="bg-surface-highlight border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-accent/50 outline-none placeholder-muted"
+            className="bg-surface-highlight border border-border rounded-lg px-3 py-2 text-foreground text-sm focus:border-accent/50 outline-none placeholder:text-muted transition-colors duration-200"
             value={value.zipCode}
             onChange={(e) => handleChangeField("zipCode", e.target.value)}
           />

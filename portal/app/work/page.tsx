@@ -13,7 +13,7 @@ export default function WorkPage() {
   ];
 
   return (
-    <main className="min-h-screen flex flex-col bg-background text-porcelain selection:bg-accent/30">
+    <main className="min-h-screen flex flex-col bg-background text-foreground selection:bg-accent/30 transition-colors duration-300">
       <PublicNavbar />
 
       <div className="flex-1">
@@ -26,7 +26,7 @@ export default function WorkPage() {
             <h1 className="text-4xl md:text-6xl font-light mb-6 tracking-tight">
               Our <span className="text-accent">Masterpieces</span>
             </h1>
-            <p className="text-lg text-white/60 max-w-2xl mx-auto leading-relaxed">
+            <p className="text-lg text-muted max-w-2xl mx-auto leading-relaxed">
               Precision meets artistry. Explore our gallery of complex restorations, 
               aesthetic makeovers, and everyday crown & bridge work.
             </p>
@@ -41,23 +41,23 @@ export default function WorkPage() {
               {galleryItems.map((item) => (
                 <div 
                   key={item.id} 
-                  className={`group relative rounded-3xl overflow-hidden border border-white/5 bg-white/5 backdrop-blur-sm hover:border-accent/30 transition-all duration-500 ${item.colSpan}`}
+                  className={`group relative rounded-3xl overflow-hidden border border-border bg-surface backdrop-blur-sm hover:border-accent/30 transition-all duration-300 ${item.colSpan}`}
                 >
                   {/* Placeholder for Image */}
-                  <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent flex items-center justify-center group-hover:scale-105 transition-transform duration-700">
-                    <svg className="w-12 h-12 text-white/10 group-hover:text-accent/20 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <div className="absolute inset-0 bg-gradient-to-br from-foreground/5 to-transparent flex items-center justify-center group-hover:scale-105 transition-transform duration-700">
+                    <svg className="w-12 h-12 text-muted/30 group-hover:text-accent/30 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                   </div>
 
                   {/* Overlay Content */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300" />
                   
                   <div className="absolute bottom-0 left-0 p-8 translate-y-2 group-hover:translate-y-0 transition-transform duration-300">
                     <span className="text-accent text-xs font-bold tracking-widest uppercase mb-2 block opacity-0 group-hover:opacity-100 transition-opacity delay-100">
                       {item.category}
                     </span>
-                    <h3 className="text-xl font-medium text-white group-hover:text-accent transition-colors">
+                    <h3 className="text-xl font-medium text-foreground group-hover:text-accent transition-colors">
                       {item.title}
                     </h3>
                   </div>
@@ -74,7 +74,7 @@ export default function WorkPage() {
             <h2 className="text-3xl font-light mb-8">Ready to send your first case?</h2>
             <Link 
               href="/signup"
-              className="inline-flex items-center justify-center px-8 py-4 text-base font-bold text-background bg-accent rounded-full hover:bg-white hover:scale-105 transition-all shadow-[0_0_30px_rgba(150,150,226,0.3)]"
+              className="inline-flex items-center justify-center px-8 py-4 text-base font-bold text-white bg-accent rounded-full hover:bg-accent/90 hover:scale-105 transition-all shadow-lg"
             >
               Get Started
             </Link>

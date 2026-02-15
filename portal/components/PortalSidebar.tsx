@@ -99,7 +99,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
         })}
       </nav>
 
-      <div className="p-4 bg-sidebar border-t border-border flex flex-col items-center space-y-2">
+      <div className="p-4 bg-sidebar border-t border-border flex flex-col items-center space-y-2 transition-colors duration-200">
         <ThemeToggle expanded={expanded} />
         <button 
           onClick={handleLogout}
@@ -115,7 +115,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
             {loggingOut ? "..." : "Log Out"}
           </span>
         </button>
-        <button onClick={toggleSidebar} className="w-full flex justify-center py-2 text-muted hover:text-accent transition-colors">
+        <button onClick={toggleSidebar} className="w-full flex justify-center py-2 text-muted hover:text-accent transition-colors duration-200">
           {expanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </button>
       </div>

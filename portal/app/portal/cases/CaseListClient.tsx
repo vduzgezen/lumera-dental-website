@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation"; 
+import { useRouter } from "next/navigation"; 
 import CaseListRow from "@/components/CaseListRow";
 import { CaseRow } from "./page";
 
@@ -54,7 +54,6 @@ const SortableHeader = ({
 
 export default function CaseListClient({ cases, role, totalCount }: Props) {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const isDoctor = role === "customer";
   
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
@@ -62,7 +61,7 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
 
   const sortedCases = useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) return cases;
-    // ... (sorting logic unchanged)
+    
     return [...cases].sort((a, b) => {
       let aVal: any = "";
       let bVal: any = "";
@@ -94,7 +93,7 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
 
   const handleLoadMore = () => {
     setLoadingMore(true);
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(window.location.search);
     const currentLimit = parseInt(params.get("limit") || "50");
     const newLimit = currentLimit + 50;
     params.set("limit", newLimit.toString());

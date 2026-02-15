@@ -88,7 +88,7 @@ export default function SignupPage() {
                               name="name" 
                               value={form.name} 
                               onChange={handleChange} 
-                              className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder-muted focus:border-accent/50 outline-none" 
+                              className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors" 
                               placeholder="Dr. Jane Doe" 
                             />
                         </div>
@@ -100,7 +100,7 @@ export default function SignupPage() {
                               name="email" 
                               value={form.email} 
                               onChange={handleChange} 
-                              className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder-muted focus:border-accent/50 outline-none" 
+                              className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors" 
                               placeholder="doctor@clinic.com" 
                             />
                         </div>
@@ -112,7 +112,7 @@ export default function SignupPage() {
                           name="phone" 
                           value={form.phone} 
                           onChange={handleChange} 
-                          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder-muted focus:border-accent/50 outline-none" 
+                          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors" 
                           placeholder="(555) 000-0000" 
                         />
                     </div>
@@ -127,7 +127,7 @@ export default function SignupPage() {
                           name="street" 
                           value={form.street} 
                           onChange={handleChange} 
-                          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder-muted focus:border-accent/50 outline-none" 
+                          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors" 
                           placeholder="123 Main St" 
                         />
                     </div>
@@ -139,7 +139,7 @@ export default function SignupPage() {
                               name="city" 
                               value={form.city} 
                               onChange={handleChange} 
-                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder-muted outline-none focus:border-accent/50" 
+                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder:text-muted outline-none focus:border-accent/50 transition-colors" 
                               placeholder="City" 
                             />
                         </div>
@@ -150,7 +150,7 @@ export default function SignupPage() {
                               name="state" 
                               value={form.state} 
                               onChange={handleChange} 
-                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder-muted outline-none focus:border-accent/50" 
+                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder:text-muted outline-none focus:border-accent/50 transition-colors" 
                               placeholder="State" 
                             />
                         </div>
@@ -161,7 +161,7 @@ export default function SignupPage() {
                               name="zipCode" 
                               value={form.zipCode} 
                               onChange={handleChange} 
-                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder-muted outline-none focus:border-accent/50" 
+                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder:text-muted outline-none focus:border-accent/50 transition-colors" 
                               placeholder="Zip" 
                             />
                         </div>
@@ -171,11 +171,11 @@ export default function SignupPage() {
                 {error && <p className="text-red-500 text-sm text-center bg-red-500/10 p-2 rounded">{error}</p>}
 
                 <div className="pt-2 flex items-center justify-between mt-auto">
-                    <Link href="/login" className="text-sm text-muted hover:text-foreground transition">← Back to Login</Link>
+                    <Link href="/login" className="text-sm text-muted hover:text-foreground transition-colors">← Back to Login</Link>
                     <button 
                       type="submit" 
                       disabled={busy} 
-                      className="px-8 py-3 bg-accent text-white font-bold rounded-lg hover:bg-accent/80 transition disabled:opacity-50"
+                      className="px-8 py-3 bg-accent text-white font-bold rounded-lg hover:bg-accent/80 transition-colors disabled:opacity-50"
                     >
                         {busy ? "Submitting..." : "Request Access"}
                     </button>

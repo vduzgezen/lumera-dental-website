@@ -60,10 +60,10 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
   const hasFilters = Object.values(filters).some(v => v && v.length > 0);
 
   // Common input class for reuse
-  const inputClass = "bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted outline-none w-32 lg:w-40 focus:border-accent transition-colors";
+  const inputClass = "bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted outline-none w-32 lg:w-40 focus:border-accent transition-colors duration-200";
 
   return (
-    <div className="flex flex-wrap gap-2 items-center bg-surface p-2 rounded-xl border border-border">
+    <div className="flex flex-wrap gap-2 items-center bg-surface p-2 rounded-xl border border-border transition-colors duration-200">
       
       <StatusFilter 
         selected={filters.status} 
@@ -79,7 +79,7 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
             <select 
                 value={filters.assignee}
                 onChange={(e) => updateInstant("assignee", e.target.value)}
-                className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-foreground outline-none w-32 lg:w-40 cursor-pointer focus:border-accent"
+                className="bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-foreground outline-none w-32 lg:w-40 cursor-pointer focus:border-accent transition-colors duration-200"
             >
                 <option value="">All Lab Users</option>
                 {labUsers.map(u => (
@@ -132,7 +132,7 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
                 setFilters({ clinic:"", doctor:"", assignee:"", caseId:"", date:"", alias:"", status:[] });
                 setDebouncedFilters({ clinic:"", doctor:"", assignee:"", caseId:"", date:"", alias:"", status:[] });
             }} 
-            className="px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-[var(--accent-dim)] rounded-lg transition"
+            className="px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-[var(--accent-dim)] rounded-lg transition-colors duration-200"
          >
             Clear
          </button>
