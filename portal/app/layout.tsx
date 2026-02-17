@@ -1,31 +1,28 @@
 // portal/app/layout.tsx
 import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 
+const geistSans = Geist({
+  variable: "--font-geist-sans",
+  subsets: ["latin"],
+});
+
+const geistMono = Geist_Mono({
+  variable: "--font-geist-mono",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "Lumera Dental Portal",
-  description: "Advanced Dental Case Management",
+  description: "Next-generation dental lab workflow",
   icons: {
-    icon: "/Images/Icon-Purple.png", 
-    shortcut: "/Images/Icon-Purple.png",
-    apple: "/Images/Icon-Purple.png",
+    icon: "/icon.png",
+    shortcut: "/icon.png",
+    apple: "/icon.png",
   },
 };
-
-// FOUC Prevention Script - runs before hydration
-const foucPreventionScript = `
-  (function() {
-    try {
-      const theme = localStorage.getItem("lumera_theme");
-      if (theme === "light") {
-        document.documentElement.classList.add("light");
-      }
-    } catch (e) {
-      // localStorage not available
-    }
-  })();
-`;
 
 export default function RootLayout({
   children,
@@ -33,11 +30,12 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
+    // suppressHydrationWarning is required because your ThemeProvider modifies the DOM 
+    // (adding 'dark' class) before React hydrates.
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: foucPreventionScript }} />
-      </head>
-      <body className="font-sans antialiased bg-background text-foreground">
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-[#f5f7fb] dark:bg-[#0a1020] min-h-screen transition-colors duration-300`}
+      >
         <ThemeProvider>
           {children}
         </ThemeProvider>

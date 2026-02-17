@@ -18,7 +18,6 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     // Default to dark if no preference or explicitly dark
     const initial = saved ? saved === "dark" : true; 
     setIsDark(initial);
-    applyTheme(initial);
   }, []);
 
   const applyTheme = (dark: boolean) => {
@@ -38,13 +37,30 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     applyTheme(next);
   };
 
-  // Prevent hydration mismatch by holding off render until mount
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
   return (
     <ThemeContext.Provider value={{ isDark, toggleTheme }}>
+      {/* This script runs IMMEDIATELY before the body is rendered.
+        It prevents the theme flash by applying the class before React mounts.
+      */}
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function() {
+              try {
+                var saved = localStorage.getItem('lumera-theme');
+                var isDark = saved ? saved === 'dark' : true;
+                if (isDark) {
+                  document.documentElement.classList.add('dark');
+                  document.documentElement.classList.remove('light');
+                } else {
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.classList.add('light');
+                }
+              } catch (e) {}
+            })();
+          `,
+        }}
+      />
       {children}
     </ThemeContext.Provider>
   );

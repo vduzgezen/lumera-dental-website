@@ -39,7 +39,6 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
 
   const updateShade = (type: "incisal" | "body" | "gingival", value: string) => {
     const newParts = { ...shadeParts, [type]: value };
-    
     if (!newParts.incisal && !newParts.gingival) {
       update({ shade: newParts.body });
       return;
@@ -48,11 +47,9 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
     const b = newParts.body;
     const i = newParts.incisal || b;
     const g = newParts.gingival || b;
-    
     update({ shade: `${i}/${b}/${g}` });
   };
 
-  // ✅ Auto-Update for Nightguard (Fixed Dependencies)
   useEffect(() => {
     if (isNightguard) {
       if (data.toothCodes.length === 0 || data.toothCodes[0] !== "Full Arch") {
@@ -63,7 +60,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
           update({ toothCodes: [] });
       }
     }
-  }, [isNightguard, data.toothCodes, update]); // ✅ Added missing deps
+  }, [isNightguard, data.toothCodes, update]);
 
   const handleProductChange = (type: ProductType) => {
     let defaultMaterial: MaterialType = null;
@@ -94,14 +91,15 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted">Product</label>
           <div className="grid grid-cols-2 gap-2">
-              {(["ZIRCONIA", "EMAX", "NIGHTGUARD", "INLAY_ONLAY"] as ProductType[]).map((type) => (
+             {(["ZIRCONIA", "EMAX", "NIGHTGUARD", "INLAY_ONLAY"] as ProductType[]).map((type) => (
                <button
                  key={type}
                  type="button"
                  onClick={() => handleProductChange(type)}
-                 className={`px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 border
+                 // ✅ FIX: Use Tinted Accent Style (Matches Service Level)
+                 className={`px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 border cursor-pointer
                    ${data.product === type 
-                     ? "bg-accent border-accent text-white" 
+                     ? "bg-accent/10 border-accent/50 text-accent shadow-sm" 
                      : "bg-surface border-border text-muted hover:bg-[var(--accent-dim)]"
                    }`}
               >
@@ -112,13 +110,15 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
         </div>
 
         <div className="space-y-4">
+           
            {data.product === "ZIRCONIA" && (
              <div className="space-y-2">
                <label className="text-sm font-medium text-muted">Zirconia Material</label>
                <div className="flex gap-2">
                  {(["HT", "ML"] as MaterialType[]).map(m => (
                     <button key={m} type="button" onClick={() => update({ material: m })}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors duration-200 ${data.material === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-surface border-border text-muted"}`}>
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors duration-200 cursor-pointer ${data.material === m ?
+                      "bg-accent/10 border-accent/50 text-accent shadow-sm" : "bg-surface border-border text-muted hover:bg-[var(--accent-dim)]"}`}>
                       {m}
                     </button>
                  ))}
@@ -132,7 +132,8 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                <div className="flex gap-2">
                  {(["HARD", "SOFT"] as MaterialType[]).map(m => (
                     <button key={m} type="button" onClick={() => update({ material: m })}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors duration-200 ${data.material === m ? "bg-emerald-500/20 border-emerald-500 text-emerald-400" : "bg-surface border-border text-muted"}`}>
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors duration-200 cursor-pointer ${data.material === m ? 
+                      "bg-accent/10 border-accent/50 text-accent shadow-sm" : "bg-surface border-border text-muted hover:bg-[var(--accent-dim)]"}`}>
                       {m}
                     </button>
                  ))}
@@ -142,7 +143,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
 
            {/* SHADE LAYERING */}
            {!isNightguard && (
-              <div className="space-y-2">
+               <div className="space-y-2">
                 <label className="text-sm font-medium text-muted">Shade Layering</label>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
@@ -183,7 +184,8 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
            <div className="flex gap-4 w-full md:w-auto">
               {(["IN_HOUSE", "STANDARD"] as ServiceLevel[]).map((level) => (
-                <label key={level} className={`flex-1 md:flex-none flex items-center gap-2 cursor-pointer p-3 rounded-lg border transition-colors duration-200 ${data.serviceLevel === level ? "bg-accent/10 border-accent/50" : "border-transparent hover:bg-[var(--accent-dim)]"}`}>
+                <label key={level} className={`flex-1 md:flex-none flex items-center gap-2 cursor-pointer p-3 rounded-lg border transition-colors duration-200 ${data.serviceLevel === level ?
+                 "bg-accent/10 border-accent/50" : "border-transparent hover:bg-[var(--accent-dim)]"}`}>
                    <input 
                     type="radio" 
                     name="serviceLevel" 
@@ -191,14 +193,15 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                     onChange={() => update({ serviceLevel: level })}
                     className="accent-accent"
                   />
-                  <span className={`text-sm font-bold ${data.serviceLevel === level ? "text-accent" : "text-muted"}`}>
+                  <span className={`text-sm font-bold ${data.serviceLevel === level ?
+                    "text-accent" : "text-muted"}`}>
                     {level.replace("_", " ")}
                   </span>
                 </label>
               ))}
            </div>
            <div className="text-right">
-              <span className="text-xs text-muted block">Estimated Unit Price</span>
+             <span className="text-xs text-muted block">Estimated Unit Price</span>
              <span className="text-2xl font-bold text-emerald-400">${currentPrice}</span>
            </div>
         </div>

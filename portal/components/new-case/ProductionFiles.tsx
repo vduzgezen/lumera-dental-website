@@ -1,15 +1,16 @@
 // portal/components/new-case/ProductionFiles.tsx
 "use client";
 
+import { useRef } from "react";
 import { CaseData } from "./types";
+import { useTheme } from "@/components/ThemeProvider";
 
 interface ProductionFilesProps {
   data: CaseData;
   update: (fields: Partial<CaseData>) => void;
 }
 
-// Reusable File Input Sub-component
-const FileInput = ({ 
+const CustomFileInput = ({ 
   label, 
   file, 
   accept, 
@@ -21,39 +22,53 @@ const FileInput = ({
   accept: string, 
   req?: boolean,
   onChange: (f: File | null) => void 
-}) => (
-  <div className="space-y-1">
-    <div className="flex justify-between items-end gap-2 overflow-hidden">
-      <label className="text-xs font-medium text-muted uppercase tracking-wider shrink-0">
-        {label} {req && <span className="text-accent">*</span>}
-      </label>
+}) => {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const { isDark } = useTheme();
+
+  return (
+    <div className="space-y-1">
+      <div className="flex justify-between items-end gap-2 overflow-hidden">
+        <label className="text-xs font-medium text-muted uppercase tracking-wider shrink-0">
+          {label} {req && <span className="text-accent">*</span>}
+        </label>
+        
+        {file && (
+          <span className="text-[10px] text-emerald-400 font-mono truncate min-w-0" title={file.name}>
+            ✓ {file.name}
+          </span>
+        )}
+      </div>
       
-      {/* ✅ FIX: CSS Truncation ensures this never breaks layout */}
-      {file && (
-        <span className="text-[10px] text-emerald-400 font-mono truncate min-w-0" title={file.name}>
-          ✓ {file.name}
+      {/* Custom Trigger Area */}
+      <div 
+        onClick={() => inputRef.current?.click()}
+        className="flex items-center justify-between gap-3 rounded-lg p-2 bg-surface-highlight border border-border cursor-pointer hover:border-accent/30 transition-colors duration-200 group"
+      >
+        <span className="text-sm text-foreground/50 truncate pl-1">
+            {file ? file.name : "No file chosen..."}
         </span>
-      )}
+
+        {/* ✅ THE FIX: A real button, styled explicitly */}
+        <button
+            type="button"
+            className="px-3 py-1.5 rounded text-xs font-bold bg-accent hover:bg-accent/80 transition-colors"
+            style={{ color: isDark ? 'white' : 'black' }}
+        >
+            Browse
+        </button>
+
+        <input
+            ref={inputRef}
+            type="file"
+            accept={accept}
+            onChange={(e) => onChange(e.target.files?.[0] || null)}
+            className="hidden" // Completely hide the native input
+        />
+      </div>
     </div>
-    
-    <div className="relative group">
-      <input
-          type="file"
-          accept={accept}
-          onChange={(e) => onChange(e.target.files?.[0] || null)}
-          className="
-          w-full text-sm text-foreground
-          file:mr-4 file:py-2.5 file:px-4
-          file:rounded-lg file:border-0
-          file:text-sm file:font-semibold
-          file:bg-accent file:text-white
-          hover:file:bg-accent/80 file:transition-colors
-          cursor-pointer bg-surface-highlight rounded-lg border border-border p-2
-          "
-      />
-    </div>
-  </div>
-);
+  );
+};
 
 export default function ProductionFiles({ data, update }: ProductionFilesProps) {
   return (
@@ -62,16 +77,15 @@ export default function ProductionFiles({ data, update }: ProductionFilesProps) 
          Production Files
       </h2>
       <div className="grid grid-cols-1 gap-6">
-         {/* Mandatory at Start */}
          <div className="grid md:grid-cols-2 gap-6">
-            <FileInput 
+            <CustomFileInput 
               label="Scan Viewer (HTML)" 
               file={data.scanHtml} 
               accept=".html" 
               req={true} 
               onChange={(f) => update({ scanHtml: f })} 
             />
-            <FileInput 
+            <CustomFileInput 
               label="Rx PDF" 
               file={data.rxPdf} 
               accept=".pdf" 
@@ -82,25 +96,24 @@ export default function ProductionFiles({ data, update }: ProductionFilesProps) 
 
          <div className="w-full h-px bg-border" />
 
-         {/* Optional / Construction Files */}
          <div>
             <span className="text-[10px] uppercase tracking-wider text-muted mb-2 block">
               Optional now (Required before Milling)
             </span>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <FileInput 
+                <CustomFileInput 
                   label="Construction Info" 
                   file={data.constructionInfo} 
                   accept=".pdf,.xml,.txt,.constructionInfo" 
                   onChange={(f) => update({ constructionInfo: f })} 
                 />
-                <FileInput 
+                <CustomFileInput 
                   label="Model Top (STL)" 
                   file={data.modelTop} 
                   accept=".stl,.ply" 
                   onChange={(f) => update({ modelTop: f })} 
                 />
-                <FileInput 
+                <CustomFileInput 
                   label="Model Bottom (STL)" 
                   file={data.modelBottom} 
                   accept=".stl,.ply" 

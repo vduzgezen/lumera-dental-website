@@ -15,18 +15,45 @@ function addDays(dateStr: string, days: number) {
   return d.toISOString().split("T")[0];
 }
 
+// ✅ HELPER: Strict Manual Check for YYYY-MM-DD
+function isDateIncorrect(dateStr: string) {
+  if (!dateStr) return false;
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return true;
+
+  const y = parseInt(parts[0]);
+  const m = parseInt(parts[1]);
+  const d = parseInt(parts[2]);
+
+  // Check 1: Year must be 4 digits (e.g. 1000-9999)
+  if (y < 1000 || y > 9999) return true;
+  // Check 2: Month 1-12
+  if (m < 1 || m > 12) return true;
+  // Check 3: Day 1-31
+  if (d < 1 || d > 31) return true;
+
+  return false;
+}
+
 export default function CaseInfo({ data, update }: CaseInfoProps) {
   
-  // Handle Order Date Change -> Auto-update Due Date
   const handleOrderDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newOrderDate = e.target.value;
-    const newDueDate = addDays(newOrderDate, 8); // Default buffer
-    
-    update({ 
-      orderDate: newOrderDate,
-      dueDate: newDueDate // Auto-set due date
-    });
+    update({ orderDate: newOrderDate });
+
+    // Auto-suggest due date only if the date looks valid enough
+    if (!isDateIncorrect(newOrderDate)) {
+       const newDueDate = addDays(newOrderDate, 8); 
+       update({ dueDate: newDueDate });
+    }
   };
+
+  // 1. Check Format (Day > 31, Month > 12, Year != 4 digits)
+  const orderFormatInvalid = isDateIncorrect(data.orderDate);
+  const dueFormatInvalid = isDateIncorrect(data.dueDate);
+
+  // 2. Check Timing (Due < Order)
+  const timingInvalid = data.orderDate && data.dueDate && data.dueDate < data.orderDate;
 
   return (
     <div className="rounded-xl border border-border bg-surface p-6 space-y-6 shadow-lg transition-colors duration-200">
@@ -36,7 +63,7 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
         <div className="flex items-center gap-2">
            <span className="text-[10px] uppercase text-muted tracking-wider">Auto-ID:</span>
            <span className="font-mono text-sm font-bold text-blue-400 bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20">
-             {data.patientAlias || "Waiting for data..."}
+              {data.patientAlias || "Waiting for data..."}
            </span>
         </div>
       </div>
@@ -73,19 +100,30 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
             type="date"
             required
             value={data.orderDate}
-            onChange={handleOrderDateChange} // ✅ Updates both dates
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200"
+            onChange={handleOrderDateChange}
+            className={`w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted outline-none transition-colors duration-200 ${orderFormatInvalid ? 'border-red-500/50' : 'border-border focus:border-accent/50'}`}
           />
+          {orderFormatInvalid && (
+            <p className="text-xs text-red-400 font-medium animate-pulse">
+                Date is incorrect.
+            </p>
+          )}
         </div>
+      
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted">Due Date</label>
           <input
             type="date"
             required
-            value={data.dueDate} // ✅ Bound to editable state
-            onChange={(e) => update({ dueDate: e.target.value })} // ✅ Allow manual edit
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200"
+            value={data.dueDate} 
+            onChange={(e) => update({ dueDate: e.target.value })} 
+            className={`w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted outline-none transition-colors duration-200 ${dueFormatInvalid || timingInvalid ? 'border-red-500/50' : 'border-border focus:border-accent/50'}`}
           />
+          {(dueFormatInvalid || timingInvalid) && (
+            <p className="text-xs text-red-400 font-medium animate-pulse">
+                Date is incorrect.
+            </p>
+          )}
         </div>
       </div>
     </div>

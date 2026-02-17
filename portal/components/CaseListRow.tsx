@@ -1,4 +1,4 @@
-// components/CaseListRow.tsx
+// portal/components/CaseListRow.tsx
 "use client";
 
 import { useRouter } from "next/navigation";
@@ -49,11 +49,9 @@ const DesignerAvatar = ({ name, email }: { name: string | null, email: string })
 // --- HELPER 2: Status Badge ---
 const StatusBadge = ({ status }: { status: string }) => {
   const s = status.toUpperCase();
-  
   // Base classes
   // We use 'text-foreground' here to bind to the global theme text color.
   const baseClasses = "inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold border uppercase tracking-wide shadow-sm transition-colors text-foreground dark:text-white";
-
   let colorClasses = "";
 
   switch (s) {
@@ -169,7 +167,7 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
             <button 
                 onClick={markDelivered}
                 disabled={busy}
-                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all bg-purple-600 text-white text-[10px] uppercase font-bold px-3 py-1.5 rounded shadow-lg hover:bg-purple-500 hover:scale-105 z-10 whitespace-nowrap ring-1 ring-white/20"
+                className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all bg-purple-600 text-white text-[10px] uppercase font-bold px-3 py-1.5 rounded shadow-lg hover:bg-purple-500 hover:scale-105 z-10 whitespace-nowrap ring-1 ring-white/20 cursor-pointer"
             >
                 {busy ? "..." : "Mark Delivered"}
             </button>

@@ -29,6 +29,7 @@ const SortableHeader = ({
   onSort: (k: string) => void 
 }) => {
   const isActive = sortConfig.key === colKey;
+
   return (
     <th 
       className={`
@@ -149,7 +150,7 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="px-4 py-1.5 rounded-lg border border-border bg-surface hover:bg-[var(--accent-dim)] text-xs font-bold text-foreground transition-colors flex items-center gap-2"
+              className="px-4 py-1.5 rounded-lg border border-border bg-surface hover:bg-[var(--accent-dim)] text-xs font-bold text-foreground transition-colors flex items-center gap-2 cursor-pointer"
             >
               {loadingMore ? (
                 <>

@@ -1,3 +1,4 @@
+// components/PortalSidebar.tsx
 "use client";
 
 import { usePathname } from "next/navigation";
@@ -10,22 +11,47 @@ import {
   ChevronRight, ChevronLeft, ShieldCheck, DollarSign
 } from "lucide-react";
 
-export default function PortalSidebar({ userRole }: { userRole: string }) {
+const COOKIE_NAME = "lumera_sidebar_v2";
+
+function setSidebarCookie(isOpen: boolean) {
+  // Set new global cookie
+  document.cookie = `${COOKIE_NAME}=${isOpen}; path=/; max-age=31536000; SameSite=Lax`;
+}
+
+// FIX: Aggressively delete old conflicting cookies on any path
+function nukeOldCookies() {
+  const oldCookies = ["lumera_sidebar", "lumera_sidebar_state"];
+  oldCookies.forEach(name => {
+    // Delete generic
+    document.cookie = `${name}=; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+    // Delete root path
+    document.cookie = `${name}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
+  });
+}
+
+interface Props {
+  userRole: string;
+  defaultOpen?: boolean;
+}
+
+export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
   const pathname = usePathname();
-  const [expanded, setExpanded] = useState(true);
+  
+  const [expanded, setExpanded] = useState(defaultOpen);
   const [loggingOut, setLoggingOut] = useState(false);
 
+  // Run cleanup once on mount
   useEffect(() => {
-    const saved = window.localStorage.getItem("lumera_sidebar");
-    if (saved !== null) {
-      setExpanded(saved === "true");
-    }
+    nukeOldCookies();
   }, []);
 
   const toggleSidebar = () => {
     const next = !expanded;
     setExpanded(next);
-    window.localStorage.setItem("lumera_sidebar", String(next));
+    
+    // Save new V2 cookie
+    setSidebarCookie(next);
+    window.localStorage.setItem(COOKIE_NAME, String(next));
   };
 
   const navItems = [
@@ -66,7 +92,6 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
       <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto custom-scrollbar flex flex-col items-center">
         {filteredNav.map((item) => {
           let isActive = false;
-          // (Simplified logic for brevity, functional logic remains same)
           if (item.label === "Dashboard") {
              const isFinance = pathname.startsWith("/portal/cases/milling/finance");
              const isNew = pathname.startsWith("/portal/cases/new");
@@ -76,6 +101,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
           }
             
           const Icon = item.icon;
+
           return (
             <Link
               key={item.href}
@@ -105,7 +131,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
           onClick={handleLogout}
           disabled={loggingOut}
           className={`
-            h-11 flex items-center rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 transition-[background-color] duration-200 group
+            h-11 flex items-center rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 transition-[background-color] duration-200 group cursor-pointer
             ${expanded ? "w-full px-3 justify-start" : "w-11 justify-center"}
           `}
           title={!expanded ? "Log Out" : ""}
@@ -115,7 +141,7 @@ export default function PortalSidebar({ userRole }: { userRole: string }) {
             {loggingOut ? "..." : "Log Out"}
           </span>
         </button>
-        <button onClick={toggleSidebar} className="w-full flex justify-center py-2 text-muted hover:text-accent transition-colors duration-200">
+        <button onClick={toggleSidebar} className="w-full flex justify-center py-2 text-muted hover:text-accent transition-colors duration-200 cursor-pointer">
           {expanded ? <ChevronLeft size={20} /> : <ChevronRight size={20} />}
         </button>
       </div>
