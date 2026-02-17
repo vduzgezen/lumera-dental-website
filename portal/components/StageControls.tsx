@@ -2,8 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import ProgressTracker, { Stage } from "@/components/ProgressTracker";
+import ProgressTracker from "@/components/ProgressTracker";
 
+type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING";
 type Role = "customer" | "lab" | "admin";
 
 export default function StageControls({
@@ -21,38 +22,30 @@ export default function StageControls({
   async function setStage(s: Stage) {
     if (!canEdit) return;
     if (s === current) return;
-    
-    const previous = current;
-    setCurrent(s);
-
-    try {
-      const r = await fetch(`/api/cases/${caseId}/stage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ stage: s }),
-      });
-
-      if (r.ok) {
-        if (typeof window !== "undefined") window.location.reload();
-      } else {
-        throw new Error("Failed");
-      }
-    } catch {
-      // Removed unused 'e' variable
-      setCurrent(previous);
-      alert("Failed to update stage");
+    const r = await fetch(`/api/cases/${caseId}/stage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ stage: s }),
+    });
+    if (r.ok) {
+      setCurrent(s);
+      // refresh server data so timestamps update
+      if (typeof window !== "undefined") window.location.reload();
+    } else {
+      const j = await r.json().catch(() => ({}));
+      alert(j.error || "Failed to update stage");
     }
   }
 
   return (
-    <div className="w-full">
+    <div>
       <ProgressTracker
         stage={current}
         onClickStage={canEdit ? setStage : undefined}
       />
       {!canEdit && (
-        <p className="mt-3 text-center text-xs text-muted/60">
-          Tracking status updated by laboratory.
+        <p className="mt-2 text-xs text-muted">
+          The lab updates these stages as your case progresses.
         </p>
       )}
     </div>

@@ -1,4 +1,4 @@
-// components/ThemeToggle.tsx
+// portal/components/ThemeToggle.tsx
 "use client";
 
 import { useTheme } from "./ThemeProvider";
@@ -6,16 +6,17 @@ import { Sun, Moon } from "lucide-react";
 
 export default function ThemeToggle({ expanded = true }: { expanded?: boolean }) {
   const { isDark, toggleTheme } = useTheme();
+
   return (
     <button
       onClick={toggleTheme}
       className={`
-        h-11 flex items-center rounded-lg transition-[background-color] duration-200 group
+        h-11 flex items-center rounded-lg transition-colors duration-200 group relative
         ${expanded 
           ? "w-full px-3 justify-start" 
           : "w-11 justify-center"
         }
-        text-muted hover:bg-[var(--accent-dim)] hover:text-accent
+        text-muted hover:bg-[var(--accent-dim)] hover:text-accent cursor-pointer
       `}
       title={isDark ? "Switch to Light Mode" : "Switch to Night Mode"}
     >

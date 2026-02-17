@@ -1,10 +1,8 @@
 // portal/components/SearchableSelect.tsx
 "use client";
-
 import { useState, useRef, useEffect } from "react";
 
 type Option = { id: string; label: string; subLabel?: string };
-
 type Props = {
   label: string;
   options: Option[];
@@ -22,7 +20,6 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
 
   const selectedOption = options.find((o) => o.id === value);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
@@ -46,12 +43,9 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
     
     const nextState = !isOpen;
     setIsOpen(nextState);
-    
     if (nextState) {
-        // ✅ FIX: Reset search when opening
-        setSearch(""); 
-        // ✅ CRITICAL FIX: Tell parent to reset server-side search too
-        if (onSearch) onSearch(""); 
+        setSearch("");
+        if (onSearch) onSearch("");
     }
   };
 
@@ -66,14 +60,13 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
     <div className="space-y-2 relative" ref={containerRef}>
       {label && <label className="text-sm font-medium text-muted">{label}</label>}
       
-      {/* Trigger Button */}
       <button
         type="button"
         disabled={disabled}
         onClick={handleToggle}
         className={`
           w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-left flex items-center justify-between transition
-          ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-accent/30 focus:border-accent/50"}
+          ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-accent/30 focus:border-accent/50 cursor-pointer"}
         `}
       >
         <div className="flex flex-col items-start truncate">
@@ -90,10 +83,8 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
         </svg>
       </button>
 
-      {/* Dropdown Menu */}
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-surface border border-border rounded-lg shadow-2xl max-h-60 flex flex-col overflow-hidden transition-colors duration-200">
-          {/* Search Input */}
           <div className="p-2 border-b border-border sticky top-0 bg-surface transition-colors duration-200">
             <input
               autoFocus
@@ -104,7 +95,6 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
             />
           </div>
 
-          {/* List */}
           <div className="overflow-y-auto flex-1 custom-scrollbar">
             {displayedOptions.length === 0 ? (
               <div className="p-3 text-sm text-muted text-center">No results found.</div>
@@ -118,7 +108,7 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
                     setIsOpen(false);
                   }}
                   className={`
-                    w-full text-left px-4 py-3 text-sm border-b border-border hover:bg-[var(--accent-dim)] transition
+                    w-full text-left px-4 py-3 text-sm border-b border-border hover:bg-[var(--accent-dim)] transition cursor-pointer
                     ${value === opt.id ? "bg-accent/10 text-accent" : "text-foreground/80"}
                   `}
                 >

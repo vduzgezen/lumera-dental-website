@@ -4,6 +4,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CaseData, INITIAL_DATA, DoctorRow, ServiceLevel } from "./new-case/types";
+import { useTheme } from "@/components/ThemeProvider"; // ✅ Import Theme Hook
 
 import DoctorSelection from "./new-case/DoctorSelection";
 import CaseInfo from "./new-case/CaseInfo";
@@ -12,6 +13,7 @@ import ProductionFiles from "./new-case/ProductionFiles";
 
 export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   const router = useRouter();
+  const { isDark } = useTheme(); // ✅ Get actual theme state
   const [data, setData] = useState<CaseData>(INITIAL_DATA);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | undefined>();
@@ -22,15 +24,12 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     setData(prev => ({ ...prev, ...fields }));
   }, []);
 
-  // ✅ AUTO-SELECT: Added dependencies
+  // ✅ AUTO-SELECT
   useEffect(() => {
-    // Only run if NO doctor is selected yet
     if (!data.doctorUserId && doctors.length > 0) {
       const first = doctors[0];
       const prefs = first.preferenceNote || first.defaultDesignPreferences || "";
-      
       const clinics = first.clinic ? [first.clinic, ...first.secondaryClinics] : [...first.secondaryClinics];
-      
       let initialClinicId = "";
       let initialLevel: ServiceLevel = "STANDARD";
 
@@ -47,9 +46,9 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
         serviceLevel: initialLevel
       });
     }
-  }, [doctors, data.doctorUserId, update]); // ✅ Added missing deps
+  }, [doctors, data.doctorUserId, update]); 
 
-  // ✅ AUTO-ALIAS: Added dependencies
+  // ✅ AUTO-ALIAS
   useEffect(() => {
     const last = (data.patientLastName || "XX").replace(/[^a-zA-Z]/g, "").slice(0, 2).padEnd(2, "X");
     const first = (data.patientFirstName || "XX").replace(/[^a-zA-Z]/g, "").slice(0, 2).padEnd(2, "X");
@@ -57,11 +56,10 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     const prod = (data.product || "XX").slice(0, 2);
     const generated = `${last}${first}${color}${prod}00`.toUpperCase();
 
-    // Prevent loop: Only update if different
     if (data.patientAlias !== generated) {
        update({ patientAlias: generated });
     }
-  }, [data.patientLastName, data.patientFirstName, data.shade, data.product, data.patientAlias, update]); // ✅ Added missing deps
+  }, [data.patientLastName, data.patientFirstName, data.shade, data.product, data.patientAlias, update]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -114,6 +112,7 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
 
   return (
     <div className="flex-1 min-h-0 w-full max-w-5xl mx-auto overflow-y-auto custom-scrollbar pr-2 pb-20">
+      
       <form onSubmit={submit} className="space-y-6">
         <DoctorSelection doctors={doctors} data={data} update={update} />
         <CaseInfo data={data} update={update} />
@@ -127,9 +126,15 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
           <button
             type="submit"
             disabled={busy}
-            className="px-8 py-3 rounded-lg bg-accent text-white font-bold hover:bg-accent/80 transition disabled:opacity-50"
+            // ✅ FORCE OVERRIDE: Inline styles bypass Tailwind completely.
+            // If this stays white in light mode, your browser logic is broken.
+            style={{
+                color: isDark ? 'white' : 'black',
+                borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'
+            }}
+            className="px-8 py-3 rounded-lg bg-accent font-bold hover:bg-accent/80 transition disabled:opacity-50 cursor-pointer border"
           >
-            {busy ? "Creating Case..." : "Create Case"}
+             {busy ? "Creating Case..." : "Create Case"}
           </button>
         </div>
       </form>

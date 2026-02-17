@@ -15,17 +15,15 @@ interface Props {
 export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const [filters, setFilters] = useState({
     clinic: searchParams.get("clinic") || "",
     doctor: searchParams.get("doctor") || "",
     assignee: searchParams.get("assignee") || "",
     caseId: searchParams.get("caseId") || "",
     date: searchParams.get("date") || "",
-    alias: searchParams.get("alias") || "",
+    search: searchParams.get("search") || "",
     status: searchParams.getAll("status"),
   });
-
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
 
   const updateInstant = (key: string, value: string | string[]) => {
@@ -52,7 +50,7 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
     if (debouncedFilters.assignee) params.set("assignee", debouncedFilters.assignee);
     if (debouncedFilters.caseId) params.set("caseId", debouncedFilters.caseId);
     if (debouncedFilters.date) params.set("date", debouncedFilters.date);
-    if (debouncedFilters.alias) params.set("alias", debouncedFilters.alias);
+    if (debouncedFilters.search) params.set("search", debouncedFilters.search);
     debouncedFilters.status.forEach(s => params.append("status", s));
     router.replace(`?${params.toString()}`, { scroll: false });
   }, [debouncedFilters, router]);
@@ -108,8 +106,10 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
             onChange={(e) => updateText("caseId", e.target.value)}
             className={`${inputClass} font-mono`} 
           />
+          {/* ✅ FIX: Added max date to UI to discourage invalid years */}
           <input 
             type="date" 
+            max="2100-12-31"
             value={filters.date}
             onChange={(e) => updateText("date", e.target.value)}
             className={inputClass} 
@@ -119,9 +119,9 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
       
       {isDoctor && (
         <input 
-            placeholder="Search patient, ID, or name..." 
-            value={filters.alias}
-            onChange={(e) => updateText("alias", e.target.value)}
+            placeholder="Search patient, alias, or case ID..." 
+            value={filters.search}
+            onChange={(e) => updateText("search", e.target.value)}
             className={`${inputClass} flex-1 min-w-[200px]`} 
         />
       )}
@@ -129,10 +129,10 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
       {hasFilters && (
          <button 
             onClick={() => {
-                setFilters({ clinic:"", doctor:"", assignee:"", caseId:"", date:"", alias:"", status:[] });
-                setDebouncedFilters({ clinic:"", doctor:"", assignee:"", caseId:"", date:"", alias:"", status:[] });
+              setFilters({ clinic:"", doctor:"", assignee:"", caseId:"", date:"", search:"", status:[] });
+              setDebouncedFilters({ clinic:"", doctor:"", assignee:"", caseId:"", date:"", search:"", status:[] });
             }} 
-            className="px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-[var(--accent-dim)] rounded-lg transition-colors duration-200"
+            className="px-3 py-1.5 text-sm text-muted hover:text-foreground hover:bg-[var(--accent-dim)] rounded-lg transition-colors duration-200 cursor-pointer"
          >
             Clear
          </button>
