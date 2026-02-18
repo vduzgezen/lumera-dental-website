@@ -19,7 +19,6 @@ model Clinic {
   addressId String?
   address   Address? @relation(fields: [addressId], references: [id])
   phone     String?
-  
   // BILLING & FINANCIALS
   billingCycleDay Int     @default(1) 
   paymentTerms    Int     @default(30) 
@@ -30,7 +29,6 @@ model Clinic {
   bankName        String?
   bankLast4       String? 
   routingNumber   String?
-  
   // RELATIONS
   users           User[] // Primary doctors (One-to-Many)
   
@@ -60,7 +58,7 @@ model User {
   
   // PRIMARY CLINIC (One-to-Many)
   clinicId        String?
-  clinic          Clinic?  @relation(fields: [clinicId], references: [id])
+  clinic          Clinic? @relation(fields: [clinicId], references: [id])
 
   // ✅ SECONDARY CLINICS (Many-to-Many)
   secondaryClinics Clinic[] @relation("DoctorSecondaryClinics")
@@ -142,7 +140,12 @@ model DentalCase {
 
   material       String?
   serviceLevel   String?     // IN_HOUSE, STANDARD
-  shade          String?
+  
+  // ✅ SHADES (Expanded)
+  shade          String?     // Body Shade
+  shadeGingival  String?     // NEW
+  shadeIncisal   String?     // NEW
+  
   designPreferences String?
   
   // Billing
@@ -168,9 +171,8 @@ model DentalCase {
   shippingCarrier String?
   trackingNumber  String?
   shippingEta     DateTime?
-  shippingCost    Decimal?    @default(0.00) // ✅ NEW: Store actual cost
+  shippingCost    Decimal?  @default(0.00) // ✅ NEW: Store actual cost
   shippingBatchId String?
-
   needsReview        Boolean   @default(false)
   reviewQuestion     String?
   reviewRequestedAt  DateTime?
@@ -216,7 +218,8 @@ model Payment {
   clinic      Clinic        @relation(fields: [clinicId], references: [id])
   
   amount      Decimal
-  method      String        
+  method      String 
+       
   referenceId String?
   postedAt    DateTime      @default(now())
 }

@@ -2,8 +2,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import UserForm from "@/components/UserForm";
-import { AdminTabs } from "@/components/AdminTabs";
+import UserForm from "@/features/admin/components/UserForm";
+import { AdminTabs } from "@/features/admin/components/AdminTabs";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function UserListClient({ users, clinics }: { users: any[], clinics: any[] }) {

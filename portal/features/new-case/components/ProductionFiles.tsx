@@ -3,7 +3,7 @@
 
 import { useRef } from "react";
 import { CaseData } from "./types";
-import { useTheme } from "@/components/ThemeProvider";
+import { useTheme } from "@/components/ui/ThemeProvider";
 
 interface ProductionFilesProps {
   data: CaseData;

@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { AdminTabs } from "@/components/AdminTabs";
+import { AdminTabs } from "@/features/admin/components/AdminTabs";
 
 export default function RequestListClient({ requests }: { requests: any[] }) {
   const router = useRouter();

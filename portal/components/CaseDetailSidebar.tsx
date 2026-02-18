@@ -2,9 +2,9 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
-import HtmlViewerUploader from "@/components/HtmlViewerUploader";
-import FileUploader from "@/components/FileUploader";
-import CommentsPanel from "@/components/CommentsPanel";
+import HtmlViewerUploader from "@/features/case-dashboard/components/HtmlViewerUploader";
+import FileUploader from "@/components/ui/FileUploader";
+import CommentsPanel from "@/features/case-dashboard/components/CommentsPanel";
 import DesignerPicker from "@/components/DesignerPicker";
 import { CaseFile } from "@prisma/client";
 import type { Role } from "@/lib/types";

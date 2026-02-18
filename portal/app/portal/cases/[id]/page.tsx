@@ -4,11 +4,11 @@ import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import CaseProcessBar from "@/components/CaseProcessBar";
-import CaseViewerTabs from "@/components/CaseViewerTabs";
+import CaseViewerTabs from "@/features/case-dashboard/components/CaseViewerTabs";
 import { CaseFile } from "@prisma/client";
 import CopyableId from "@/components/CopyableId";
 import CaseDetailSidebar from "@/components/CaseDetailSidebar";
-import AutoRefresh from "@/components/AutoRefresh";
+import AutoRefresh from "@/components/ui/AutoRefresh";
 import { getSignedFileUrl } from "@/lib/storage"; 
 
 export const dynamic = "force-dynamic";

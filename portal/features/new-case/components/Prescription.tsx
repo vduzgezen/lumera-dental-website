@@ -1,7 +1,6 @@
-// portal/components/new-case/Prescription.tsx
+// portal/features/new-case/components/Prescription.tsx
 "use client";
 
-// ✅ FIX: Import 'CaseData' and 'ProductType' instead of 'NewCaseState'
 import { CaseData, ProductType } from "./types";
 
 interface Props {
@@ -9,21 +8,24 @@ interface Props {
   onChange: (updates: Partial<CaseData>) => void;
 }
 
-const PRODUCTS = ["ZIRCONIA", "MULTILAYER_ZIRCONIA", "EMAX", "INLAY_ONLAY"];
+const PRODUCTS = ["ZIRCONIA", "MULTILAYER_ZIRCONIA", "EMAX", "INLAY_ONLAY", "NIGHTGUARD"];
 
 export default function Prescription({ data, onChange }: Props) {
+  // Check if shade is required based on product
+  const isShadeRequired = data.product !== "NIGHTGUARD";
+
   return (
     <div className="rounded-xl border border-border bg-surface p-6 space-y-6 shadow-lg">
       <h2 className="text-lg font-medium text-foreground border-b border-border pb-2">
         Prescription
       </h2>
       
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* ROW 1: Product & Material */}
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted">Product</label>
           <select
             value={data.product}
-            // ✅ FIX: Cast to ProductType
             onChange={(e) => onChange({ product: e.target.value as ProductType })}
             className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition appearance-none"
           >
@@ -33,16 +35,6 @@ export default function Prescription({ data, onChange }: Props) {
               </option>
             ))}
           </select>
-        </div>
-        
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-muted">Shade (e.g. A2)</label>
-          <input
-            value={data.shade}
-            onChange={(e) => onChange({ shade: e.target.value })}
-            placeholder="A2"
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
-          />
         </div>
         
         <div className="space-y-2">
@@ -56,6 +48,44 @@ export default function Prescription({ data, onChange }: Props) {
         </div>
       </div>
 
+      {/* ROW 2: Shades */}
+      <div className="grid gap-6 md:grid-cols-3">
+        {/* BODY SHADE (Mandatory for most) */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted">
+            Body Shade {isShadeRequired && <span className="text-red-500">*</span>}
+          </label>
+          <input
+            value={data.shade}
+            onChange={(e) => onChange({ shade: e.target.value })}
+            placeholder={isShadeRequired ? "Required (e.g. A2)" : "Optional"}
+            className={`w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition ${isShadeRequired && !data.shade ? "border-red-500/50" : "border-border"}`}
+          />
+        </div>
+
+        {/* GINGIVAL SHADE (Optional) */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted">Gingival Shade <span className="text-[10px] opacity-70">(Optional)</span></label>
+          <input
+            value={data.shadeGingival || ""}
+            onChange={(e) => onChange({ shadeGingival: e.target.value })}
+            placeholder="e.g. Pink"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+          />
+        </div>
+
+        {/* INCISAL SHADE (Optional) */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted">Incisal Shade <span className="text-[10px] opacity-70">(Optional)</span></label>
+          <input
+            value={data.shadeIncisal || ""}
+            onChange={(e) => onChange({ shadeIncisal: e.target.value })}
+            placeholder="e.g. Translucent"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+          />
+        </div>
+      </div>
+       
       <div className="space-y-2">
         <div className="flex justify-between items-center">
             <label className="text-sm font-medium text-muted">Designer Preferences</label>

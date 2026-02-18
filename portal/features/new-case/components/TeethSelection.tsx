@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo } from "react";
 import { CaseData, ProductType, MaterialType, ServiceLevel } from "./types";
-import ToothSelector from "@/components/ToothSelector";
+import ToothSelector from "@/components/dentistry/ToothSelector";
 
 interface TeethSelectionProps {
   data: CaseData;

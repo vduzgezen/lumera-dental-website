@@ -1,0 +1,787 @@
+FILE: features/new-case/NewCaseForm.tsx
+// portal/components/NewCaseForm.tsx
+"use client";
+
+import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { CaseData, INITIAL_DATA, DoctorRow, ServiceLevel } from "./components/types";
+import { useTheme } from "@/components/ui/ThemeProvider"; // ✅ Import Theme Hook
+
+import DoctorSelection from "./components/DoctorSelection";
+import CaseInfo from "./components/CaseInfo";
+import TeethSelection from "./components/TeethSelection";
+import ProductionFiles from "./components/ProductionFiles";
+
+export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
+  const router = useRouter();
+  const { isDark } = useTheme(); // ✅ Get actual theme state
+  const [data, setData] = useState<CaseData>(INITIAL_DATA);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | undefined>();
+  const [ok, setOk] = useState<string | undefined>();
+
+  // ✅ STABILIZED: Wrapped in useCallback to prevent infinite loops in children
+  const update = useCallback((fields: Partial<CaseData>) => {
+    setData(prev => ({ ...prev, ...fields }));
+  }, []);
+
+  // ✅ AUTO-SELECT
+  useEffect(() => {
+    if (!data.doctorUserId && doctors.length > 0) {
+      const first = doctors[0];
+      const prefs = first.preferenceNote || first.defaultDesignPreferences || "";
+      const clinics = first.clinic ? [first.clinic, ...first.secondaryClinics] : [...first.secondaryClinics];
+      let initialClinicId = "";
+      let initialLevel: ServiceLevel = "STANDARD";
+
+      if (clinics.length === 1) {
+        initialClinicId = clinics[0].id;
+        if (clinics[0].priceTier === "IN_HOUSE") initialLevel = "IN_HOUSE";
+      }
+
+      update({
+        doctorUserId: first.id,
+        doctorName: first.name || first.email,
+        designPreferences: prefs,
+        clinicId: initialClinicId,
+        serviceLevel: initialLevel
+      });
+    }
+  }, [doctors, data.doctorUserId, update]); 
+
+  // ✅ AUTO-ALIAS
+  useEffect(() => {
+    const last = (data.patientLastName || "XX").replace(/[^a-zA-Z]/g, "").slice(0, 2).padEnd(2, "X");
+    const first = (data.patientFirstName || "XX").replace(/[^a-zA-Z]/g, "").slice(0, 2).padEnd(2, "X");
+    const color = (data.shade || "NO").replace(/[^a-zA-Z0-9]/g, "").slice(0, 2).padEnd(2, "X");
+    const prod = (data.product || "XX").slice(0, 2);
+    const generated = `${last}${first}${color}${prod}00`.toUpperCase();
+
+    if (data.patientAlias !== generated) {
+       update({ patientAlias: generated });
+    }
+  }, [data.patientLastName, data.patientFirstName, data.shade, data.product, data.patientAlias, update]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setErr(undefined);
+    setOk(undefined);
+
+    if (!data.doctorUserId) return setErr("Please select a doctor account.");
+    if (!data.clinicId) return setErr("Please select a clinic.");
+    if (!data.patientFirstName.trim() || !data.patientLastName.trim()) return setErr("Patient Name is required.");
+    if (data.toothCodes.length === 0) return setErr("Please select at least one tooth.");
+    if (!data.scanHtml) return setErr("Please upload a scan viewer HTML file.");
+    if (!data.rxPdf) return setErr("Please upload the Rx PDF.");
+    
+    setBusy(true);
+    try {
+      const fd = new FormData();
+      fd.append("patientAlias", data.patientAlias);
+      fd.append("patientFirstName", data.patientFirstName);
+      fd.append("patientLastName", data.patientLastName);
+      fd.append("doctorUserId", data.doctorUserId);
+      fd.append("clinicId", data.clinicId);
+      fd.append("toothCodes", data.toothCodes.join(",")); 
+      
+      fd.append("orderDate", new Date(data.orderDate).toISOString());
+      fd.append("dueDate", new Date(data.dueDate).toISOString());
+
+      fd.append("product", data.product);
+      if (data.material) fd.append("material", data.material);
+      fd.append("serviceLevel", data.serviceLevel);
+      if (data.shade) fd.append("shade", data.shade);
+      if (data.designPreferences) fd.append("designPreferences", data.designPreferences);
+
+      if (data.scanHtml) fd.append("scanHtml", data.scanHtml);
+      if (data.rxPdf) fd.append("rxPdf", data.rxPdf);
+      if (data.constructionInfo) fd.append("constructionInfo", data.constructionInfo);
+      if (data.modelTop) fd.append("modelTop", data.modelTop);
+      if (data.modelBottom) fd.append("modelBottom", data.modelBottom);
+
+      const r = await fetch("/api/cases/new", { method: "POST", body: fd });
+      const j = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(j.error || "Create failed");
+
+      setOk("Case created. Redirecting…");
+      router.push(`/portal/cases/${encodeURIComponent(j.id)}`);
+    } catch (e: any) {
+      setErr(e.message || "Something went wrong.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex-1 min-h-0 w-full max-w-5xl mx-auto overflow-y-auto custom-scrollbar pr-2 pb-20">
+      
+      <form onSubmit={submit} className="space-y-6">
+        <DoctorSelection doctors={doctors} data={data} update={update} />
+        <CaseInfo data={data} update={update} />
+        <TeethSelection data={data} update={update} />
+        <ProductionFiles data={data} update={update} />
+
+        <div className="flex flex-col items-end gap-3 pt-6 border-t border-border">
+          {err && <p className="text-red-400 text-sm font-medium bg-red-500/10 px-3 py-1 rounded">{err}</p>}
+          {ok && <p className="text-emerald-400 text-sm font-medium bg-emerald-500/10 px-3 py-1 rounded">{ok}</p>}
+          
+          <button
+            type="submit"
+            disabled={busy}
+            // ✅ FORCE OVERRIDE: Inline styles bypass Tailwind completely.
+            // If this stays white in light mode, your browser logic is broken.
+            style={{
+                color: isDark ? 'white' : 'black',
+                borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'
+            }}
+            className="px-8 py-3 rounded-lg bg-accent font-bold hover:bg-accent/80 transition disabled:opacity-50 cursor-pointer border"
+          >
+             {busy ? "Creating Case..." : "Create Case"}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+--- END OF FILE ---
+
+FILE: features/new-case/components/Prescription.tsx
+// portal/components/new-case/Prescription.tsx
+"use client";
+
+// ✅ FIX: Import 'CaseData' and 'ProductType' instead of 'NewCaseState'
+import { CaseData, ProductType } from "./types";
+
+interface Props {
+  data: CaseData;
+  onChange: (updates: Partial<CaseData>) => void;
+}
+
+const PRODUCTS = ["ZIRCONIA", "MULTILAYER_ZIRCONIA", "EMAX", "INLAY_ONLAY"];
+
+export default function Prescription({ data, onChange }: Props) {
+  return (
+    <div className="rounded-xl border border-border bg-surface p-6 space-y-6 shadow-lg">
+      <h2 className="text-lg font-medium text-foreground border-b border-border pb-2">
+        Prescription
+      </h2>
+      
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted">Product</label>
+          <select
+            value={data.product}
+            // ✅ FIX: Cast to ProductType
+            onChange={(e) => onChange({ product: e.target.value as ProductType })}
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition appearance-none"
+          >
+            {PRODUCTS.map(p => (
+              <option key={p} value={p} className="bg-gray-900">
+                {p.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted">Shade (e.g. A2)</label>
+          <input
+            value={data.shade}
+            onChange={(e) => onChange({ shade: e.target.value })}
+            placeholder="A2"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-muted">Material (Optional)</label>
+          <input
+            value={data.material || ""}
+            onChange={(e) => onChange({ material: e.target.value as any })}
+            placeholder="e.g. Zirconia"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+            <label className="text-sm font-medium text-muted">Designer Preferences</label>
+            <span className="text-[10px] text-muted">Auto-filled from doctor profile</span>
+        </div>
+        <textarea
+          value={data.designPreferences || ""}
+          onChange={(e) => onChange({ designPreferences: e.target.value })}
+          placeholder="E.g. Contacts heavy, light occlusion, open embrasures..."
+          className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition h-24 resize-none"
+        />
+      </div>
+    </div>
+  );
+}
+--- END OF FILE ---
+
+FILE: features/new-case/components/types.ts
+// portal/components/new-case/types.ts
+
+export type ProductType = "ZIRCONIA" | "EMAX" | "NIGHTGUARD" | "INLAY_ONLAY";
+export type MaterialType = "HT" | "ML" | "HARD" | "SOFT" | null;
+export type ServiceLevel = "IN_HOUSE" | "STANDARD";
+
+export interface DoctorRow {
+  id: string;
+  name: string | null;
+  email: string;
+  
+  // ✅ FIX: Allow clinic to be null (if doctor has no primary clinic)
+  clinic: { 
+    id: string; 
+    name: string; 
+    priceTier: string | null;
+  } | null;
+
+  // Secondary Clinics
+  secondaryClinics: {
+    id: string;
+    name: string;
+    priceTier: string | null;
+  }[];
+  
+  preferenceNote?: string | null;
+  defaultDesignPreferences?: string | null;
+}
+
+export interface CaseData {
+  doctorUserId: string;
+  doctorName: string;
+  clinicId: string;
+  
+  patientFirstName: string;
+  patientLastName: string;
+  patientAlias: string;
+  
+  orderDate: string; 
+  dueDate: string;
+  product: ProductType;
+  material: MaterialType;
+  serviceLevel: ServiceLevel;
+  shade: string;
+  designPreferences: string;
+  
+  toothCodes: string[];
+  
+  scanHtml: File | null;
+  rxPdf: File | null;
+  constructionInfo: File | null;
+  modelTop: File | null;
+  modelBottom: File | null;
+}
+
+const today = new Date();
+const defaultDue = new Date(today);
+defaultDue.setDate(today.getDate() + 8);
+
+export const INITIAL_DATA: CaseData = {
+  doctorUserId: "",
+  doctorName: "",
+  clinicId: "", 
+  
+  patientFirstName: "",
+  patientLastName: "",
+  patientAlias: "",
+  
+  orderDate: today.toISOString().split("T")[0],
+  dueDate: defaultDue.toISOString().split("T")[0],
+  
+  product: "ZIRCONIA",
+  material: "HT",
+  serviceLevel: "STANDARD",
+  shade: "",
+  designPreferences: "",
+  
+  toothCodes: [],
+  
+  scanHtml: null,
+  rxPdf: null,
+  constructionInfo: null,
+  modelTop: null,
+  modelBottom: null,
+};
+--- END OF FILE ---
+
+FILE: app/api/cases/new/route.ts
+// portal/app/api/cases/new/route.ts
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
+import { z } from "zod";
+import { uploadFile } from "@/lib/storage";
+
+const MAX_FILE_BYTES = 500 * 1024 * 1024; 
+
+// --- ZOD SCHEMA ---
+const CreateCaseSchema = z.object({
+  patientFirstName: z.string().min(1, "First Name is required"),
+  patientLastName: z.string().min(1, "Last Name is required"),
+  patientAlias: z.string().min(1, "Patient Alias is required"),
+  doctorUserId: z.string().min(1, "Doctor is required"),
+  clinicId: z.string().min(1, "Clinic is required"),
+  toothCodes: z.string().min(1, "Tooth selection is required"),
+  
+  orderDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid Order Date"),
+  dueDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid Due Date").optional(),
+
+  product: z.string().min(1, "Product is required"),
+  material: z.string().optional(),
+  shade: z.string().optional(),
+  designPreferences: z.string().optional(),
+  serviceLevel: z.enum(["IN_HOUSE", "STANDARD"]).default("IN_HOUSE"),
+  
+  scanHtml: z.instanceof(File, { message: "Scan Viewer HTML is required" }),
+  rxPdf: z.instanceof(File, { message: "Rx PDF is required" }),
+  
+  constructionInfo: z.instanceof(File).optional(),
+  modelTop: z.instanceof(File).optional(),
+  modelBottom: z.instanceof(File).optional(),
+});
+
+function addDays(d: string | Date, n: number) {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+// ✅ S3-Aware Save Function
+async function saveCaseFile(file: File, caseId: string, label: string) {
+  const buf = Buffer.from(await file.arrayBuffer());
+  const originalName = file.name || `${label}.bin`;
+  const safeName = originalName.replace(/[^a-zA-Z0-9_.-]/g, "_");
+  const key = `cases/${caseId}/${label}_${safeName}`;
+
+  await uploadFile(buf, key, file.type);
+
+  let kind = "OTHER";
+  const lower = safeName.toLowerCase();
+  if (lower.endsWith(".stl")) kind = "STL";
+  else if (lower.endsWith(".ply")) kind = "PLY";
+  else if (lower.endsWith(".obj")) kind = "OBJ";
+  else if (lower.endsWith(".pdf")) kind = "PDF";
+
+  await prisma.caseFile.create({
+    data: {
+      caseId,
+      label,
+      kind,
+      url: key,
+      sizeBytes: buf.length,
+    },
+  });
+}
+
+async function getUniqueAlias(baseAlias: string) {
+  const root = baseAlias.slice(0, -2);
+  const existing = await prisma.dentalCase.findMany({
+    where: { patientAlias: { startsWith: root } },
+    select: { patientAlias: true }
+  });
+  if (existing.length === 0) return baseAlias;
+
+  let maxSuffix = -1;
+  existing.forEach((c) => {
+    const suffix = parseInt(c.patientAlias.slice(-2), 10);
+    if (!isNaN(suffix) && suffix > maxSuffix) {
+      maxSuffix = suffix;
+    }
+  });
+  const nextSuffix = (maxSuffix + 1).toString().padStart(2, "0");
+  return `${root}${nextSuffix}`;
+}
+
+function calculateEstimate(product: string, serviceLevel: string, toothCodes: string) {
+  const units = toothCodes.split(",").filter(Boolean).length;
+  let basePrice = 0;
+  if (product === "ZIRCONIA") basePrice = serviceLevel === "IN_HOUSE" ? 55 : 65;
+  else if (product === "EMAX") basePrice = serviceLevel === "IN_HOUSE" ? 110 : 120;
+  else if (product === "NIGHTGUARD") basePrice = serviceLevel === "IN_HOUSE" ? 50 : 60;
+  else if (product === "INLAY_ONLAY") basePrice = serviceLevel === "IN_HOUSE" ? 65 : 75;
+  return basePrice * units;
+}
+
+export async function POST(req: Request) {
+  try {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
+
+    const form = await req.formData();
+    const getFile = (key: string) => {
+      const f = form.get(key);
+      return f instanceof File ? f : undefined;
+    };
+
+    const rawData = {
+      patientFirstName: form.get("patientFirstName"),
+      patientLastName: form.get("patientLastName"),
+      patientAlias: form.get("patientAlias"),
+      doctorUserId: form.get("doctorUserId"),
+      clinicId: form.get("clinicId"),
+      toothCodes: form.get("toothCodes"),
+      orderDate: form.get("orderDate"),
+      dueDate: form.get("dueDate"),
+      product: form.get("product"),
+      shade: form.get("shade") || undefined,
+      material: form.get("material") || undefined,
+      designPreferences: form.get("designPreferences") || undefined,
+      serviceLevel: form.get("serviceLevel") || "IN_HOUSE",
+      
+      scanHtml: getFile("scanHtml"),
+      rxPdf: getFile("rxPdf"),
+      constructionInfo: getFile("constructionInfo"),
+      modelTop: getFile("modelTop"),
+      modelBottom: getFile("modelBottom"),
+    };
+
+    const validation = CreateCaseSchema.safeParse(rawData);
+    if (!validation.success) {
+      const firstError = validation.error.issues[0];
+      return NextResponse.json(
+        { error: `${firstError.path.join(".")}: ${firstError.message}` }, 
+        { status: 400 }
+      );
+    }
+
+    const data = validation.data;
+
+    // ✅ Verify Doctor (FETCH SALES REP HERE)
+    const doctor = await prisma.user.findUnique({
+      where: { id: data.doctorUserId },
+      select: { 
+        id: true, 
+        name: true,
+        salesRepId: true // <--- THIS MUST BE HERE, NOT IN CLINIC
+      },
+    });
+    if (!doctor) return NextResponse.json({ error: "Invalid doctor." }, { status: 400 });
+
+    // ✅ Verify Clinic (NO SALES REP HERE)
+    const clinic = await prisma.clinic.findUnique({
+      where: { id: data.clinicId },
+      select: { id: true, priceTier: true },
+    });
+    if (!clinic) return NextResponse.json({ error: "Invalid clinic." }, { status: 400 });
+
+    const uniqueAlias = await getUniqueAlias(data.patientAlias);
+    const cost = calculateEstimate(data.product, data.serviceLevel, data.toothCodes);
+    const unitCount = data.toothCodes.split(",").filter(Boolean).length;
+    const dueDate = data.dueDate ? new Date(data.dueDate) : addDays(data.orderDate, 8);
+
+    const created = await prisma.dentalCase.create({
+      data: {
+        clinicId: clinic.id,
+        doctorUserId: doctor.id,
+        
+        // ✅ SNAPSHOT SALES REP
+        salesRepId: doctor.salesRepId,
+
+        assigneeId: session.userId, 
+        patientFirstName: data.patientFirstName,
+        patientLastName: data.patientLastName,
+        patientAlias: uniqueAlias,
+        doctorName: doctor.name ?? null,
+        toothCodes: data.toothCodes,
+        orderDate: new Date(data.orderDate),
+        dueDate: dueDate, 
+        product: data.product,
+        material: data.material || null,
+        serviceLevel: data.serviceLevel, 
+        shade: data.shade || null,
+        designPreferences: data.designPreferences || null,
+        status: "IN_DESIGN",
+        stage: "DESIGN",
+        units: unitCount,
+        cost,
+        billingType: "BILLABLE",
+        invoiced: false,
+      },
+      select: { id: true },
+    });
+
+    await saveCaseFile(data.scanHtml, created.id, "scan_html");
+    await saveCaseFile(data.rxPdf, created.id, "rx_pdf");
+    if (data.constructionInfo) await saveCaseFile(data.constructionInfo, created.id, "construction_info");
+    if (data.modelTop) await saveCaseFile(data.modelTop, created.id, "model_top");
+    if (data.modelBottom) await saveCaseFile(data.modelBottom, created.id, "model_bottom");
+
+    return NextResponse.json({ ok: true, id: created.id });
+
+  } catch (err: any) { 
+    console.error("Create case error:", err);
+    return NextResponse.json(
+      { error: "Something went wrong creating the case." },
+      { status: 500 },
+    );
+  }
+}
+--- END OF FILE ---
+
+FILE: prisma/schema.prisma
+// portal/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --- CORE MODELS ------------------------------------------------------------
+
+model Clinic {
+  id        String   @id @default(cuid())
+  name      String
+  
+  // LOGISTICS
+  addressId String?
+  address   Address? @relation(fields: [addressId], references: [id])
+  phone     String?
+  
+  // BILLING & FINANCIALS
+  billingCycleDay Int     @default(1) 
+  paymentTerms    Int     @default(30) 
+  taxId           String?
+  priceTier       String  @default("STANDARD") 
+
+  // BANKING REFERENCE
+  bankName        String?
+  bankLast4       String? 
+  routingNumber   String?
+  
+  // RELATIONS
+  users           User[] // Primary doctors (One-to-Many)
+  
+  // ✅ FIX: Back-relation for Secondary Clinics
+  partTimeDoctors User[] @relation("DoctorSecondaryClinics")
+
+  cases     DentalCase[]
+  invoices  Invoice[]
+  payments  Payment[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  password        String   // Hashed
+  name            String?
+  phoneNumber     String?  
+  preferenceNote  String? 
+
+  role            String   // customer, lab, admin, milling
+  
+  invitationToken String? @unique 
+  defaultDesignPreferences String?
+  
+  // PRIMARY CLINIC (One-to-Many)
+  clinicId        String?
+  clinic          Clinic?  @relation(fields: [clinicId], references: [id])
+
+  // ✅ SECONDARY CLINICS (Many-to-Many)
+  secondaryClinics Clinic[] @relation("DoctorSecondaryClinics")
+
+  // If this User is a Doctor, they might have a Sales Rep
+  salesRepId      String?
+  salesRep        User?    @relation("DoctorSalesRep", fields: [salesRepId], references: [id])
+  // If this User is a Sales Rep, they have many Doctors
+  doctors         User[]   @relation("DoctorSalesRep")
+
+  addressId       String?
+  address         Address? @relation(fields: [addressId], references: [id])
+
+  doctorCases     DentalCase[] @relation("DoctorCases")
+  workingCases    DentalCase[] @relation("WorkingCases")
+
+  commissionedCases DentalCase[] @relation("CaseSalesRep")
+
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+// --- SUPPORTING MODELS ------------------------------------------------------
+
+model RegistrationRequest {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  phone     String?
+  clinicName String
+  street    String?
+  city      String?
+  state     String?
+  zipCode   String?
+  status    String   @default("PENDING") // PENDING, APPROVED, REJECTED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  street    String?
+  city      String?
+  state     String?
+  zipCode   String?
+  country   String?  @default("USA")
+  users     User[]
+  clinics   Clinic[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DentalCase {
+  id             String @id @default(cuid())
+  
+  // Clinic is mandatory for billing
+  clinicId       String
+  clinic         Clinic @relation(fields: [clinicId], references: [id])
+  
+  // Doctor is the user who owns the case
+  doctorUserId   String?
+  doctorUser     User?    @relation("DoctorCases", fields: [doctorUserId], references: [id])
+
+  salesRepId     String?
+  salesRep       User?    @relation("CaseSalesRep", fields: [salesRepId], references: [id])
+
+  // Lab Assignee
+  assigneeId     String?
+  assigneeUser   User?    @relation("WorkingCases", fields: [assigneeId], references: [id])
+
+  patientAlias   String
+  patientFirstName String? 
+  patientLastName  String?
+  doctorName     String?
+  toothCodes     String
+
+  orderDate      DateTime    @default(now())
+  product        String      @default("ZIRCONIA") 
+
+  material       String?
+  serviceLevel   String?     // IN_HOUSE, STANDARD
+  shade          String?
+  designPreferences String?
+  
+  // Billing
+  billingType    String      @default("BILLABLE") 
+  units          Int         @default(1)
+  cost           Decimal     @default(0.00)
+  isRush         Boolean     @default(false) 
+  currency       String      @default("USD")
+  invoiced       Boolean     @default(false) 
+  
+  invoiceId      String?
+  invoice        Invoice?    @relation(fields: [invoiceId], references: [id])
+
+  // Production
+  dueDate        DateTime?
+  status         String      @default("IN_DESIGN") 
+  stage          String      @default("DESIGN")    
+  
+  designedAt     DateTime?
+  milledAt       DateTime?
+  shippedAt      DateTime?
+  
+  shippingCarrier String?
+  trackingNumber  String?
+  shippingEta     DateTime?
+  shippingCost    Decimal?    @default(0.00) // ✅ NEW: Store actual cost
+  shippingBatchId String?
+
+  needsReview        Boolean   @default(false)
+  reviewQuestion     String?
+  reviewRequestedAt  DateTime?
+  reviewDeadline     DateTime?
+
+  files      CaseFile[]
+  events     StatusEvent[]
+  comments   CaseComment[]
+
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([clinicId])
+  @@index([doctorUserId])
+  @@index([status])
+  @@index([createdAt])
+  @@index([orderDate])
+  @@map("Case")
+}
+
+model Invoice {
+  id          String        @id @default(cuid())
+  clinicId    String
+  clinic      Clinic        @relation(fields: [clinicId], references: [id])
+  
+  amount      Decimal
+  status      String        @default("UNPAID")
+  dueDate     DateTime      
+  
+  periodStart DateTime      
+  periodEnd   DateTime      
+  
+  pdfUrl      String?
+  cases       DentalCase[]  
+  
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Payment {
+  id          String        @id @default(cuid())
+  clinicId    String
+  clinic      Clinic        @relation(fields: [clinicId], references: [id])
+  
+  amount      Decimal
+  method      String        
+  referenceId String?
+  postedAt    DateTime      @default(now())
+}
+
+model CaseFile {
+  id        String      @id @default(cuid())
+  caseId    String
+  case      DentalCase  @relation(fields: [caseId], references: [id])
+  
+  label     String?
+  kind      String      
+  url       String
+  sizeBytes Int?
+  createdAt DateTime    @default(now())
+
+  commentId String?
+  comment   CaseComment? @relation(fields: [commentId], references: [id])
+}
+
+model StatusEvent {
+  id      String      @id @default(cuid())
+  caseId  String
+  case    DentalCase  @relation(fields: [caseId], references: [id])
+  from    String?
+  to      String
+  note    String?
+  at      DateTime    @default(now())
+  actorId String?
+}
+
+model CaseComment {
+  id        String      @id @default(cuid())
+  caseId    String
+  case      DentalCase  @relation(fields: [caseId], references: [id])
+  authorId  String
+  body      String
+  createdAt DateTime    @default(now())
+
+  attachments CaseFile[]
+}
+--- END OF FILE ---
+

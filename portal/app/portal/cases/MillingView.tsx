@@ -1,7 +1,7 @@
 // app/portal/cases/MillingView.tsx
 import { prisma } from "@/lib/prisma";
 import MillingDashboard from "./milling/MillingDashboard";
-import AutoRefresh from "@/components/AutoRefresh";
+import AutoRefresh from "@/components/ui/AutoRefresh";
 
 export default async function MillingView({ 
   searchParams 

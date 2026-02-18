@@ -4,8 +4,8 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
-import Logo from "./Logo";
-import ThemeToggle from "./ThemeToggle";
+import Logo from "@/components/ui/Logo";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 import { 
   LayoutDashboard, FolderOpen, CreditCard, LogOut,
   ChevronRight, ChevronLeft, ShieldCheck, DollarSign

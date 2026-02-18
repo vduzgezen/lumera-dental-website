@@ -21,7 +21,11 @@ const CreateCaseSchema = z.object({
 
   product: z.string().min(1, "Product is required"),
   material: z.string().optional(),
-  shade: z.string().optional(),
+  
+  shade: z.string().optional(), // We handle Conditional Requirement manually below
+  shadeGingival: z.string().optional(),
+  shadeIncisal: z.string().optional(),
+  
   designPreferences: z.string().optional(),
   serviceLevel: z.enum(["IN_HOUSE", "STANDARD"]).default("IN_HOUSE"),
   
@@ -117,7 +121,11 @@ export async function POST(req: Request) {
       orderDate: form.get("orderDate"),
       dueDate: form.get("dueDate"),
       product: form.get("product"),
+      
       shade: form.get("shade") || undefined,
+      shadeGingival: form.get("shadeGingival") || undefined,
+      shadeIncisal: form.get("shadeIncisal") || undefined,
+
       material: form.get("material") || undefined,
       designPreferences: form.get("designPreferences") || undefined,
       serviceLevel: form.get("serviceLevel") || "IN_HOUSE",
@@ -140,18 +148,24 @@ export async function POST(req: Request) {
 
     const data = validation.data;
 
+    // ✅ STRICT VALIDATION: Body Shade
+    // Must be present unless product is Nightguard
+    if (data.product !== "NIGHTGUARD" && !data.shade) {
+      return NextResponse.json({ error: "Body Shade is required." }, { status: 400 });
+    }
+
     // ✅ Verify Doctor (FETCH SALES REP HERE)
     const doctor = await prisma.user.findUnique({
       where: { id: data.doctorUserId },
       select: { 
         id: true, 
         name: true,
-        salesRepId: true // <--- THIS MUST BE HERE, NOT IN CLINIC
+        salesRepId: true 
       },
     });
     if (!doctor) return NextResponse.json({ error: "Invalid doctor." }, { status: 400 });
 
-    // ✅ Verify Clinic (NO SALES REP HERE)
+    // ✅ Verify Clinic
     const clinic = await prisma.clinic.findUnique({
       where: { id: data.clinicId },
       select: { id: true, priceTier: true },
@@ -175,6 +189,7 @@ export async function POST(req: Request) {
         patientFirstName: data.patientFirstName,
         patientLastName: data.patientLastName,
         patientAlias: uniqueAlias,
+     
         doctorName: doctor.name ?? null,
         toothCodes: data.toothCodes,
         orderDate: new Date(data.orderDate),
@@ -182,9 +197,15 @@ export async function POST(req: Request) {
         product: data.product,
         material: data.material || null,
         serviceLevel: data.serviceLevel, 
+        
+        // ✅ SAVE NEW SHADES
         shade: data.shade || null,
+        shadeGingival: data.shadeGingival || null,
+        shadeIncisal: data.shadeIncisal || null,
+        
         designPreferences: data.designPreferences || null,
         status: "IN_DESIGN",
+    
         stage: "DESIGN",
         units: unitCount,
         cost,
@@ -201,7 +222,6 @@ export async function POST(req: Request) {
     if (data.modelBottom) await saveCaseFile(data.modelBottom, created.id, "model_bottom");
 
     return NextResponse.json({ ok: true, id: created.id });
-
   } catch (err: any) { 
     console.error("Create case error:", err);
     return NextResponse.json(
