@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { AdminTabs } from "@/components/AdminTabs";
+import { AdminTabs } from "@/features/admin/components/AdminTabs";
 import FinancialsFilters from "./FinancialsFilters";
 import FinancialsTable from "./FinancialsTable"; 
 import { calculateProductionCosts } from "@/lib/cost-engine";

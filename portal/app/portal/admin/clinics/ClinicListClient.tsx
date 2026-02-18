@@ -2,8 +2,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import ClinicForm from "@/components/ClinicForm";
-import { AdminTabs } from "@/components/AdminTabs";
+import ClinicForm from "@/features/admin/components/ClinicForm";
+import { AdminTabs } from "@/features/admin/components/AdminTabs";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function ClinicListClient({ clinics }: { clinics: any[] }) {

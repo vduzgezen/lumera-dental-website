@@ -3,7 +3,7 @@
 
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
-import { useTheme } from "./ThemeProvider";
+import { useTheme } from "@/components/ui/ThemeProvider";
 
 interface LogoProps {
   className?: string;

@@ -4,7 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AddressPicker, { AddressData } from "@/components/AddressPicker";
 import SearchableSelect from "@/components/SearchableSelect";
-import ClinicForm from "@/components/ClinicForm"; 
+import ClinicForm from "./ClinicForm"; 
 
 type Clinic = { id: string; name: string };
 type UserOption = { id: string; name: string | null; email: string };

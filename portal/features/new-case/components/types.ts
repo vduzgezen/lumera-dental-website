@@ -1,4 +1,4 @@
-// portal/components/new-case/types.ts
+// portal/features/new-case/components/types.ts
 
 export type ProductType = "ZIRCONIA" | "EMAX" | "NIGHTGUARD" | "INLAY_ONLAY";
 export type MaterialType = "HT" | "ML" | "HARD" | "SOFT" | null;
@@ -41,7 +41,12 @@ export interface CaseData {
   product: ProductType;
   material: MaterialType;
   serviceLevel: ServiceLevel;
-  shade: string;
+  
+  // ✅ SHADES
+  shade: string;          // Body Shade
+  shadeGingival?: string; // Optional
+  shadeIncisal?: string;  // Optional
+  
   designPreferences: string;
   
   toothCodes: string[];
@@ -73,6 +78,8 @@ export const INITIAL_DATA: CaseData = {
   material: "HT",
   serviceLevel: "STANDARD",
   shade: "",
+  shadeGingival: "",
+  shadeIncisal: "",
   designPreferences: "",
   
   toothCodes: [],

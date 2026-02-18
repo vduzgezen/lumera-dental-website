@@ -3,14 +3,14 @@
 
 import { useEffect, useState, memo } from "react";
 import dynamic from "next/dynamic";
-import CaseActions from "@/components/CaseActions";
+import CaseActions from "./CaseActions";
 import type { Role, CaseStatus } from "@/lib/types";
 
 // Dynamic import for 3D Panel
-const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
+const Case3DPanel = dynamic(() => import("./Case3DPanel"), {
   ssr: false, 
   loading: () => (
-    <div className="w-full h-full bg-background animate-pulse flex items-center justify-center text-muted text-sm">
+    <div className="w-full h-full bg-surface animate-pulse flex items-center justify-center text-muted text-sm">
       Loading 3D Viewer...
     </div>
   ),
@@ -18,48 +18,50 @@ const Case3DPanel = dynamic(() => import("@/components/Case3DPanel"), {
 
 type TabKey = "scan" | "design_with_model" | "design_only";
 
-// --- STABLE WRAPPERS ---
+// --- STABLE WRAPPERS (Prevent Reloads on AutoRefresh) ---
 
+// Helper: Check if URLs point to the same file (ignoring ?signature=...)
 const areUrlsEqual = (prev: { url: string | null }, next: { url: string | null }) => {
-  if (prev.url === next.url) return true;
-  if (!prev.url || !next.url) return false;
+  if (prev.url === next.url) return true; // Exact match
+  if (!prev.url || !next.url) return false; // One is missing
+  
+  // Compare only the base path (e.g. https://bucket/file.stl)
   const prevBase = prev.url.split("?")[0];
   const nextBase = next.url.split("?")[0];
   return prevBase === nextBase;
 };
 
 // 1. Stable 3D Panel
-const Stable3DComponent = ({ url }: { url: string | null }) => {
+const Stable3D = memo(({ url }: { url: string | null }) => {
   return <Case3DPanel url={url} />;
-};
-const Stable3D = memo(Stable3DComponent, areUrlsEqual);
-// ✅ CRITICAL FIX: Explicit Display Name
+}, areUrlsEqual);
+
+// ✅ FIX: Add display name
 Stable3D.displayName = "Stable3D";
 
-// 2. Stable Iframe
-const StableIframeComponent = ({ url, title }: { url: string; title: string }) => {
+// 2. Stable Iframe (Exocad)
+const StableIframe = memo(({ url, title }: { url: string; title: string }) => {
   const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement, Event>) => {
     try {
       const iframe = e.target as HTMLIFrameElement;
       const doc = iframe.contentDocument;
       if (doc) {
-        // Theme-aware background injection - uses CSS variable
-        doc.body.style.backgroundColor = "var(--background)";
+        doc.body.style.backgroundColor = "#0a1020";
         const style = doc.createElement("style");
         style.textContent = `
-          body, html { background-color: var(--background) !important; }
-          #background { background-color: var(--background) !important; }
-          .webviewer-canvas-container { background-color: var(--background) !important; }
+          body, html { background-color: #0a1020 !important; }
+          #background { background-color: #0a1020 !important; }
+          .webviewer-canvas-container { background-color: #0a1020 !important; }
         `;
         doc.head.appendChild(style);
       }
     } catch (err) {
-      console.warn("Could not inject styles into viewer", err);
+      console.warn("Could not inject styles into viewer (Cross-Origin blocking?)", err);
     }
   };
 
   return (
-    <div className="w-full h-full bg-background rounded-lg overflow-hidden">
+    <div className="w-full h-full bg-[#0a1020] rounded-lg overflow-hidden">
       <iframe 
         src={url} 
         className="w-full h-full border-0 block" 
@@ -68,10 +70,11 @@ const StableIframeComponent = ({ url, title }: { url: string; title: string }) =
       />
     </div>
   );
-};
-const StableIframe = memo(StableIframeComponent, (prev, next) => areUrlsEqual({ url: prev.url }, { url: next.url }));
-// ✅ CRITICAL FIX: Explicit Display Name
+}, (prev, next) => areUrlsEqual({ url: prev.url }, { url: next.url }));
+
+// ✅ FIX: Add display name
 StableIframe.displayName = "StableIframe";
+
 
 export default function CaseViewerTabs({
   caseId,
@@ -142,7 +145,7 @@ export default function CaseViewerTabs({
           active
             ? "border-accent text-accent" 
             : disabled
-            ? "border-transparent text-muted/30 cursor-not-allowed"
+            ? "border-transparent text-muted/50 cursor-not-allowed"
             : "border-transparent text-muted hover:text-foreground"
         }
       `}
@@ -153,19 +156,25 @@ export default function CaseViewerTabs({
 
   const renderContent = () => {
     if (tab === "scan") {
-      if (scanHtmlUrl) return <StableIframe url={scanHtmlUrl} title="Exocad Scan Viewer" />;
+      if (scanHtmlUrl) {
+        return <StableIframe url={scanHtmlUrl} title="Exocad Scan Viewer" />;
+      }
       return <Stable3D url={scan3DUrl} />;
     }
+
     if (tab === "design_with_model") {
-      if (designHtmlUrl) return <StableIframe url={designHtmlUrl} title="Exocad Design Viewer" />;
+      if (designHtmlUrl) {
+        return <StableIframe url={designHtmlUrl} title="Exocad Design Viewer" />;
+      }
       return <Stable3D url={designWithModel3DUrl} />;
     }
+
     return <Stable3D url={designOnly3DUrl} />;
   };
 
   return (
-    <div className="rounded-xl border border-border bg-background flex flex-col h-full overflow-hidden shadow-2xl">
-      <div className="flex items-center border-b border-border px-2 bg-surface h-14 shrink-0">
+    <div className="rounded-xl border border-border bg-surface flex flex-col h-full overflow-hidden shadow-2xl">
+      <div className="flex items-center border-b border-border px-2 bg-surface-highlight h-14 shrink-0">
         {tabBtn("scan", "Scan", tab === "scan", !hasScanViewer)}
         {tabBtn("design_with_model", "Design + Model", tab === "design_with_model", !hasDesignViewer)}
         {tabBtn("design_only", "Design Only", tab === "design_only", !hasDesignOnlyViewer)}
@@ -179,7 +188,7 @@ export default function CaseViewerTabs({
         </div>
       </div>
 
-      <div className="flex-1 p-2 relative min-h-0 bg-background">
+      <div className="flex-1 p-2 relative min-h-0 bg-[#0a1020]">
         {renderContent()}
       </div>
     </div>

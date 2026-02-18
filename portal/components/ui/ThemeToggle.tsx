@@ -1,7 +1,7 @@
 // portal/components/ThemeToggle.tsx
 "use client";
 
-import { useTheme } from "./ThemeProvider";
+import { useTheme } from "@/components/ui/ThemeProvider";
 import { Sun, Moon } from "lucide-react";
 
 export default function ThemeToggle({ expanded = true }: { expanded?: boolean }) {

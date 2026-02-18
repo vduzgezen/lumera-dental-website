@@ -1,0 +1,20 @@
+FILE: portal/components/NewCaseForm.tsx
+
+--- END OF FILE ---
+
+FILE: portal/components/new-case/TeethSelection.tsx
+
+--- END OF FILE ---
+
+FILE: portal/components/new-case/types.ts
+
+--- END OF FILE ---
+
+FILE: portal/app/api/cases/new/route.ts
+
+--- END OF FILE ---
+
+FILE: portal/prisma/schema.prisma
+
+--- END OF FILE ---
+

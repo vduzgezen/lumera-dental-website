@@ -2,7 +2,7 @@
 "use client";
 
 import { useState } from "react";
-import ProgressTracker from "@/components/ProgressTracker";
+import ProgressTracker from "./ProgressTracker";
 
 type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING";
 type Role = "customer" | "lab" | "admin";

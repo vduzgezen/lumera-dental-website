@@ -1,15 +1,16 @@
-// portal/components/NewCaseForm.tsx
+// portal/features/new-case/NewCaseForm.tsx
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { CaseData, INITIAL_DATA, DoctorRow, ServiceLevel } from "./new-case/types";
-import { useTheme } from "@/components/ThemeProvider"; // ✅ Import Theme Hook
+import { CaseData, INITIAL_DATA, DoctorRow, ServiceLevel } from "./components/types";
+import { useTheme } from "@/components/ui/ThemeProvider";
+// ✅ Import Theme Hook
 
-import DoctorSelection from "./new-case/DoctorSelection";
-import CaseInfo from "./new-case/CaseInfo";
-import TeethSelection from "./new-case/TeethSelection";
-import ProductionFiles from "./new-case/ProductionFiles";
+import DoctorSelection from "./components/DoctorSelection";
+import CaseInfo from "./components/CaseInfo";
+import TeethSelection from "./components/TeethSelection";
+import ProductionFiles from "./components/ProductionFiles";
 
 export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   const router = useRouter();
@@ -46,7 +47,7 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
         serviceLevel: initialLevel
       });
     }
-  }, [doctors, data.doctorUserId, update]); 
+  }, [doctors, data.doctorUserId, update]);
 
   // ✅ AUTO-ALIAS
   useEffect(() => {
@@ -70,6 +71,12 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     if (!data.clinicId) return setErr("Please select a clinic.");
     if (!data.patientFirstName.trim() || !data.patientLastName.trim()) return setErr("Patient Name is required.");
     if (data.toothCodes.length === 0) return setErr("Please select at least one tooth.");
+    
+    // ✅ VALIDATION: Body Shade Required (unless Nightguard)
+    if (data.product !== "NIGHTGUARD" && !data.shade.trim()) {
+      return setErr("Body Shade is required for this product.");
+    }
+
     if (!data.scanHtml) return setErr("Please upload a scan viewer HTML file.");
     if (!data.rxPdf) return setErr("Please upload the Rx PDF.");
     
@@ -89,7 +96,11 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
       fd.append("product", data.product);
       if (data.material) fd.append("material", data.material);
       fd.append("serviceLevel", data.serviceLevel);
+      
       if (data.shade) fd.append("shade", data.shade);
+      if (data.shadeGingival) fd.append("shadeGingival", data.shadeGingival);
+      if (data.shadeIncisal) fd.append("shadeIncisal", data.shadeIncisal);
+      
       if (data.designPreferences) fd.append("designPreferences", data.designPreferences);
 
       if (data.scanHtml) fd.append("scanHtml", data.scanHtml);
@@ -120,6 +131,7 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
         <ProductionFiles data={data} update={update} />
 
         <div className="flex flex-col items-end gap-3 pt-6 border-t border-border">
+        
           {err && <p className="text-red-400 text-sm font-medium bg-red-500/10 px-3 py-1 rounded">{err}</p>}
           {ok && <p className="text-emerald-400 text-sm font-medium bg-emerald-500/10 px-3 py-1 rounded">{ok}</p>}
           
