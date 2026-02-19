@@ -1,4 +1,4 @@
-// portal/components/CaseActions.tsx
+// features/case-dashboard/components/CaseActions.tsx
 "use client";
 
 import { useState } from "react";
@@ -8,9 +8,10 @@ type Props = {
   caseId: string;
   role: Role;
   currentStatus: string;
+  hasAllDesigns?: boolean;
 };
 
-export default function CaseActions({ caseId, role, currentStatus }: Props) {
+export default function CaseActions({ caseId, role, currentStatus, hasAllDesigns = false }: Props) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -23,7 +24,6 @@ export default function CaseActions({ caseId, role, currentStatus }: Props) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ to }), 
       });
-      
       const j = await r.json().catch(() => ({}));
       
       if (r.ok) {
@@ -34,58 +34,55 @@ export default function CaseActions({ caseId, role, currentStatus }: Props) {
     } catch (e: any) {
       setErr(e.message);
       setBusy(false);
-      // Auto-clear error after 5 seconds
       setTimeout(() => setErr(null), 5000);
     }
   }
 
   const isApproved = 
     currentStatus === "APPROVED" ||
-    currentStatus === "IN_MILLING" || 
+    currentStatus === "IN_MILLING" ||
     currentStatus === "SHIPPED" ||
     currentStatus === "COMPLETED";
   
   const canCustomer = new Set(["APPROVED", "CHANGES_REQUESTED"]);
   
-  const showApprove = !isApproved && (role !== "customer" || canCustomer.has("APPROVED"));
-  const showRequest = !isApproved && (role !== "customer" || canCustomer.has("CHANGES_REQUESTED"));
+  const showApprove = !isApproved && (role !== "customer" || (canCustomer.has("APPROVED") && hasAllDesigns));
+  const showRequest = !isApproved && (role !== "customer" || (canCustomer.has("CHANGES_REQUESTED") && hasAllDesigns));
 
-  if (isApproved) return null; 
+  if (isApproved) return null;
 
   return (
-    // FIX: 'relative' establishes the anchor for the absolute error message
-    <div className="relative flex items-center gap-2">
+    <div className="relative flex items-center gap-3">
+      {/* ✅ Fully opaque red button */}
       {showRequest && (
         <button 
           onClick={() => change("CHANGES_REQUESTED")} 
           disabled={busy}
-          className="px-3 py-1.5 rounded-md border border-border hover:bg-[var(--accent-dim)] transition text-foreground text-xs font-medium disabled:opacity-50"
+          className="px-4 py-2 rounded-lg border border-red-700 bg-red-500 text-white hover:bg-red-700 transition-all text-xs font-bold disabled:opacity-50 shadow-sm"
         >
           Request Changes
         </button>
       )}
       
+      {/* ✅ Fully opaque emerald button */}
       {showApprove && (
         <button 
           onClick={() => change("APPROVED")} 
           disabled={busy}
-          className="px-3 py-1.5 rounded-md bg-accent text-white text-xs font-bold hover:bg-accent/80 transition shadow-lg disabled:opacity-50"
+          className="px-4 py-2 rounded-lg border border-emerald-700 bg-emerald-600 text-white hover:bg-emerald-700 transition-all text-xs font-bold disabled:opacity-50 shadow-sm"
         >
           {busy ? "Updating..." : "Approve Design"}
         </button>
       )}
 
-      {/* FIX: 'absolute' takes it out of flow so it doesn't stretch the header */}
       {err && (
-        <div className="absolute top-full right-0 mt-3 z-50 w-max max-w-[250px] bg-surface border border-red-500/30 text-red-200 text-xs px-3 py-2 rounded-lg shadow-2xl animate-in fade-in slide-in-from-top-1">
+        <div className="fixed bottom-6 right-6 z-[9999] w-max max-w-[300px] bg-surface border border-red-500/50 text-red-400 text-sm px-4 py-3 rounded-xl shadow-2xl animate-in slide-in-from-bottom-5 fade-in duration-300">
           <div className="flex items-center gap-2">
-            <svg className="w-4 h-4 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>{err}</span>
+            <span className="font-medium">{err}</span>
           </div>
-          {/* Little arrow pointing up */}
-          <div className="absolute -top-1 right-4 w-2 h-2 bg-surface border-t border-l border-red-500/30 rotate-45" />
         </div>
       )}
     </div>

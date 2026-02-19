@@ -1,4 +1,4 @@
-// portal/app/api/cases/[id]/files/route.ts
+// app/api/cases/[id]/files/route.ts
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
@@ -10,7 +10,6 @@ const FileKind = {
   PDF: "PDF", 
   OTHER: "OTHER"
 } as const;
-
 type FileKindType = typeof FileKind[keyof typeof FileKind];
 
 const ProductionStage = {
@@ -25,6 +24,8 @@ function normalizeSlotLabel(raw: string | null): string {
   if (lower === "scan") return "scan";
   if (lower === "design_with_model" || lower === "model_plus_design") return "design_with_model";
   if (lower === "design_only") return "design_only";
+  // ✅ Allow dynamic design slots for individual teeth
+  if (lower.startsWith("design_stl_")) return lower;
   return lower;
 }
 
@@ -47,7 +48,6 @@ export async function POST(
     const slotLabel = normalizeSlotLabel(rawLabel);
 
     // Case Existence & Stage Check
-    // ✅ ADDED: doctorUserId to the selection
     const dentalCase = await prisma.dentalCase.findUnique({
       where: { id },
       select: { id: true, stage: true, clinicId: true, doctorUserId: true },
@@ -55,7 +55,7 @@ export async function POST(
 
     if (!dentalCase) return NextResponse.json({ error: "Case not found." }, { status: 404 });
 
-    // ✅ FIXED: Doctor Ownership Validation
+    // Doctor Ownership Validation
     if (session.role === "customer") {
         const isOwner = dentalCase.doctorUserId === session.userId;
         const isSameClinic = session.clinicId && dentalCase.clinicId === session.clinicId;
@@ -83,7 +83,9 @@ export async function POST(
 
     // Replacement Logic (Delete old DB record for this slot)
     const REPLACE_SLOTS = ["scan", "design_with_model", "design_only", "scan_html", "design_with_model_html", "rx_pdf"];
-    if (REPLACE_SLOTS.includes(slotLabel)) {
+    
+    // ✅ Allow dynamic slots to be replaced
+    if (REPLACE_SLOTS.includes(slotLabel) || slotLabel.startsWith("design_stl_")) {
       await prisma.caseFile.deleteMany({
         where: { caseId: id, label: slotLabel },
       });

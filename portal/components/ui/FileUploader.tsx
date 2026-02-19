@@ -1,4 +1,4 @@
-// portal/components/FileUploader.tsx
+// components/ui/FileUploader.tsx
 "use client";
 
 import { useState } from "react";
@@ -49,7 +49,6 @@ export default function FileUploader({
     setOk(undefined);
 
     try {
-      // 1. Get the Presigned URL
       const urlRes = await fetch(`/api/cases/${caseId}/files/upload-url`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -61,9 +60,9 @@ export default function FileUploader({
       });
       
       if (!urlRes.ok) throw new Error("Failed to get upload permission");
+
       const { url, key } = await urlRes.json();
 
-      // 2. Upload directly to Cloudflare R2
       const uploadRes = await fetch(url, {
         method: "PUT",
         body: file,
@@ -72,7 +71,6 @@ export default function FileUploader({
 
       if (!uploadRes.ok) throw new Error("Upload to cloud failed");
 
-      // 3. Save the record in the Database
       const dbRes = await fetch(`/api/cases/${caseId}/files`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -112,15 +110,20 @@ export default function FileUploader({
             <div className="text-xs text-muted truncate">Choose file…</div>
           )}
         </div>
-        <div className="shrink-0 rounded-md bg-accent text-white px-3 py-1.5 text-xs font-medium">Browse</div>
+        
+        {/* ✅ REDESIGNED: Tinted text with solid dark mode fallback */}
+        <div className="shrink-0 rounded-md bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white dark:bg-accent dark:text-white dark:border-accent px-3 py-1.5 text-xs font-bold transition-all shadow-sm">
+          Browse
+        </div>
         <input type="file" accept={finalAccept} onChange={onFileChange} className="hidden" />
       </label>
 
       <div className="flex items-center gap-2">
+        {/* ✅ REDESIGNED: Tinted text with solid dark mode fallback */}
         <button
           onClick={send}
           disabled={busy || !file}
-          className="rounded-lg px-3 py-1.5 bg-accent text-white text-xs font-bold disabled:opacity-50 hover:bg-accent/80 transition-colors duration-200"
+          className="rounded-lg px-4 py-1.5 bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white dark:bg-accent dark:text-white dark:border-accent text-xs font-bold disabled:opacity-50 transition-all duration-200 shadow-sm"
         >
           {busy ? "Uploading…" : "Upload"}
         </button>

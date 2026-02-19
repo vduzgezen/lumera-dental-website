@@ -1,3 +1,4 @@
+// components/CaseProcessBar.tsx
 "use client";
 
 import { useState } from "react";
@@ -151,13 +152,13 @@ export default function CaseProcessBar({
 
         {/* TRACKING BADGE */}
         {isShippedOrDone && tracking && (
-          <div className="flex items-center gap-3 bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-lg shadow-lg shadow-blue-900/10 animate-in fade-in slide-in-from-right-2">
-            <div className="p-2 bg-blue-500 rounded-full text-white">
+          <div className="flex items-center gap-3 bg-[#9696e2]/10 border border-[#9696e2]/20 px-4 py-2 rounded-lg shadow-lg shadow-[#9696e2]/10 animate-in fade-in slide-in-from-right-2">
+            <div className="p-2 bg-[#9696e2] rounded-full text-white">
                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" /></svg>
             </div>
             <div>
                <div className="flex items-center gap-2">
-                   <div className="text-[10px] text-blue-300 uppercase font-bold tracking-wider">{carrier || "Shipped"} Tracking</div>
+                   <div className="text-[10px] text-[#9696e2] uppercase font-bold tracking-wider">{carrier || "Shipped"} Tracking</div>
                    {canEdit && <button onClick={() => setShowShipModal(true)} className="text-muted hover:text-foreground"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>}
                </div>
                <a href={getTrackingLink(tracking, carrier)} target="_blank" rel="noopener noreferrer" className="text-sm font-mono font-medium text-foreground hover:text-accent flex items-center gap-1 group transition-colors">

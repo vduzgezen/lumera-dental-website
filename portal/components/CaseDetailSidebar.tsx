@@ -1,4 +1,4 @@
-// portal/components/CaseDetailSidebar.tsx
+// components/CaseDetailSidebar.tsx
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
@@ -19,6 +19,8 @@ type Props = {
   designPreferences?: string | null;
   assigneeId?: string | null;
   designers?: { id: string; name: string | null; email: string }[];
+  toothCodes: string;
+  isBridge: boolean;
 };
 
 function fmtDate(d?: Date | string | null) {
@@ -35,13 +37,14 @@ export default function CaseDetailSidebar({
   currentUserName,
   designPreferences,
   assigneeId,
-  designers = []
+  designers = [],
+  toothCodes,
+  isBridge
 }: Props) {
   const STORAGE_KEY = "lumera.sidebarTab";
   
   const isInternal = role === "lab" || role === "admin" || role === "milling";
 
-  // ✅ Initialize based on role to avoid flash of wrong content
   const [activeTab, setActiveTab] = useState<"files" | "discussion" | "history" | "preferences">(
     isInternal ? "files" : "discussion"
   );
@@ -50,7 +53,6 @@ export default function CaseDetailSidebar({
     if (typeof window !== "undefined") {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       
-      // ✅ SAFETY CHECK: If doctor has "files" saved in local storage, force "discussion"
       if (!isInternal && (saved === "files" || saved === "preferences")) {
         setActiveTab("discussion");
         return;
@@ -59,7 +61,6 @@ export default function CaseDetailSidebar({
       if (saved && ["files", "discussion", "history", "preferences"].includes(saved)) {
         setActiveTab(saved as any);
       } else {
-        // Default fallback if nothing saved
         setActiveTab(isInternal ? "files" : "discussion");
       }
     }
@@ -85,7 +86,13 @@ export default function CaseDetailSidebar({
     };
   }, [files]);
 
-  // ✅ UPDATED: Matches 3D Viewer Header Height (h-14) & Style
+  const teeth = useMemo(() => {
+    return toothCodes.split(",").map(t => t.trim()).filter(Boolean);
+  }, [toothCodes]);
+
+  // ✅ FIX: Determine if it's an appliance (No Bridge AND No Teeth)
+  const isAppliance = !isBridge && teeth.length === 0;
+
   const InternalNav = () => (
     <div className="h-14 flex items-center px-3 border-b border-border bg-surface shrink-0 gap-3">
       <label className="text-xs font-bold text-accent uppercase tracking-wider shrink-0 hidden sm:block">
@@ -111,7 +118,6 @@ export default function CaseDetailSidebar({
     </div>
   );
 
-  // ✅ UPDATED: Matches 3D Viewer Header Height (h-14) & Style
   const CustomerNav = () => (
     <div className="h-14 flex items-center border-b border-border bg-surface shrink-0 px-2">
       <button
@@ -120,7 +126,7 @@ export default function CaseDetailSidebar({
           activeTab === "discussion" ? "border-accent text-foreground" : "border-transparent text-muted hover:text-foreground"
         }`}
       >
-        Discussion
+         Discussion
       </button>
       <button
         onClick={() => handleTabChange("history")}
@@ -152,19 +158,19 @@ export default function CaseDetailSidebar({
         {isInternal && (
           <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 animate-in fade-in duration-200 ${activeTab === "files" ? "block" : "hidden"}`}>
              <div className="space-y-8">
-                <div className="space-y-3">
+                 <div className="space-y-3">
                     <div className="text-[10px] font-bold text-accent uppercase tracking-wider border-b border-border pb-1">Visualization</div>
                     
                     <div className="bg-surface p-3 rounded-lg border border-border">
-                        <div className="flex items-center justify-between mb-2">
+                         <div className="flex items-center justify-between mb-2">
                              <span className="text-xs font-medium text-foreground/80">Scan HTML</span>
                             {fileStatus.scanHtml && <span className="text-[10px] text-accent">✓ Ready</span>}
-                        </div>
+                         </div>
                         <HtmlViewerUploader caseId={caseId} role={role} label="scan_html" description="Exocad Web Viewer (Scan)" />
                     </div>
 
                     <div className="bg-surface p-3 rounded-lg border border-border">
-                        <div className="flex items-center justify-between mb-2">
+                         <div className="flex items-center justify-between mb-2">
                              <span className="text-xs font-medium text-foreground/80">Design HTML</span>
                             {fileStatus.designHtml && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
@@ -172,11 +178,47 @@ export default function CaseDetailSidebar({
                     </div>
 
                     <div className="bg-surface p-3 rounded-lg border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                             <span className="text-xs font-medium text-foreground/80">Design STL</span>
-                            {fileStatus.designOnly && <span className="text-[10px] text-accent">✓ Ready</span>}
-                        </div>
-                        <FileUploader caseId={caseId} role={role} label="design_only" description="Final Design STL" />
+                        {isBridge || isAppliance ? (
+                          // BRIDGE OR APPLIANCE: Single File Uploader
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-medium text-foreground/80">{isAppliance ? "Appliance Design (STL)" : "Bridge Design (STL)"}</span>
+                                {fileStatus.designOnly && <span className="text-[10px] text-accent">✓ Ready</span>}
+                            </div>
+                            <FileUploader caseId={caseId} role={role} label="design_only" description={isAppliance ? "Appliance STL" : "Merged Bridge STL"} />
+                          </div>
+                        ) : (
+                          // INDIVIDUAL UNITS
+                          <div className="space-y-4">
+                             <div className="flex items-center justify-between mb-1">
+                                <span className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Individual Designs</span>
+                             </div>
+                             {teeth.map((tooth) => {
+                                const label = `design_stl_${tooth}`;
+                                const hasFile = files.some(f => f.label === label);
+                                return (
+                                  <div key={tooth} className="pt-2 border-t border-border/50 first:border-0 first:pt-0">
+                                      <div className="flex items-center justify-between mb-2">
+                                          <span className="text-xs font-medium text-foreground/80">Tooth #{tooth}</span>
+                                          {hasFile && <span className="text-[10px] text-accent">✓ Ready</span>}
+                                      </div>
+                                      <FileUploader caseId={caseId} role={role} label={label as any} description={`Design #${tooth} (STL)`} />
+                                  </div>
+                                );
+                             })}
+                             
+                             {!isBridge && fileStatus.designOnly && !teeth.some(t => files.some(f => f.label === `design_stl_${t}`)) && (
+                                <div className="mt-4 pt-4 border-t border-dashed border-border">
+                                   <p className="text-[10px] text-amber-400 mb-2">Legacy Design File Found:</p>
+                                   <div className="flex items-center justify-between mb-2">
+                                        <span className="text-xs font-medium text-foreground/80">Legacy STL</span>
+                                        <span className="text-[10px] text-accent">✓ Ready</span>
+                                   </div>
+                                   <FileUploader caseId={caseId} role={role} label="design_only" description="Legacy Design STL" />
+                                </div>
+                             )}
+                          </div>
+                        )}
                     </div>
                 </div>
 
@@ -185,7 +227,7 @@ export default function CaseDetailSidebar({
                     
                     <div className="bg-surface p-3 rounded-lg border border-border space-y-2">
                         <div className="flex items-center justify-between">
-                             <span className="text-xs font-medium text-foreground/80">Rx PDF</span>
+                              <span className="text-xs font-medium text-foreground/80">Rx PDF</span>
                              {fileStatus.rx && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
                         <FileUploader caseId={caseId} role={role} label="rx_pdf" accept=".pdf" description="Prescription PDF" />
@@ -197,7 +239,7 @@ export default function CaseDetailSidebar({
                              {fileStatus.construction && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
                         <FileUploader caseId={caseId} role={role} label="construction_info" description="Construction/Milling Params" />
-                    </div>
+                     </div>
 
                     <div className="bg-surface p-3 rounded-lg border border-border space-y-2">
                         <div className="flex items-center justify-between">
@@ -205,15 +247,15 @@ export default function CaseDetailSidebar({
                              {fileStatus.modelTop && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
                         <FileUploader caseId={caseId} role={role} label="model_top" accept=".stl,.ply" description="Upper Model STL" />
-                    </div>
+                   </div>
 
                     <div className="bg-surface p-3 rounded-lg border border-border space-y-2">
                         <div className="flex items-center justify-between">
                              <span className="text-xs font-medium text-foreground/80">Model Bottom</span>
-                             {fileStatus.modelBottom && <span className="text-[10px] text-accent">✓ Ready</span>}
+                              {fileStatus.modelBottom && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
                         <FileUploader caseId={caseId} role={role} label="model_bottom" accept=".stl,.ply" description="Lower Model STL" />
-                    </div>
+                   </div>
                 </div>
              </div>
           </div>
@@ -231,11 +273,11 @@ export default function CaseDetailSidebar({
                 {events.map((ev) => (
                   <div key={ev.id} className="ml-4 relative">
                     <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-accent border border-background" />
-                    <div className="flex flex-col"><span className="text-sm font-medium text-foreground">{ev.to.replace(/_/g, " ")}</span><span className="text-xs text-muted font-mono mt-0.5">{fmtDate(ev.at)}</span></div>
+                     <div className="flex flex-col"><span className="text-sm font-medium text-foreground">{ev.to.replace(/_/g, " ")}</span><span className="text-xs text-muted font-mono mt-0.5">{fmtDate(ev.at)}</span></div>
                     {ev.note && <div className="mt-2 text-xs text-foreground/80 bg-surface p-2 rounded border border-border italic">&quot;{ev.note}&quot;</div>}
                   </div>
                 ))}
-              </div>
+               </div>
             )}
         </div>
 
@@ -248,7 +290,7 @@ export default function CaseDetailSidebar({
                 <div className="bg-surface border border-border rounded-lg p-3"><p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{designPreferences}</p></div>
               </div>
             ) : (
-              <div className="flex flex-col items-center justify-center h-20 text-muted text-sm italic">No preferences set for this case.</div>
+               <div className="flex flex-col items-center justify-center h-20 text-muted text-sm italic">No preferences set for this case.</div>
             )}
           </div>
         )}
