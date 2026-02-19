@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation"; 
 import CaseListRow from "@/components/CaseListRow";
-import { CaseRow } from "./page";
+import { CaseRow } from "./types";
 
 type SortConfig = {
   key: string | null;
@@ -66,6 +66,7 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
     return [...cases].sort((a, b) => {
       let aVal: any = "";
       let bVal: any = "";
+      
       switch (sortConfig.key) {
         case "id": aVal = a.id; bVal = b.id; break;
         case "alias": aVal = a.patientAlias; bVal = b.patientAlias; break;
@@ -73,11 +74,18 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
         case "doctor": aVal = a.doctorName || ""; bVal = b.doctorName || ""; break;
         case "patient": aVal = a.patientLastName || ""; bVal = b.patientLastName || ""; break;
         case "designer": aVal = a.assigneeUser?.name || ""; bVal = b.assigneeUser?.name || ""; break;
-        case "tooth": aVal = a.toothCodes; bVal = b.toothCodes; break;
+        case "restoration": aVal = a.product; bVal = b.product; break;
         case "status": aVal = a.status; bVal = b.status; break;
         case "due": aVal = a.dueDate ? new Date(a.dueDate).getTime() : 0; bVal = b.dueDate ? new Date(b.dueDate).getTime() : 0; break;
         case "created": aVal = new Date(a.createdAt).getTime(); bVal = new Date(b.createdAt).getTime(); break;
       }
+
+      // Case-insensitive alphabetical sorting for strings
+      if (typeof aVal === "string" && typeof bVal === "string") {
+         aVal = aVal.toLowerCase();
+         bVal = bVal.toLowerCase();
+      }
+
       if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
       if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
@@ -124,7 +132,7 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
               {!isDoctor && (
                 <SortableHeader label="Designer" colKey="designer" sortConfig={sortConfig} onSort={handleSort} />
               )}
-              <SortableHeader label="Tooth" colKey="tooth" sortConfig={sortConfig} onSort={handleSort} />
+              <SortableHeader label="Restoration" colKey="restoration" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader label="Status" colKey="status" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader label="Due Date" colKey="due" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader label="Created" colKey="created" sortConfig={sortConfig} onSort={handleSort} />

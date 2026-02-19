@@ -164,6 +164,9 @@ model DentalCase {
   status         String      @default("IN_DESIGN") 
   stage          String      @default("DESIGN")    
   
+  // ✅ NEW: Restoration Type
+  isBridge       Boolean     @default(false)
+
   designedAt     DateTime?
   milledAt       DateTime?
   shippedAt      DateTime?
@@ -171,8 +174,9 @@ model DentalCase {
   shippingCarrier String?
   trackingNumber  String?
   shippingEta     DateTime?
-  shippingCost    Decimal?  @default(0.00) // ✅ NEW: Store actual cost
+  shippingCost    Decimal? @default(0.00) // ✅ NEW: Store actual cost
   shippingBatchId String?
+
   needsReview        Boolean   @default(false)
   reviewQuestion     String?
   reviewRequestedAt  DateTime?
@@ -218,8 +222,7 @@ model Payment {
   clinic      Clinic        @relation(fields: [clinicId], references: [id])
   
   amount      Decimal
-  method      String 
-       
+  method      String        
   referenceId String?
   postedAt    DateTime      @default(now())
 }

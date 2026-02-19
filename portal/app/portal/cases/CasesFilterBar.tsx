@@ -24,7 +24,9 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
     search: searchParams.get("search") || "",
     status: searchParams.getAll("status"),
   });
+  
   const [debouncedFilters, setDebouncedFilters] = useState(filters);
+  const canFilterAssignee = isAdmin || role === "lab";
 
   const updateInstant = (key: string, value: string | string[]) => {
     const newFilters = { ...filters, [key]: value };
@@ -56,8 +58,7 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
   }, [debouncedFilters, router]);
 
   const hasFilters = Object.values(filters).some(v => v && v.length > 0);
-
-  // Common input class for reuse
+  
   const inputClass = "bg-background border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder:text-muted outline-none w-32 lg:w-40 focus:border-accent transition-colors duration-200";
 
   return (
@@ -73,7 +74,7 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
 
       {!isDoctor && (
         <>
-          {isAdmin && (
+          {canFilterAssignee && (
             <select 
                 value={filters.assignee}
                 onChange={(e) => updateInstant("assignee", e.target.value)}
@@ -106,7 +107,7 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
             onChange={(e) => updateText("caseId", e.target.value)}
             className={`${inputClass} font-mono`} 
           />
-          {/* ✅ FIX: Added max date to UI to discourage invalid years */}
+       
           <input 
             type="date" 
             max="2100-12-31"
@@ -119,7 +120,7 @@ export default function CasesFilterBar({ role, isAdmin, isDoctor, labUsers }: Pr
       
       {isDoctor && (
         <input 
-            placeholder="Search patient, alias, or case ID..." 
+            placeholder="Search patient, alias, product..." 
             value={filters.search}
             onChange={(e) => updateText("search", e.target.value)}
             className={`${inputClass} flex-1 min-w-[200px]`} 

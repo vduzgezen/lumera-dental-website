@@ -1,8 +1,8 @@
-// portal/components/CommentsPanel.tsx
+// features/case-dashboard/components/CommentsPanel.tsx
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image"; // ✅ Import Image
+import Image from "next/image";
 import ImageAnnotator from "./ImageAnnotator";
 
 type Attachment = {
@@ -67,6 +67,7 @@ export default function CommentsPanel({
           attachmentFileId: attachmentId 
         }),
       });
+
       if (!res.ok) throw new Error("Failed to post");
 
       const newComment = await res.json();
@@ -103,6 +104,7 @@ export default function CommentsPanel({
   async function onAnnotationSave(blob: Blob) {
     setAnnotatingFile(null); 
     setPosting(true);
+
     try {
       const file = new File([blob], "annotation.png", { type: "image/png" });
       const label = "Photo";
@@ -116,6 +118,7 @@ export default function CommentsPanel({
           label: label
         }),
       });
+
       if (!urlRes.ok) throw new Error("Failed to get upload URL");
       const { url, key } = await urlRes.json();
 
@@ -124,6 +127,7 @@ export default function CommentsPanel({
         body: file,
         headers: { "Content-Type": file.type },
       });
+
       if (!uploadRes.ok) throw new Error("Failed to upload image");
 
       const upRes = await fetch(`/api/cases/${caseId}/files`, {
@@ -151,12 +155,12 @@ export default function CommentsPanel({
   function renderBody(text: string) {
     const regex = /((?:https?:\/\/[^\s]+|(?:\/uploads\/)[^\s]+)\.(?:png|jpg|jpeg|gif|webp))/gi;
     const parts = text.split(regex);
+
     return parts.map((part, i) => {
       if (part.match(regex)) {
         const safeSrc = fixUrl(part);
         return (
           <div key={i} className="my-3 relative w-full h-64">
-            {/* ✅ Optimized Inline Image */}
             <Image
               src={safeSrc}
               alt="Inline Content"
@@ -191,8 +195,9 @@ export default function CommentsPanel({
             const displayInitials = maskAsLumera ? "L" : displayAuthor.substring(0, 2).toUpperCase();
             
             const bubbleStyle = isInternal 
-                ? "bg-blue-500/20 text-blue-300 border border-blue-500/30" 
-                : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+              ? "shadow-sm bg-gray-300 border border-gray-400 text-foreground dark:bg-[#9696e2]/50 dark:border-[#9696e2]/70 dark:text-white"
+              : "shadow-sm bg-gray-300 border border-gray-400 text-foreground dark:bg-[#FFA800]/50 dark:border-[#FFA800]/70 dark:text-white";
+
             return (
               <div key={c.id} className="group flex gap-3">
                 <div 
@@ -231,14 +236,13 @@ export default function CommentsPanel({
                             onClick={() => setZoomImg(safeSrc)} 
                             className="relative w-24 h-24 rounded-lg overflow-hidden border border-border cursor-zoom-in hover:border-accent/30 transition-colors bg-surface"
                           >
-                            {/* ✅ OPTIMIZED: Use Next.js Image for thumbnails */}
                             <Image 
                               src={safeSrc} 
                               alt="Attachment" 
                               fill
                               className="object-cover" 
                               sizes="96px"
-                              unoptimized // For Signed URLs
+                              unoptimized 
                             />
                           </div>
                         );
@@ -263,9 +267,10 @@ export default function CommentsPanel({
               onChange={onFileSelect}
             />
             
+            {/* ✅ Consistent coloring for Attach Image button */}
             <button
               onClick={() => fileInputRef.current?.click()}
-              className="p-2 rounded-lg bg-surface text-muted hover:text-foreground hover:bg-[var(--accent-dim)] transition-colors duration-200"
+              className="p-2 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:bg-[var(--accent-dim)] transition-colors duration-200 shadow-sm"
               title="Attach Image & Draw"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -273,6 +278,7 @@ export default function CommentsPanel({
               </svg>
             </button>
 
+            {/* ✅ Consistent coloring for Type Message container */}
             <input
               value={body}
               onChange={(e) => setBody(e.target.value)}
@@ -283,16 +289,18 @@ export default function CommentsPanel({
                 }
               }}
               placeholder="Type a message..."
-              className="flex-1 bg-surface-highlight border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-accent/30 transition-colors duration-200"
+              className="flex-1 bg-surface border border-border rounded-lg px-3 py-2 text-sm text-foreground placeholder:text-muted focus:outline-none focus:border-accent/30 transition-colors duration-200"
             />
             
+            {/* ✅ Consistent coloring for Send Comment button */}
             <button
               onClick={() => handlePost()}
               disabled={posting || (!body.trim())}
-              className="p-2 rounded-lg bg-accent text-white hover:bg-accent/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
+              className="p-2 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:bg-[var(--accent-dim)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
+              title="Send Comment"
             >
               {posting ? (
-                <div className="w-5 h-5 border-2 border-muted border-t-foreground rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-current border-t-transparent rounded-full animate-spin" />
               ) : (
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
@@ -316,7 +324,6 @@ export default function CommentsPanel({
           className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-4 transition-colors duration-200"
           onClick={() => setZoomImg(null)}
         >
-          {/* Zoomed image stays as standard img for full quality/simplicity */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img 
             src={zoomImg} 

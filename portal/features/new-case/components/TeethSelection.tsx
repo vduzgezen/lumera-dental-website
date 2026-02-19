@@ -1,4 +1,4 @@
-// portal/components/new-case/TeethSelection.tsx
+// portal/features/new-case/components/TeethSelection.tsx
 "use client";
 
 import { useEffect, useMemo } from "react";
@@ -17,9 +17,48 @@ const PRICING = {
   INLAY_ONLAY: { default: { IN_HOUSE: 65, STANDARD: 75 } }
 };
 
+// ✅ HELPER: Check for Adjacency (Universal System 1-32)
+function areTeethAdjacent(codes: string[]): boolean {
+  const numbers = codes
+    .map((c) => parseInt(c, 10))
+    .filter((n) => !isNaN(n))
+    .sort((a, b) => a - b);
+
+  if (numbers.length < 2) return false;
+
+  for (let i = 0; i < numbers.length - 1; i++) {
+    // Check if current number is exactly 1 less than the next
+    // This works for Universal Numbering (8 and 9 are adjacent across midline)
+    if (numbers[i + 1] !== numbers[i] + 1) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export default function TeethSelection({ data, update }: TeethSelectionProps) {
   
   const isNightguard = data.product === "NIGHTGUARD";
+
+  // --- LOGIC: Bridge Eligibility ---
+  const showBridgeOption = useMemo(() => {
+    const validProduct = data.product === "ZIRCONIA" || data.product === "EMAX";
+    if (!validProduct) return false;
+    
+    // Must be numeric teeth (not "Full Arch" etc)
+    const hasSpecialCodes = data.toothCodes.some(c => isNaN(parseInt(c)));
+    if (hasSpecialCodes) return false;
+
+    return areTeethAdjacent(data.toothCodes);
+  }, [data.product, data.toothCodes]);
+
+  // ✅ EFFECT: Auto-reset isBridge if conditions aren't met
+  useEffect(() => {
+    if (!showBridgeOption && data.isBridge) {
+      update({ isBridge: false });
+    }
+  }, [showBridgeOption, data.isBridge, update]);
+
 
   // --- SHADE LOGIC ---
   const shadeParts = useMemo(() => {
@@ -39,6 +78,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
 
   const updateShade = (type: "incisal" | "body" | "gingival", value: string) => {
     const newParts = { ...shadeParts, [type]: value };
+
     if (!newParts.incisal && !newParts.gingival) {
       update({ shade: newParts.body });
       return;
@@ -47,6 +87,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
     const b = newParts.body;
     const i = newParts.incisal || b;
     const g = newParts.gingival || b;
+
     update({ shade: `${i}/${b}/${g}` });
   };
 
@@ -91,12 +132,11 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
         <div className="space-y-2">
           <label className="text-sm font-medium text-muted">Product</label>
           <div className="grid grid-cols-2 gap-2">
-             {(["ZIRCONIA", "EMAX", "NIGHTGUARD", "INLAY_ONLAY"] as ProductType[]).map((type) => (
+            {(["ZIRCONIA", "EMAX", "NIGHTGUARD", "INLAY_ONLAY"] as ProductType[]).map((type) => (
                <button
                  key={type}
                  type="button"
                  onClick={() => handleProductChange(type)}
-                 // ✅ FIX: Use Tinted Accent Style (Matches Service Level)
                  className={`px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 border cursor-pointer
                    ${data.product === type 
                      ? "bg-accent/10 border-accent/50 text-accent shadow-sm" 
@@ -118,7 +158,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                  {(["HT", "ML"] as MaterialType[]).map(m => (
                     <button key={m} type="button" onClick={() => update({ material: m })}
                       className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors duration-200 cursor-pointer ${data.material === m ?
-                      "bg-accent/10 border-accent/50 text-accent shadow-sm" : "bg-surface border-border text-muted hover:bg-[var(--accent-dim)]"}`}>
+                  "bg-accent/10 border-accent/50 text-accent shadow-sm" : "bg-surface border-border text-muted hover:bg-[var(--accent-dim)]"}`}>
                       {m}
                     </button>
                  ))}
@@ -132,8 +172,8 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                <div className="flex gap-2">
                  {(["HARD", "SOFT"] as MaterialType[]).map(m => (
                     <button key={m} type="button" onClick={() => update({ material: m })}
-                      className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors duration-200 cursor-pointer ${data.material === m ? 
-                      "bg-accent/10 border-accent/50 text-accent shadow-sm" : "bg-surface border-border text-muted hover:bg-[var(--accent-dim)]"}`}>
+                      className={`flex-1 py-2 rounded-lg text-xs font-bold border transition-colors duration-200 cursor-pointer ${data.material === m ?
+"bg-accent/10 border-accent/50 text-accent shadow-sm" : "bg-surface border-border text-muted hover:bg-[var(--accent-dim)]"}`}>
                       {m}
                     </button>
                  ))}
@@ -146,7 +186,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                <div className="space-y-2">
                 <label className="text-sm font-medium text-muted">Shade Layering</label>
                 <div className="grid grid-cols-3 gap-2">
-                  <div className="space-y-1">
+                   <div className="space-y-1">
                     <input
                       value={shadeParts.body}
                       onChange={(e) => updateShade("body", e.target.value)}
@@ -185,7 +225,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
            <div className="flex gap-4 w-full md:w-auto">
               {(["IN_HOUSE", "STANDARD"] as ServiceLevel[]).map((level) => (
                 <label key={level} className={`flex-1 md:flex-none flex items-center gap-2 cursor-pointer p-3 rounded-lg border transition-colors duration-200 ${data.serviceLevel === level ?
-                 "bg-accent/10 border-accent/50" : "border-transparent hover:bg-[var(--accent-dim)]"}`}>
+"bg-accent/10 border-accent/50" : "border-transparent hover:bg-[var(--accent-dim)]"}`}>
                    <input 
                     type="radio" 
                     name="serviceLevel" 
@@ -194,7 +234,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                     className="accent-accent"
                   />
                   <span className={`text-sm font-bold ${data.serviceLevel === level ?
-                    "text-accent" : "text-muted"}`}>
+"text-accent" : "text-muted"}`}>
                     {level.replace("_", " ")}
                   </span>
                 </label>
@@ -211,19 +251,36 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
       {!isNightguard && (
         <div className="space-y-2">
            <div className="flex justify-between items-center px-1">
-              <h3 className="text-sm font-medium text-muted">Select Teeth <span className="text-accent">*</span></h3>
+              <div className="flex items-center gap-4">
+                 <h3 className="text-sm font-medium text-muted">Select Teeth <span className="text-accent">*</span></h3>
+                 
+                 {/* ✅ BRIDGE CHECKBOX (CONDITIONAL) */}
+                 {showBridgeOption && (
+                   <label className="flex items-center gap-2 cursor-pointer group animate-in fade-in zoom-in duration-300">
+                      <input 
+                          type="checkbox" 
+                          checked={data.isBridge} 
+                          onChange={(e) => update({ isBridge: e.target.checked })}
+                          className="accent-accent w-4 h-4 cursor-pointer"
+                      />
+                      <span className={`text-xs font-medium transition-colors ${data.isBridge ? "text-accent" : "text-muted group-hover:text-foreground"}`}>
+                          Bridge Restoration
+                      </span>
+                   </label>
+                 )}
+              </div>
               <span className="text-xs text-muted">
                  {data.toothCodes.length > 0 ? `${data.toothCodes.length} selected` : "None"}
               </span>
            </div>
            
-           <div className="bg-surface rounded-xl border border-border p-4 flex justify-center transition-colors duration-200">
+           <div className="bg-surface rounded-xl p-4 flex justify-center transition-colors duration-200">
               <ToothSelector 
                 value={data.toothCodes.join(",")} 
                 onChange={(val) => update({ toothCodes: val.split(",").map(t => t.trim()).filter(Boolean) })} 
               />
            </div>
-        </div>
+       </div>
       )}
 
       {/* 4. DESIGN PREFERENCES */}

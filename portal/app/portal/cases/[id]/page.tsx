@@ -1,33 +1,51 @@
-// portal/app/portal/cases/[id]/page.tsx
+// app/portal/cases/[id]/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import CaseProcessBar from "@/components/CaseProcessBar";
 import CaseViewerTabs from "@/features/case-dashboard/components/CaseViewerTabs";
-import { CaseFile } from "@prisma/client";
 import CopyableId from "@/components/CopyableId";
 import CaseDetailSidebar from "@/components/CaseDetailSidebar";
 import AutoRefresh from "@/components/ui/AutoRefresh";
-import { getSignedFileUrl } from "@/lib/storage"; 
+import { getSignedFileUrl } from "@/lib/storage";
 
 export const dynamic = "force-dynamic";
-
 type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
 type Params = Promise<{ id: string }>;
 
-function normalizeSlot(label: string | null): "scan" | "design_with_model" | "design_only" | null {
+function fmtDate(d?: Date | null) {
+  if (!d) return "—";
+  return new Date(d).toLocaleString();
+}
+
+function baseNameFromUrl(url?: string | null): string {
+  if (!url) return "";
+  const parts = url.split("/");
+  const last = parts[parts.length - 1] || "";
+  try {
+    return decodeURIComponent(last);
+  } catch {
+    return last;
+  }
+}
+
+function normalizeSlot(
+  label: string | null,
+): "scan" | "design_with_model" | "design_only" | null {
   const lower = String(label ?? "").toLowerCase();
   if (lower === "scan") return "scan";
-  if (lower === "design_with_model" || lower === "model_plus_design") return "design_with_model";
+  if (lower === "design_with_model" || lower === "model_plus_design") {
+    return "design_with_model";
+  }
   if (lower === "design_only") return "design_only";
   return null;
 }
 
-function is3DUrl(url: string | null | undefined): boolean {
-  if (!url) return false;
-  const clean = url.split("?")[0].toLowerCase(); 
-  return clean.endsWith(".stl") || clean.endsWith(".ply") || clean.endsWith(".obj");
+function formatProduct(product: string) {
+  const p = product.replace(/_/g, " ").toLowerCase();
+  if (p === "zirconia" || p === "emax") return p + " crown";
+  return p;
 }
 
 export default async function CaseDetailPage({ params }: { params: Params }) {
@@ -48,23 +66,14 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
       assigneeUser: { select: { id: true, name: true, email: true } }
     },
   });
-
   if (!item) return notFound();
 
-  // ✅ FIXED AUTHORIZATION
   if (session.role === "customer") {
-    // Access granted if:
-    // 1. You are the Doctor who created the case (Owner)
-    // 2. OR the case belongs to your Primary Clinic (Colleague)
     const isOwner = item.doctorUserId === session.userId;
     const isPrimaryClinic = session.clinicId === item.clinicId;
-
-    if (!isOwner && !isPrimaryClinic) {
-        return notFound();
-    }
+    if (!isOwner && !isPrimaryClinic) return notFound();
   }
 
-  // HYDRATE FILES: Generate Signed URLs
   const hydratedFiles = await Promise.all(item.files.map(async (f) => {
     if (f.url.startsWith("/") || f.url.startsWith("http")) return f;
     try {
@@ -77,16 +86,14 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
   }));
   item.files = hydratedFiles as any;
 
-  // HYDRATE COMMENT ATTACHMENTS
   const hydratedComments = await Promise.all(item.comments.map(async (c) => {
       const attachments = await Promise.all(c.attachments.map(async (a) => {
           if (a.url.startsWith("/") || a.url.startsWith("http")) return a;
           try {
               const signed = await getSignedFileUrl(a.url);
               return { ...a, url: signed };
-          } catch (e) {
-              return a;
-          }
+          } 
+          catch (e) { return a; }
       }));
       return { ...c, attachments };
   }));
@@ -122,7 +129,6 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
 
   const isLabOrAdmin = session.role === "lab" || session.role === "admin";
   let designers: { id: string; name: string | null; email: string }[] = [];
-  
   if (session.role === "admin") {
     designers = await prisma.user.findMany({
       where: { role: { in: ["lab", "admin"] } },
@@ -131,28 +137,16 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
     });
   }
 
-  let scanFile: CaseFile | null = null;
-  let designWithModelFile: CaseFile | null = null;
-  let designOnlyFile: CaseFile | null = null;
-  let scanHtmlFile: CaseFile | null = null;
-  let designHtmlFile: CaseFile | null = null;
-
-  for (const f of item.files) {
+  let scanHtmlFile: any = null;
+  for (const f of item.files ?? []) {
     const lbl = String(f.label ?? "").toLowerCase();
-    const slot = normalizeSlot(lbl);
-    if (slot === "scan") { scanFile = f; continue; }
-    if (slot === "design_with_model") { designWithModelFile = f; continue; }
-    if (slot === "design_only") { designOnlyFile = f; continue; }
     if (lbl === "scan_html") { scanHtmlFile = f; continue; }
-    if (lbl === "design_with_model_html") { designHtmlFile = f; continue; }
   }
 
-  const scan3DUrl = is3DUrl(scanFile?.url) ? scanFile!.url : null;
-  const designWithModel3DUrl = is3DUrl(designWithModelFile?.url) ? designWithModelFile!.url : null;
-  const designOnly3DUrl = is3DUrl(designOnlyFile?.url) ? designOnlyFile!.url : null;
-  const scanHtmlUrl = scanHtmlFile?.url ?? null;
-  const designHtmlUrl = designHtmlFile?.url ?? null;
-
+  const teeth = item.toothCodes.split(",").map(t => t.trim()).filter(Boolean);
+  const hasBridgeDesign = item.files.some((f: any) => f.label === "design_only");
+  const hasIndividualDesigns = teeth.length > 0 && teeth.every(tooth => item.files.some((f: any) => f.label === `design_stl_${tooth}`));
+  const hasAllDesigns = item.isBridge ? hasBridgeDesign : (hasIndividualDesigns || hasBridgeDesign);
   const statusColor = 
     item.status === "CHANGES_REQUESTED" ? "text-red-400" :
     item.status === "COMPLETED" || item.status === "DELIVERED" ? "text-emerald-400" :
@@ -167,14 +161,14 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
           caseId={item.id}
           stage={item.stage as ProductionStage}
           status={item.status}
-          role={session.role}
+          role={session.role as any}
           carrier={item.shippingCarrier}
           tracking={item.trackingNumber}
         />
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-xl font-semibold">{item.patientAlias}</h1>
-            <div className="text-muted text-xs mt-1 flex flex-wrap items-center gap-x-3">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold truncate">{item.patientAlias}</h1>
+            <div className="text-muted text-xs mt-1 flex flex-wrap items-center gap-y-1 gap-x-3">
               <span>Clinic: <span className="text-foreground">{item.clinic.name}</span></span>
               <span>•</span>
               
@@ -189,6 +183,8 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
                 </>
               )}
 
+              <span>Restoration: <span className="text-foreground capitalize">{formatProduct(item.product)}</span></span>
+              <span>•</span>
               <span>Teeth: <span className="text-foreground">{item.toothCodes}</span></span>
               <span>•</span>
               <span>Status: <span className={`${statusColor} font-medium`}>{item.status.replace(/_/g, " ")}</span></span>
@@ -199,7 +195,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
             </div>
           </div>
           
-          <Link href="/portal/cases" className="px-3 py-1.5 rounded-lg bg-surface border border-border hover:bg-[var(--accent-dim)] transition text-xs font-medium text-muted">
+          <Link href="/portal/cases" className="shrink-0 whitespace-nowrap px-3 py-1.5 rounded-lg bg-surface border border-border hover:bg-[var(--accent-dim)] transition text-xs font-medium text-muted">
             ← Cases
           </Link>
         </div>
@@ -207,9 +203,9 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
 
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4">
         <div className="flex-none w-full lg:w-[350px] xl:w-[400px] h-full min-h-0">
-          <CaseDetailSidebar 
+           <CaseDetailSidebar 
             caseId={item.id}
-            role={session.role}
+            role={session.role as any}
             files={item.files}
             comments={uiComments}
             events={item.events}
@@ -217,21 +213,23 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
             designPreferences={item.designPreferences}
             assigneeId={item.assigneeId}
             designers={designers}
+            toothCodes={item.toothCodes}
+            isBridge={item.isBridge}
           />
         </div>
 
-        <div className="flex-1 h-full min-h-0">
-          <CaseViewerTabs
-            caseId={item.id}
-            role={session.role}
-            status={item.status}
-            scan3DUrl={scan3DUrl}
-            designWithModel3DUrl={designWithModel3DUrl}
-            designOnly3DUrl={designOnly3DUrl}
-            scanHtmlUrl={scanHtmlUrl}
-            designHtmlUrl={designHtmlUrl}
-          />
-        </div>
+        <div className="flex-1 h-full min-h-0 flex flex-col gap-4">
+          <div className="flex-1 min-h-0">
+            <CaseViewerTabs
+              caseId={item.id}
+              role={session.role as any}
+              status={item.status}
+              files={item.files}
+              toothCodes={item.toothCodes}
+              isBridge={item.isBridge}
+            />
+          </div>
+       </div>
       </div>
     </section>
   );

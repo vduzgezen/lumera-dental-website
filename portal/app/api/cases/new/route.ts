@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 import { z } from "zod";
 import { uploadFile } from "@/lib/storage";
 
-const MAX_FILE_BYTES = 500 * 1024 * 1024; 
+const MAX_FILE_BYTES = 500 * 1024 * 1024;
 
 // --- ZOD SCHEMA ---
 const CreateCaseSchema = z.object({
@@ -22,13 +22,15 @@ const CreateCaseSchema = z.object({
   product: z.string().min(1, "Product is required"),
   material: z.string().optional(),
   
-  shade: z.string().optional(), // We handle Conditional Requirement manually below
+  shade: z.string().optional(), 
   shadeGingival: z.string().optional(),
   shadeIncisal: z.string().optional(),
   
   designPreferences: z.string().optional(),
   serviceLevel: z.enum(["IN_HOUSE", "STANDARD"]).default("IN_HOUSE"),
   
+  isBridge: z.preprocess((val) => val === 'true' || val === true, z.boolean()), // ✅ CAST TO BOOLEAN
+
   scanHtml: z.instanceof(File, { message: "Scan Viewer HTML is required" }),
   rxPdf: z.instanceof(File, { message: "Rx PDF is required" }),
   
@@ -77,6 +79,7 @@ async function getUniqueAlias(baseAlias: string) {
     where: { patientAlias: { startsWith: root } },
     select: { patientAlias: true }
   });
+
   if (existing.length === 0) return baseAlias;
 
   let maxSuffix = -1;
@@ -86,6 +89,7 @@ async function getUniqueAlias(baseAlias: string) {
       maxSuffix = suffix;
     }
   });
+
   const nextSuffix = (maxSuffix + 1).toString().padStart(2, "0");
   return `${root}${nextSuffix}`;
 }
@@ -106,6 +110,7 @@ export async function POST(req: Request) {
     if (!session) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
 
     const form = await req.formData();
+
     const getFile = (key: string) => {
       const f = form.get(key);
       return f instanceof File ? f : undefined;
@@ -130,6 +135,8 @@ export async function POST(req: Request) {
       designPreferences: form.get("designPreferences") || undefined,
       serviceLevel: form.get("serviceLevel") || "IN_HOUSE",
       
+      isBridge: form.get("isBridge"), // Handled by preprocess in Zod
+
       scanHtml: getFile("scanHtml"),
       rxPdf: getFile("rxPdf"),
       constructionInfo: getFile("constructionInfo"),
@@ -163,6 +170,7 @@ export async function POST(req: Request) {
         salesRepId: true 
       },
     });
+
     if (!doctor) return NextResponse.json({ error: "Invalid doctor." }, { status: 400 });
 
     // ✅ Verify Clinic
@@ -170,6 +178,7 @@ export async function POST(req: Request) {
       where: { id: data.clinicId },
       select: { id: true, priceTier: true },
     });
+
     if (!clinic) return NextResponse.json({ error: "Invalid clinic." }, { status: 400 });
 
     const uniqueAlias = await getUniqueAlias(data.patientAlias);
@@ -211,6 +220,9 @@ export async function POST(req: Request) {
         cost,
         billingType: "BILLABLE",
         invoiced: false,
+        
+        // ✅ PERSIST BRIDGE FLAG
+        isBridge: data.isBridge,
       },
       select: { id: true },
     });

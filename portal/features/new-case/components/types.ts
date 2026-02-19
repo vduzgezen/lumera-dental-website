@@ -50,7 +50,8 @@ export interface CaseData {
   designPreferences: string;
   
   toothCodes: string[];
-  
+  isBridge: boolean;      // ✅ NEW: Bridge Flag
+
   scanHtml: File | null;
   rxPdf: File | null;
   constructionInfo: File | null;
@@ -83,6 +84,7 @@ export const INITIAL_DATA: CaseData = {
   designPreferences: "",
   
   toothCodes: [],
+  isBridge: false, // Default to single unit
   
   scanHtml: null,
   rxPdf: null,

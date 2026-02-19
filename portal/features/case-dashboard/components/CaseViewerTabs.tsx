@@ -1,10 +1,10 @@
-// portal/components/CaseViewerTabs.tsx
+// features/case-dashboard/components/CaseViewerTabs.tsx
 "use client";
-
 import { useEffect, useState, memo } from "react";
 import dynamic from "next/dynamic";
 import CaseActions from "./CaseActions";
 import type { Role, CaseStatus } from "@/lib/types";
+import { CaseFile } from "@prisma/client";
 
 // Dynamic import for 3D Panel
 const Case3DPanel = dynamic(() => import("./Case3DPanel"), {
@@ -16,10 +16,7 @@ const Case3DPanel = dynamic(() => import("./Case3DPanel"), {
   ),
 });
 
-type TabKey = "scan" | "design_with_model" | "design_only";
-
 // --- STABLE WRAPPERS ---
-
 const areUrlsEqual = (prev: { url: string | null }, next: { url: string | null }) => {
   if (prev.url === next.url) return true;
   if (!prev.url || !next.url) return false;
@@ -28,28 +25,27 @@ const areUrlsEqual = (prev: { url: string | null }, next: { url: string | null }
   return prevBase === nextBase;
 };
 
-// 1. Stable 3D Panel
 const Stable3DComponent = ({ url }: { url: string | null }) => {
   return <Case3DPanel url={url} />;
 };
 const Stable3D = memo(Stable3DComponent, areUrlsEqual);
-// ✅ CRITICAL FIX: Explicit Display Name
 Stable3D.displayName = "Stable3D";
 
-// 2. Stable Iframe
 const StableIframeComponent = ({ url, title }: { url: string; title: string }) => {
   const handleIframeLoad = (e: React.SyntheticEvent<HTMLIFrameElement, Event>) => {
     try {
       const iframe = e.target as HTMLIFrameElement;
       const doc = iframe.contentDocument;
       if (doc) {
-        // Theme-aware background injection - uses CSS variable
         doc.body.style.backgroundColor = "var(--background)";
         const style = doc.createElement("style");
         style.textContent = `
-          body, html { background-color: var(--background) !important; }
-          #background { background-color: var(--background) !important; }
-          .webviewer-canvas-container { background-color: var(--background) !important; }
+          body, html { background-color: var(--background) !important;
+          }
+          #background { background-color: var(--background) !important;
+          }
+          .webviewer-canvas-container { background-color: var(--background) !important;
+          }
         `;
         doc.head.appendChild(style);
       }
@@ -70,111 +66,155 @@ const StableIframeComponent = ({ url, title }: { url: string; title: string }) =
   );
 };
 const StableIframe = memo(StableIframeComponent, (prev, next) => areUrlsEqual({ url: prev.url }, { url: next.url }));
-// ✅ CRITICAL FIX: Explicit Display Name
 StableIframe.displayName = "StableIframe";
+
+function getFileUrl(files: CaseFile[], label: string): string | null {
+  const f = files.find(f => f.label === label);
+  return f ? f.url : null;
+}
 
 export default function CaseViewerTabs({
   caseId,
   role,
   status,
-  scan3DUrl,
-  designWithModel3DUrl,
-  designOnly3DUrl,
-  scanHtmlUrl,
-  designHtmlUrl,
+  files,
+  toothCodes,
+  isBridge
 }: {
   caseId: string;
   role: Role;
   status: string;
-  scan3DUrl: string | null;
-  designWithModel3DUrl: string | null;
-  designOnly3DUrl: string | null;
-  scanHtmlUrl: string | null;
-  designHtmlUrl: string | null;
+  files: CaseFile[];
+  toothCodes: string;
+  isBridge: boolean;
 }) {
-  const [tab, setTab] = useState<TabKey>("scan");
-  
-  const hasScanViewer = !!scanHtmlUrl || !!scan3DUrl;
-  const hasDesignViewer = !!designHtmlUrl || !!designWithModel3DUrl;
-  const hasDesignOnlyViewer = !!designOnly3DUrl;
+  const [tab, setTab] = useState<string>("scan");
 
+  // --- DERIVE URLS ---
+  const scanHtml = getFileUrl(files, "scan_html");
+  const scan3D = getFileUrl(files, "scan");
+  const designHtml = getFileUrl(files, "design_with_model_html");
+  const designWithModel3D = getFileUrl(files, "design_with_model");
+  const designOnly3D = getFileUrl(files, "design_only");
+
+  const hasScanViewer = !!scanHtml || !!scan3D;
+  const hasDesignViewer = !!designHtml || !!designWithModel3D;
+
+  const tabs: { key: string; label: string; disabled: boolean }[] = [];
+
+  // 1. Scan 
+  tabs.push({ key: "scan", label: "Scan", disabled: !hasScanViewer });
+
+  let hasAllDesigns = false;
+  
+  // ✅ FIX: Determine if it's an appliance (No Bridge AND No Teeth)
+  const teeth = toothCodes.split(",").map(t => t.trim()).filter(Boolean);
+  const isAppliance = !isBridge && teeth.length === 0;
+
+  // 2. Design Tabs
+  if (isBridge || isAppliance) {
+     const hasSingleDesign = !!designOnly3D;
+     if (hasSingleDesign) {
+         tabs.push({ key: "design_only", label: "Design", disabled: false });
+     }
+     hasAllDesigns = hasSingleDesign;
+  } else {
+     let allIndividualPresent = true;
+     
+     teeth.forEach(tooth => {
+         const key = `design_stl_${tooth}`;
+         const url = getFileUrl(files, key);
+         if (url) {
+            tabs.push({ key, label: `Design #${tooth}`, disabled: false });
+         } else {
+            allIndividualPresent = false;
+         }
+     });
+
+     if (tabs.length === 1 && designOnly3D) {
+        tabs.push({ key: "design_only", label: "Design", disabled: false });
+        hasAllDesigns = true;
+     } else {
+        hasAllDesigns = teeth.length > 0 && allIndividualPresent;
+     }
+  }
+
+  // 3. Design + Model
+  if (hasDesignViewer) {
+      tabs.push({ key: "design_with_model", label: "Design + Model", disabled: false });
+  }
+
+  // --- AUTO SELECT ---
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const STORAGE_KEY = "lumera.caseViewerTab";
-    const stored = window.localStorage.getItem(STORAGE_KEY) as TabKey | null;
-
-    const available: Record<TabKey, boolean> = {
-      scan: hasScanViewer,
-      design_with_model: hasDesignViewer,
-      design_only: hasDesignOnlyViewer,
-    };
-    const order: TabKey[] = ["scan", "design_with_model", "design_only"];
-
-    if (stored && available[stored]) {
-      if (stored !== tab) setTab(stored);
-      return;
+    const currentTabObj = tabs.find(t => t.key === tab);
+    
+    if (!currentTabObj || currentTabObj.disabled) {
+       const firstEnabled = tabs.find(t => !t.disabled);
+       if (firstEnabled) setTab(firstEnabled.key);
     }
-    if (available[tab]) return;
-    for (const key of order) {
-      if (available[key]) {
-        setTab(key);
-        window.localStorage.setItem(STORAGE_KEY, key);
-        return;
-      }
-    }
-  }, [hasScanViewer, hasDesignViewer, hasDesignOnlyViewer, tab]);
+  }, [tabs, tab]);
 
-  function selectTab(key: TabKey) {
+  function selectTab(key: string) {
     setTab(key);
     if (typeof window !== "undefined") {
       window.localStorage.setItem("lumera.caseViewerTab", key);
     }
   }
 
-  const tabBtn = (key: TabKey, label: string, active: boolean, disabled: boolean) => (
-    <button
-      type="button"
-      onClick={() => !disabled && selectTab(key)}
-      disabled={disabled}
-      className={`
-        px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center
-        ${
-          active
-            ? "border-accent text-accent" 
-            : disabled
-            ? "border-transparent text-muted/30 cursor-not-allowed"
-            : "border-transparent text-muted hover:text-foreground"
-        }
-      `}
-    >
-      {label}
-    </button>
-  );
-
   const renderContent = () => {
     if (tab === "scan") {
-      if (scanHtmlUrl) return <StableIframe url={scanHtmlUrl} title="Exocad Scan Viewer" />;
-      return <Stable3D url={scan3DUrl} />;
+      if (scanHtml) return <StableIframe url={scanHtml} title="Exocad Scan Viewer" />;
+      return <Stable3D url={scan3D} />;
     }
+    
     if (tab === "design_with_model") {
-      if (designHtmlUrl) return <StableIframe url={designHtmlUrl} title="Exocad Design Viewer" />;
-      return <Stable3D url={designWithModel3DUrl} />;
+      if (designHtml) return <StableIframe url={designHtml} title="Exocad Design Viewer" />;
+      return <Stable3D url={designWithModel3D} />;
     }
-    return <Stable3D url={designOnly3DUrl} />;
+    
+    if (tab === "design_only") {
+      return <Stable3D url={designOnly3D} />;
+    }
+
+    if (tab.startsWith("design_stl_")) {
+       const url = getFileUrl(files, tab);
+       return <Stable3D url={url} />;
+    }
+
+    return null;
   };
 
   return (
     <div className="rounded-xl border border-border bg-background flex flex-col h-full overflow-hidden shadow-2xl">
-      <div className="flex items-center border-b border-border px-2 bg-surface h-14 shrink-0">
-        {tabBtn("scan", "Scan", tab === "scan", !hasScanViewer)}
-        {tabBtn("design_with_model", "Design + Model", tab === "design_with_model", !hasDesignViewer)}
-        {tabBtn("design_only", "Design Only", tab === "design_only", !hasDesignOnlyViewer)}
+      <div className="flex items-center border-b border-border px-2 bg-surface h-14 shrink-0 overflow-x-auto custom-scrollbar">
+        {tabs.map(t => (
+            <button
+              key={t.key}
+              type="button"
+              onClick={() => !t.disabled && selectTab(t.key)}
+              disabled={t.disabled}
+              className={`
+                px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center whitespace-nowrap
+                ${
+                  tab === t.key
+                    ? "border-accent text-accent" 
+                    : t.disabled
+                    ? "border-transparent text-muted/30 cursor-not-allowed"
+                    : "border-transparent text-muted hover:text-foreground"
+                }
+              `}
+            >
+              {t.label}
+            </button>
+        ))}
         
-        <div className="ml-auto pr-2">
+        <div className="ml-auto pr-2 pl-4">
           <CaseActions 
             caseId={caseId} 
             role={role} 
             currentStatus={status as CaseStatus} 
+            hasAllDesigns={hasAllDesigns}
           />
         </div>
       </div>

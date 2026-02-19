@@ -2,7 +2,7 @@
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import AutoRefresh from "@/components/ui/AutoRefresh";
-import CaseListClient from "./CaseListClient"; 
+import CaseListClient from "./CaseListClient";
 import CasesFilterBar from "./CasesFilterBar";
 import { CaseRow } from "./types";
 
@@ -16,10 +16,11 @@ export default async function StandardView({
   const role = session.role;
   const isDoctor = role === "customer";
   const isAdmin = role === "admin";
-  const currentRole = role as string; 
+  const isLab = role === "lab";
+  const currentRole = role as string;
   const canCreate = currentRole === "lab" || currentRole === "admin";
+  const canFilterAssignee = isAdmin || isLab;
 
-  // Helpers
   const getParam = (key: string) => {
     const value = searchParams[key];
     return Array.isArray(value) ? value[0] : value;
@@ -59,13 +60,12 @@ export default async function StandardView({
     ];
 
     const query = searchFilter || aliasFilter;
-
     if (query && query.trim()) {
       where.AND = {
         OR: [
             { id: { contains: query.trim() } },
             { patientAlias: { contains: query.trim(), mode: 'insensitive' } },
-            { toothCodes: { contains: query.trim(), mode: 'insensitive' } },
+            { product: { contains: query.trim(), mode: 'insensitive' } },
             { patientFirstName: { contains: query.trim(), mode: 'insensitive' } },
             { patientLastName: { contains: query.trim(), mode: 'insensitive' } }
         ]
@@ -77,7 +77,7 @@ export default async function StandardView({
     if (clinicFilter?.trim()) where.clinic = { name: { contains: clinicFilter.trim(), mode: 'insensitive' } };
     if (doctorFilter?.trim()) where.doctorName = { contains: doctorFilter.trim(), mode: 'insensitive' };
     if (caseIdFilter?.trim()) where.id = { contains: caseIdFilter.trim() };
-    if (isAdmin && assigneeFilter?.trim()) {
+    if (canFilterAssignee && assigneeFilter?.trim()) {
         where.assigneeId = assigneeFilter.trim();
     }
 
@@ -86,10 +86,10 @@ export default async function StandardView({
       const searchConditions = [
         { id: { contains: term } },
         { patientAlias: { contains: term, mode: 'insensitive' } },
+        { product: { contains: term, mode: 'insensitive' } },
         { patientFirstName: { contains: term, mode: 'insensitive' } },
         { patientLastName: { contains: term, mode: 'insensitive' } },
       ];
-      
       if (!where.AND) {
         where.AND = [{ OR: searchConditions }];
       } else if (Array.isArray(where.AND)) {
@@ -102,7 +102,8 @@ export default async function StandardView({
     if (dateFilter?.trim()) {
       const d = new Date(dateFilter);
       if (!Number.isNaN(d.getTime()) && d.getFullYear() >= 2000 && d.getFullYear() <= 2100) {
-        const start = new Date(d); start.setHours(0, 0, 0, 0);
+        const start = new Date(d);
+        start.setHours(0, 0, 0, 0);
         const end = new Date(start); end.setDate(end.getDate() + 1);
         where.dueDate = { gte: start, lt: end };
       }
@@ -110,7 +111,7 @@ export default async function StandardView({
   }
 
   let labUsers: { id: string; name: string | null; email: string }[] = [];
-  if (isAdmin) {
+  if (canFilterAssignee) {
     labUsers = await prisma.user.findMany({
         where: { role: { in: ["lab", "admin"] } },
         select: { id: true, name: true, email: true },
@@ -161,7 +162,7 @@ export default async function StandardView({
             <h1 className="text-2xl font-semibold text-foreground">Cases</h1>
             <span className="text-sm text-muted">Total: {totalCount}</span>
           </div>
-          
+  
           {canCreate && (
             <Link
             href="/portal/cases/new"
