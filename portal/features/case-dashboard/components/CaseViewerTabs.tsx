@@ -195,12 +195,12 @@ export default function CaseViewerTabs({
               onClick={() => !t.disabled && selectTab(t.key)}
               disabled={t.disabled}
               className={`
-                px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center whitespace-nowrap
+                px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center whitespace-nowrap cursor-pointer
                 ${
                   tab === t.key
-                    ? "border-accent text-accent" 
+                    ? "border-[#9696e2] text-[#9696e2]" 
                     : t.disabled
-                    ? "border-transparent text-muted/30 cursor-not-allowed"
+                    ? "border-transparent text-muted/30 !cursor-not-allowed"
                     : "border-transparent text-muted hover:text-foreground"
                 }
               `}

@@ -13,6 +13,7 @@ export default function CaseProcessBar({
   role,
   carrier,
   tracking,
+  files = [], // ✅ Receive files
 }: {
   caseId: string;
   stage: ProductionStage;
@@ -20,18 +21,25 @@ export default function CaseProcessBar({
   role: Role;
   carrier?: string | null;
   tracking?: string | null;
+  files?: any[];
 }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [showShipModal, setShowShipModal] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
 
   // Status Checks
   const isFullyDelivered = status === "DELIVERED";
   const isShippedOrDone = ["SHIPPED", "COMPLETED", "DELIVERED"].includes(status);
-  
-  // Permissions - 🔒 LOCKED TO ADMIN ONLY
+  const isCancelled = status === "CANCELLED";
+
+  // Permissions - 🔒 LOCKED TO ADMIN ONLY (For advancing)
   const isAdmin = role === "admin";
   const isDoctor = role === "customer";
+
+  // --- LOGIC: Cancel Warnings ---
+  const hasDesignFiles = files.some(f => String(f.label).startsWith("design_stl_") || String(f.label) === "design_only");
+  const isProduced = ["MILLING_GLAZING", "SHIPPING", "COMPLETED", "DELIVERED"].includes(stage) || ["IN_MILLING", "SHIPPED", "COMPLETED", "DELIVERED"].includes(status);
 
   // --- LOGIC: Next Stage Calculation ---
   let nextStage: ProductionStage | null = null;
@@ -42,6 +50,7 @@ export default function CaseProcessBar({
   if (stage === "DESIGN") {
     nextStage = "MILLING_GLAZING";
     nextLabel = "Start Milling";
+
     const isApproved = ["APPROVED", "IN_MILLING", "SHIPPED", "COMPLETED", "DELIVERED"].includes(status);
     
     if (isApproved) {
@@ -74,7 +83,7 @@ export default function CaseProcessBar({
 
   // --- VISIBILITY CHECK ---
   const showButton = 
-    (isAdmin && nextStage !== null) || 
+    (isAdmin && nextStage !== null) ||
     (isDoctor && nextStage === "DELIVERED" && !isFullyDelivered);
 
   // --- HANDLERS ---
@@ -99,6 +108,11 @@ export default function CaseProcessBar({
     if (nextStage === "DELIVERED") { await submitStatusChange("DELIVERED"); return; }
     if (nextStage === "COMPLETED") { await submitStatusChange("COMPLETED"); return; }
     await submitStageChange(nextStage);
+  }
+
+  async function handleCancelCase() {
+    setBusy(true);
+    await submitStatusChange("CANCELLED");
   }
 
   async function submitStatusChange(newStatus: string) {
@@ -136,21 +150,21 @@ export default function CaseProcessBar({
   }
 
   return (
-    <div className="bg-surface border border-border rounded-3xl pt-6 px-6 pb-12 shadow-sm">
+    <div className="bg-surface border border-border rounded-3xl pt-6 px-6 pb-12 shadow-sm relative">
       
       {/* HEADER */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-2">
         <div>
           <h2 className="text-sm font-semibold text-foreground">Manufacturing Process</h2>
           <p className="text-xs font-medium">
-            Status: <span className={isFullyDelivered ? "text-green-500 font-bold tracking-wide" : "text-muted"}>
-              {isFullyDelivered ? "DELIVERED TO PATIENT" : STAGE_LABEL[stage]}
+            Status: <span className={isFullyDelivered ? "text-green-500 font-bold tracking-wide" : isCancelled ? "text-red-500 font-bold tracking-wide" : "text-muted"}>
+               {isFullyDelivered ? "DELIVERED TO PATIENT" : isCancelled ? "CANCELLED" : STAGE_LABEL[stage]}
             </span>
           </p>
         </div>
 
         {/* TRACKING BADGE */}
-        {isShippedOrDone && tracking && (
+        {isShippedOrDone && tracking && !isCancelled && (
           <div className="flex items-center gap-3 bg-[#9696e2]/10 border border-[#9696e2]/20 px-4 py-2 rounded-lg shadow-lg shadow-[#9696e2]/10 animate-in fade-in slide-in-from-right-2">
             <div className="p-2 bg-[#9696e2] rounded-full text-white">
                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1 1H9m4-1V8a1 1 0 011-1h2.586a1 1 0 01.707.293l3.414 3.414a1 1 0 01.293.707V16a1 1 0 01-1 1h-1m-6-1a1 1 0 001 1h1M5 17a2 2 0 104 0m-4 0a2 2 0 114 0m6 0a2 2 0 104 0m-4 0a2 2 0 114 0" /></svg>
@@ -158,7 +172,6 @@ export default function CaseProcessBar({
             <div>
                <div className="flex items-center gap-2">
                    <div className="text-[10px] text-[#9696e2] uppercase font-bold tracking-wider">{carrier || "Shipped"} Tracking</div>
-                   {/* 🔒 Edit Tracking also locked to admin */}
                    {isAdmin && <button onClick={() => setShowShipModal(true)} className="text-muted hover:text-foreground"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>}
                </div>
                <a href={getTrackingLink(tracking, carrier)} target="_blank" rel="noopener noreferrer" className="text-sm font-mono font-medium text-foreground hover:text-accent flex items-center gap-1 group transition-colors">
@@ -169,22 +182,39 @@ export default function CaseProcessBar({
           </div>
         )}
 
-        {/* ACTION BUTTON */}
-        {showButton && nextStage && (
-          <div className="flex flex-col items-end">
-             <button
-              onClick={handleAdvanceClick}
-              disabled={busy}
-              className={`
-                px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2
-                ${canAdvance 
-                  ? "bg-foreground text-background border-2 border-foreground hover:opacity-80 shadow-md" 
-                  : "bg-surface text-muted border-2 border-border cursor-not-allowed"}
-              `}
-            >
-              {busy ? "Updating..." : <>{nextLabel} →</>}
-            </button>
-            {!canAdvance && reason && <span className="text-[10px] text-orange-400 mt-1">{reason}</span>}
+        {/* ACTION BUTTONS */}
+        {!isCancelled && (
+          <div className="flex items-start gap-3"> {/* ✅ Changed items-center to items-start */}
+            
+            {/* 🛑 CANCEL CASE BUTTON */}
+            {!isFullyDelivered && (
+              <button
+                onClick={() => setShowCancelModal(true)}
+                disabled={busy}
+                className="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed bg-red-500/10 text-red-500 border-2 border-red-500/20 hover:bg-red-500 hover:text-white"
+              >
+                Cancel Case
+              </button>
+            )}
+
+            {/* NEXT STAGE ADVANCE BUTTON */}
+            {showButton && nextStage && (
+              <div className="flex flex-col items-end">
+                <button
+                  onClick={handleAdvanceClick}
+                  disabled={busy}
+                  className={`
+                    px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed
+                    ${canAdvance 
+                      ? "bg-foreground text-background border-2 border-foreground hover:opacity-80 shadow-md" 
+                      : "bg-surface text-muted border-2 border-border !cursor-not-allowed"}
+                  `}
+                >
+                  {busy ? "Updating..." : <>{nextLabel} →</>}
+                </button>
+                {!canAdvance && reason && <span className="text-[10px] text-orange-400 mt-1">{reason}</span>}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -192,7 +222,7 @@ export default function CaseProcessBar({
       {/* PROGRESS BAR */}
       <StageProgress currentStage={stage} isFullyDelivered={isFullyDelivered} />
 
-      {/* MODAL */}
+      {/* SHIPPING MODAL */}
       <ShippingModal
         isOpen={showShipModal}
         busy={busy}
@@ -201,6 +231,56 @@ export default function CaseProcessBar({
         onClose={() => setShowShipModal(false)}
         onSubmit={submitShipping}
       />
+
+      {/* ⚠️ CANCEL WARNING MODAL */}
+      {showCancelModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm p-4">
+          <div className="bg-surface border border-border rounded-2xl shadow-2xl max-w-md w-full p-6 animate-in zoom-in-95 duration-200">
+            <h3 className="text-lg font-bold text-foreground mb-4">Cancel Case</h3>
+            
+            <div className="space-y-4 mb-6">
+              <p className="text-sm text-foreground/80">
+                Are you sure you want to cancel this case? This action cannot be undone.
+              </p>
+
+              {/* Dynamic Warnings */}
+              {isProduced ? (
+                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex gap-3">
+                  <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  <p className="text-xs text-red-600 dark:text-red-400 font-medium leading-relaxed">
+                    This case is already in production. If you cancel now, you may be charged a production cancellation fee.
+                  </p>
+                </div>
+              ) : hasDesignFiles ? (
+                <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg flex gap-3">
+                  <svg className="w-5 h-5 text-orange-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                  <p className="text-xs text-orange-600 dark:text-orange-400 font-medium leading-relaxed">
+                    This case has already been designed. If you cancel now, you may be charged a $5 design cancellation fee.
+                  </p>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowCancelModal(false)}
+                disabled={busy}
+                className="px-4 py-2 rounded-lg text-sm font-bold border border-border bg-surface hover:bg-[var(--accent-dim)] transition-colors cursor-pointer disabled:opacity-50"
+              >
+                Keep Case
+              </button>
+              <button
+                onClick={handleCancelCase}
+                disabled={busy}
+                className="px-4 py-2 rounded-lg text-sm font-bold bg-red-500 text-white hover:bg-red-600 border border-red-700 transition-colors shadow-sm cursor-pointer disabled:opacity-50 flex items-center gap-2"
+              >
+                {busy && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       {err && <p className="mt-2 text-xs text-center text-red-400">{err}</p>}
     </div>

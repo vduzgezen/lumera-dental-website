@@ -1,4 +1,4 @@
-// portal/components/new-case/DoctorSelection.tsx
+// portal/features/new-case/components/DoctorSelection.tsx
 "use client";
 
 import { useMemo } from "react";
@@ -31,10 +31,8 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
   const availableClinics = useMemo(() => {
     if (!selectedDoctor) return [];
     
-    // Start with Primary
     const list = selectedDoctor.clinic ? [selectedDoctor.clinic] : [];
     
-    // Add Secondary (Unique check to be safe)
     if (selectedDoctor.secondaryClinics && selectedDoctor.secondaryClinics.length > 0) {
       selectedDoctor.secondaryClinics.forEach(sc => {
         if (!list.find(c => c.id === sc.id)) {
@@ -48,33 +46,27 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
   // 4. Handle Doctor Change
   const handleDoctorChange = (newId: string) => {
     const doc = doctors.find((d) => d.id === newId);
+
     if (doc) {
       const newPrefs = doc.preferenceNote || doc.defaultDesignPreferences || "";
-      
-      // Calculate clinics for this new doctor
       const clinics = doc.clinic ? [doc.clinic] : [];
       if (doc.secondaryClinics) clinics.push(...doc.secondaryClinics);
       
-      // Auto-Select Logic: If only 1 clinic, pick it. Else reset.
       let autoClinicId = "";
       let newServiceLevel: ServiceLevel = "STANDARD";
 
-      if (clinics.length === 1) {
-        autoClinicId = clinics[0].id;
-        if (clinics[0].priceTier === "IN_HOUSE") newServiceLevel = "IN_HOUSE";
-      } else if (clinics.length > 1) {
-        // If multiple, default to primary
-        if (doc.clinic) {
-           autoClinicId = doc.clinic.id;
-           if (doc.clinic.priceTier === "IN_HOUSE") newServiceLevel = "IN_HOUSE";
-        }
+      // ✅ FIX: Force auto-select of the primary (or first available) clinic
+      if (clinics.length > 0) {
+        const targetClinic = doc.clinic || clinics[0];
+        autoClinicId = targetClinic.id;
+        if (targetClinic.priceTier === "IN_HOUSE") newServiceLevel = "IN_HOUSE";
       }
 
       update({
         doctorUserId: newId,
         doctorName: doc.name || doc.email,
         designPreferences: newPrefs,
-        clinicId: autoClinicId, // Set or Clear
+        clinicId: autoClinicId,
         serviceLevel: newServiceLevel
       });
     }
@@ -113,7 +105,6 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
         onChange={handleDoctorChange}
       />
 
-      {/* ✅ ALWAYS SHOW CLINIC (Read-only if single, Dropdown if multiple) */}
       {availableClinics.length > 0 && (
         <div className="space-y-1 animate-in fade-in slide-in-from-top-2 duration-300">
           <label className="text-xs font-medium text-muted uppercase tracking-wider">
@@ -121,12 +112,14 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
           </label>
           <div className="relative">
             <select
-              value={data.clinicId}
+              value={data.clinicId || ""} // Fallback to empty string if undefined
               onChange={handleClinicChange}
-              disabled={availableClinics.length === 1} // Disable if only 1 option
+              disabled={availableClinics.length === 1} 
               className={`w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition appearance-none 
                 ${availableClinics.length === 1 ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-[var(--accent-dim)]"}`}
             >
+              {/* ✅ ADDED: Placeholder option to catch edge cases */}
+              <option value="" disabled>Select a clinic...</option>
               {availableClinics.map(c => (
                 <option key={c.id} value={c.id} className="bg-surface-highlight">
                   {c.name} {c.priceTier === "IN_HOUSE" ? "(In-House)" : ""}
@@ -134,7 +127,6 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
               ))}
             </select>
             
-            {/* Show Arrow only if multiple options */}
             {availableClinics.length > 1 && (
               <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none opacity-50">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -144,7 +136,6 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
             )}
           </div>
           
-          {/* Helper Text */}
           {availableClinics.length === 1 && (
              <p className="text-[10px] text-muted pl-1 mt-1">
                Doctor is only associated with this clinic.

@@ -58,7 +58,7 @@ export default function CaseActions({ caseId, role, currentStatus, hasAllDesigns
         <button 
           onClick={() => change("CHANGES_REQUESTED")} 
           disabled={busy}
-          className="px-4 py-2 rounded-lg border border-red-700 bg-red-500 text-white hover:bg-red-700 transition-all text-xs font-bold disabled:opacity-50 shadow-sm"
+          className="px-4 py-2 rounded-lg border border-red-700 bg-red-500 text-white hover:bg-red-700 transition-all text-xs font-bold disabled:opacity-50 shadow-sm cursor-pointer disabled:cursor-not-allowed"
         >
           Request Changes
         </button>
@@ -69,7 +69,7 @@ export default function CaseActions({ caseId, role, currentStatus, hasAllDesigns
         <button 
           onClick={() => change("APPROVED")} 
           disabled={busy}
-          className="px-4 py-2 rounded-lg border border-emerald-700 bg-emerald-600 text-white hover:bg-emerald-700 transition-all text-xs font-bold disabled:opacity-50 shadow-sm"
+          className="px-4 py-2 rounded-lg border border-emerald-700 bg-emerald-600 text-white hover:bg-emerald-700 transition-all text-xs font-bold disabled:opacity-50 shadow-sm cursor-pointer disabled:cursor-not-allowed"
         >
           {busy ? "Updating..." : "Approve Design"}
         </button>

@@ -72,7 +72,7 @@ export default function UploadButtons({
         />
         <button
           type="button"
-          className="rounded-md bg-accent text-white text-sm px-3 py-1.5 disabled:opacity-50 hover:bg-accent/80 transition"
+          className="rounded-md bg-foreground text-background border border-foreground text-sm px-3 py-1.5 hover:opacity-80 transition shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           onClick={upload}
           disabled={busy || disabled}
         >

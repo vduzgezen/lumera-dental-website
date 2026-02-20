@@ -13,8 +13,10 @@ function stageForStatus(to: CaseStatus): ProductionStage {
       return "SHIPPING";
     case "COMPLETED":
       return "COMPLETED";
-    case "DELIVERED": // ✅ Final Stage
+    case "DELIVERED":
       return "DELIVERED";
+    case "CANCELLED": // ✅ Add Cancelled handler
+      return "DESIGN"; // Can default back to design stage, the status overrides the UI.
     case "APPROVED":
     default:
       return "DESIGN";
@@ -39,12 +41,13 @@ export async function POST(
     where: { id },
     include: { files: true }
   });
+
   if (!item) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   // ✅ DOCTOR PERMISSIONS
   if (session.role === "customer") {
-    // Doctors can approve designs AND mark Delivered
-    const allowedForDoctor: CaseStatus[] = ["APPROVED", "CHANGES_REQUESTED", "DELIVERED"];
+    // ✅ Added CANCELLED to allowed doctor actions
+    const allowedForDoctor: CaseStatus[] = ["APPROVED", "CHANGES_REQUESTED", "DELIVERED", "CANCELLED"];
     
     if (!allowedForDoctor.includes(to)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
@@ -57,15 +60,14 @@ export async function POST(
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    // ✅ LOGIC: Can only mark DELIVERED if it is currently COMPLETED (Arrived)
     if (to === "DELIVERED" && item.status !== "COMPLETED") {
         return NextResponse.json({ error: "Case must be marked Completed (Arrived at Clinic) before marking Delivered." }, { status: 400 });
     }
   }
 
-  // (Keep existing Lab/Admin guard logic for APPROVED...)
+  // Guard logic for APPROVED
   if (to === "APPROVED") {
-    if (["APPROVED", "IN_MILLING", "SHIPPED", "COMPLETED", "DELIVERED"].includes(item.status)) {
+    if (["APPROVED", "IN_MILLING", "SHIPPED", "COMPLETED", "DELIVERED", "CANCELLED"].includes(item.status)) {
       return NextResponse.json({ error: "Case is already approved/processed." }, { status: 400 });
     }
     const labels = new Set(item.files.map((f) => f.label));
@@ -89,12 +91,11 @@ export async function POST(
       where: { id },
       data: {
         status: to,
-        stage: newStage,
+        // Don't change the stage if they are just cancelling it, leave it where it died
+        stage: to === "CANCELLED" ? item.stage : newStage,
         designedAt: to === "READY_FOR_REVIEW" ? at : item.designedAt,
         milledAt: to === "IN_MILLING" ? at : item.milledAt,
         shippedAt: to === "SHIPPED" ? at : item.shippedAt,
-        // We could add a 'deliveredAt' field to DB later if needed, 
-        // for now statusEvent tracks the timestamp.
       },
     });
 

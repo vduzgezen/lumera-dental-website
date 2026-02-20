@@ -164,6 +164,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
           role={session.role as any}
           carrier={item.shippingCarrier}
           tracking={item.trackingNumber}
+          files={item.files} // ✅ ADD THIS LINE
         />
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">

@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import Logo from "@/components/ui/Logo";
 
 export default function SignupPage() {
   const [form, setForm] = useState({
@@ -14,6 +15,7 @@ export default function SignupPage() {
     state: "",
     zipCode: ""
   });
+
   const [busy, setBusy] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -33,7 +35,7 @@ export default function SignupPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form)
       });
-      
+
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed to submit request");
       
@@ -55,7 +57,7 @@ export default function SignupPage() {
           <p className="text-muted mb-8 leading-relaxed">
             Thank you, {form.name}. Our team will review your information and send an approval email shortly.
           </p>
-          <Link href="/" className="inline-block px-6 py-3 bg-accent text-white font-bold rounded-lg hover:bg-accent/80 transition">
+          <Link href="/" className="inline-block px-6 py-3 bg-[#9696e2] text-white font-bold rounded-lg shadow-md hover:bg-[#9696e2]/80 transition cursor-pointer">
             Return Home
           </Link>
         </div>
@@ -71,15 +73,16 @@ export default function SignupPage() {
 
         <div className="w-full max-w-2xl relative z-10 flex flex-col max-h-full">
             <div className="mb-6 text-center flex-none">
-                <Link href="/" className="inline-block text-2xl font-light tracking-wide text-foreground mb-2">Lumera</Link>
+                <Link href="/" className="flex justify-center mb-4 group">
+                   <Logo />
+                </Link>
                 <h1 className="text-2xl font-semibold text-foreground">Request Access</h1>
                 <p className="text-muted text-sm mt-1">Enter your details to create an account.</p>
             </div>
 
             <form onSubmit={onSubmit} className="bg-surface border border-border rounded-2xl p-8 shadow-2xl flex flex-col gap-5 overflow-y-auto custom-scrollbar">
-                
                 <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-accent uppercase tracking-wider border-b border-border pb-2">Account Details</h3>
+                    <h3 className="text-xs font-bold text-[#9696e2] uppercase tracking-wider border-b border-border pb-2">Account Details</h3>
                     <div className="grid md:grid-cols-2 gap-4">
                         <div className="space-y-1">
                             <label className="text-xs text-muted uppercase">Full Name *</label>
@@ -88,7 +91,7 @@ export default function SignupPage() {
                               name="name" 
                               value={form.name} 
                               onChange={handleChange} 
-                              className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors" 
+                              className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-[#9696e2]/50 outline-none transition-colors" 
                               placeholder="Dr. Jane Doe" 
                             />
                         </div>
@@ -100,7 +103,7 @@ export default function SignupPage() {
                               name="email" 
                               value={form.email} 
                               onChange={handleChange} 
-                              className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors" 
+                              className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-[#9696e2]/50 outline-none transition-colors" 
                               placeholder="doctor@clinic.com" 
                             />
                         </div>
@@ -112,14 +115,14 @@ export default function SignupPage() {
                           name="phone" 
                           value={form.phone} 
                           onChange={handleChange} 
-                          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors" 
+                          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-[#9696e2]/50 outline-none transition-colors" 
                           placeholder="(555) 000-0000" 
                         />
                     </div>
                 </div>
 
                 <div className="space-y-4">
-                    <h3 className="text-xs font-bold text-accent uppercase tracking-wider border-b border-border pb-2">Address</h3>
+                    <h3 className="text-xs font-bold text-[#9696e2] uppercase tracking-wider border-b border-border pb-2">Address</h3>
                     <div className="space-y-1">
                         <label className="text-xs text-muted uppercase">Street Address *</label>
                         <input 
@@ -127,7 +130,7 @@ export default function SignupPage() {
                           name="street" 
                           value={form.street} 
                           onChange={handleChange} 
-                          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors" 
+                          className="w-full bg-surface-highlight border border-border rounded-lg px-4 py-2.5 text-foreground placeholder:text-muted focus:border-[#9696e2]/50 outline-none transition-colors" 
                           placeholder="123 Main St" 
                         />
                     </div>
@@ -139,7 +142,7 @@ export default function SignupPage() {
                               name="city" 
                               value={form.city} 
                               onChange={handleChange} 
-                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder:text-muted outline-none focus:border-accent/50 transition-colors" 
+                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder:text-muted outline-none focus:border-[#9696e2]/50 transition-colors" 
                               placeholder="City" 
                             />
                         </div>
@@ -150,7 +153,7 @@ export default function SignupPage() {
                               name="state" 
                               value={form.state} 
                               onChange={handleChange} 
-                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder:text-muted outline-none focus:border-accent/50 transition-colors" 
+                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder:text-muted outline-none focus:border-[#9696e2]/50 transition-colors" 
                               placeholder="State" 
                             />
                         </div>
@@ -161,7 +164,7 @@ export default function SignupPage() {
                               name="zipCode" 
                               value={form.zipCode} 
                               onChange={handleChange} 
-                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder:text-muted outline-none focus:border-accent/50 transition-colors" 
+                              className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-2.5 text-foreground placeholder:text-muted outline-none focus:border-[#9696e2]/50 transition-colors" 
                               placeholder="Zip" 
                             />
                         </div>
@@ -175,7 +178,7 @@ export default function SignupPage() {
                     <button 
                       type="submit" 
                       disabled={busy} 
-                      className="px-8 py-3 bg-accent text-white font-bold rounded-lg hover:bg-accent/80 transition-colors disabled:opacity-50"
+                      className="px-8 py-3 bg-[#9696e2] text-white font-bold rounded-lg shadow-md hover:bg-[#9696e2]/80 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
                     >
                         {busy ? "Submitting..." : "Request Access"}
                     </button>

@@ -10,7 +10,8 @@ export type CaseStatus =
   | "IN_MILLING" 
   | "SHIPPED" 
   | "COMPLETED" 
-  | "DELIVERED";
+  | "DELIVERED"
+  | "CANCELLED";
 
 export type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED" | "DELIVERED";
 

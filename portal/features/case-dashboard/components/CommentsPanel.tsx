@@ -269,8 +269,8 @@ export default function CommentsPanel({
             
             {/* ✅ Consistent coloring for Attach Image button */}
             <button
-              onClick={() => fileInputRef.current?.click()}
-              className="p-2 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:bg-[var(--accent-dim)] transition-colors duration-200 shadow-sm"
+               onClick={() => fileInputRef.current?.click()}
+              className="p-2 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:bg-[var(--accent-dim)] transition-colors duration-200 shadow-sm cursor-pointer"
               title="Attach Image & Draw"
             >
               <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -296,7 +296,7 @@ export default function CommentsPanel({
             <button
               onClick={() => handlePost()}
               disabled={posting || (!body.trim())}
-              className="p-2 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:bg-[var(--accent-dim)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 shadow-sm"
+              className="p-2 rounded-lg bg-surface border border-border text-muted hover:text-foreground hover:bg-[var(--accent-dim)] disabled:opacity-50 transition-colors duration-200 shadow-sm cursor-pointer disabled:cursor-not-allowed"
               title="Send Comment"
             >
               {posting ? (

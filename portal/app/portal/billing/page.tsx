@@ -36,15 +36,51 @@ export default async function BillingPage({
 
   const qFilter = getParam("q") || "";
   const doctorFilter = getParam("doctor") || "";
-  const clinicFilter = getParam("clinic") || "";
+  const clinicFilter = getParam("clinic") || ""; // ✅ Now represents a specific clinicId
   const isAdminOrLab = session.role === "admin" || session.role === "lab";
 
   const where: Prisma.DentalCaseWhereInput = {};
+  
+  let authorizedClinicIds: string[] = [];
+  let availableClinics: { id: string; name: string }[] = [];
+
+  // ✅ Fetch Clinics for Dropdown & Authorization
   if (session.role === "customer") {
-    if (!session.clinicId) {
+    const userRecord = await prisma.user.findUnique({
+      where: { id: session.userId },
+      include: { secondaryClinics: { select: { id: true } } }
+    });
+
+    if (userRecord?.clinicId) authorizedClinicIds.push(userRecord.clinicId);
+    if (userRecord?.secondaryClinics) {
+      userRecord.secondaryClinics.forEach(c => authorizedClinicIds.push(c.id));
+    }
+
+    if (authorizedClinicIds.length === 0) {
       return <div className="p-8 text-muted">No clinic linked. Contact support.</div>;
     }
-    where.clinicId = session.clinicId;
+    
+    // Fetch only authorized clinics for the dropdown
+    availableClinics = await prisma.clinic.findMany({
+      where: { id: { in: authorizedClinicIds } },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    });
+  } else {
+    // Fetch all clinics for admin/lab dropdown
+    availableClinics = await prisma.clinic.findMany({
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    });
+  }
+
+  // ✅ Apply Clinic Filter Logic
+  if (clinicFilter.trim()) {
+    // If a specific clinic is chosen from the dropdown
+    where.clinicId = clinicFilter.trim();
+  } else if (session.role === "customer") {
+    // Default to all authorized clinics if nothing is selected
+    where.clinicId = { in: authorizedClinicIds };
   }
 
   const start = new Date(selYear, selMonth - 1, 1);
@@ -62,14 +98,15 @@ export default async function BillingPage({
     ];
   }
 
-  if (isAdminOrLab) {
-    if (doctorFilter.trim()) where.doctorName = { contains: doctorFilter.trim(), mode: 'insensitive' };
-    if (clinicFilter.trim()) where.clinic = { name: { contains: clinicFilter.trim(), mode: 'insensitive' } };
+  if (isAdminOrLab && doctorFilter.trim()) {
+    where.doctorName = { contains: doctorFilter.trim(), mode: 'insensitive' };
   }
+
+  const showClinicFilter = isAdminOrLab || authorizedClinicIds.length > 1;
+  const showClinicColumn = true;
 
   // --- 2. FETCH DATA ---
   const [stats, rawCases] = await Promise.all([
-    // ✅ Use 'aggregate' for counts to populate the footer accurately
     prisma.dentalCase.aggregate({
         where,
         _sum: { cost: true, units: true },
@@ -78,7 +115,7 @@ export default async function BillingPage({
     prisma.dentalCase.findMany({
         where,
         orderBy: { orderDate: "desc" },
-        take: limit, // ✅ Apply Limit Here
+        take: limit, 
         select: {
             id: true,
             orderDate: true,
@@ -100,7 +137,7 @@ export default async function BillingPage({
     cost: Number(c.cost),
   }));
 
-  const isFiltered = !!qFilter || (isAdminOrLab && (!!doctorFilter || !!clinicFilter)) || selYear !== currentYear || selMonth !== currentMonth;
+  const isFiltered = !!qFilter || (isAdminOrLab && !!doctorFilter) || !!clinicFilter || selYear !== currentYear || selMonth !== currentMonth;
 
   return (
     <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
@@ -110,7 +147,9 @@ export default async function BillingPage({
         qFilter={qFilter}
         doctorFilter={doctorFilter}
         clinicFilter={clinicFilter}
+        availableClinics={availableClinics}
         isAdminOrLab={isAdminOrLab}
+        showClinicFilter={showClinicFilter}
         isFiltered={isFiltered}
       />
 
@@ -123,7 +162,8 @@ export default async function BillingPage({
       <BillingList 
         cases={cases} 
         isAdminOrLab={isAdminOrLab} 
-        totalCount={stats._count.id} // ✅ Pass Total
+        showClinicColumn={showClinicColumn}
+        totalCount={stats._count.id} 
       />
     </section>
   );
