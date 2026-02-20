@@ -27,6 +27,11 @@
   /* Glass */
   --glass-bg: rgba(17, 27, 45, 0.7);
   --glass-border: rgba(255, 255, 255, 0.1);
+  
+  /* Progress Bar Lines (Dark Mode) */
+  --line-active: #ffffff;      /* White for active lines in dark mode */
+  --line-inactive: #4b5563;    /* Gray-600 for inactive lines in dark mode */
+  --node-border: #374151;      /* Gray-700 for node borders in dark mode */
 }
 
 .light {
@@ -55,6 +60,11 @@
   /* Glass */
   --glass-bg: rgba(255, 255, 255, 0.8);
   --glass-border: #cbd5e1;
+  
+  /* Progress Bar Lines (Light Mode) */
+  --line-active: #000000;      /* Black for active lines in light mode */
+  --line-inactive: #d1d5db;    /* Gray-300 for inactive lines in light mode */
+  --node-border: #d1d5db;      /* Gray-300 for node borders in light mode */
 }
 
 body {
