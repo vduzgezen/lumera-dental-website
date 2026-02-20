@@ -47,7 +47,7 @@ export function StageProgress({ currentStage, isFullyDelivered }: StageProgressP
                       ? "!bg-[#9696e2] !border-[#9696e2] text-white" 
                       : isCurrent
                         ? "bg-surface !border-[#9696e2] text-[#9696e2] scale-110 shadow-lg shadow-[#9696e2]/20"
-                        : "bg-surface border-gray-300 dark:border-gray-700 text-muted"}
+                        : "bg-surface border-foreground text-foreground"}
                 `}
               >
                 {(isDone || isFullyFinished) ? "✓" : idx + 1}
@@ -66,16 +66,15 @@ export function StageProgress({ currentStage, isFullyDelivered }: StageProgressP
               </span>
             </div>
 
-            {/* SEGMENTED LINE: Pure Tailwind Dark Mode Logic */}
+            {/* SEGMENTED LINE: CSS Variable-based theming */}
             {!isLast && (
               <div
-                className={`
+                data-line-active={isLineActive}
+                className="
                   h-1.5 flex-1 mx-2 rounded-full transition-colors duration-200
-                  ${isLineActive 
-                    ? "bg-black dark:bg-white" 
-                    : "bg-gray-300 dark:bg-gray-600"
-                  }
-                `}
+                  bg-[var(--line-inactive)]
+                  data-[line-active=true]:bg-[var(--line-active)]
+                "
               />
             )}
           </React.Fragment>

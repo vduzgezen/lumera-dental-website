@@ -61,10 +61,10 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
         <h2 className="text-lg font-medium text-foreground">Case Information</h2>
         {/* Live Alias Preview */}
         <div className="flex items-center gap-2">
-           <span className="text-[10px] uppercase text-muted tracking-wider">Auto-ID:</span>
-           <span className="font-mono text-sm font-bold text-blue-400 bg-blue-500/10 px-2 py-1 rounded border border-blue-500/20">
-              {data.patientAlias || "Waiting for data..."}
-           </span>
+          <span className="text-[10px] uppercase text-muted tracking-wider">Auto-ID:</span>
+          <span className="font-mono text-sm font-bold text-[#9696e2] bg-[#9696e2]/20 px-2 py-1 rounded border border-[#9696e2]/30 dark:border-[#9696e2]/50">
+            {data.patientAlias || "Waiting for data..."}
+          </span>
         </div>
       </div>
       

@@ -29,8 +29,8 @@ export default function CaseProcessBar({
   const isFullyDelivered = status === "DELIVERED";
   const isShippedOrDone = ["SHIPPED", "COMPLETED", "DELIVERED"].includes(status);
   
-  // Permissions
-  const canEdit = role === "admin" || role === "lab" || role === "milling";
+  // Permissions - 🔒 LOCKED TO ADMIN ONLY
+  const isAdmin = role === "admin";
   const isDoctor = role === "customer";
 
   // --- LOGIC: Next Stage Calculation ---
@@ -74,7 +74,7 @@ export default function CaseProcessBar({
 
   // --- VISIBILITY CHECK ---
   const showButton = 
-    (canEdit && nextStage !== null) || 
+    (isAdmin && nextStage !== null) || 
     (isDoctor && nextStage === "DELIVERED" && !isFullyDelivered);
 
   // --- HANDLERS ---
@@ -92,7 +92,7 @@ export default function CaseProcessBar({
     if (!nextStage || !canAdvance || busy) return;
     if (isDoctor && nextStage !== "DELIVERED") return;
 
-    if (nextStage === "SHIPPING" && canEdit) {
+    if (nextStage === "SHIPPING" && isAdmin) {
         setShowShipModal(true);
         return;
     }
@@ -136,7 +136,6 @@ export default function CaseProcessBar({
   }
 
   return (
-    // UPDATED: pb-12 (Large bottom buffer for labels), pt-6 (Spacious top)
     <div className="bg-surface border border-border rounded-3xl pt-6 px-6 pb-12 shadow-sm">
       
       {/* HEADER */}
@@ -159,7 +158,8 @@ export default function CaseProcessBar({
             <div>
                <div className="flex items-center gap-2">
                    <div className="text-[10px] text-[#9696e2] uppercase font-bold tracking-wider">{carrier || "Shipped"} Tracking</div>
-                   {canEdit && <button onClick={() => setShowShipModal(true)} className="text-muted hover:text-foreground"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>}
+                   {/* 🔒 Edit Tracking also locked to admin */}
+                   {isAdmin && <button onClick={() => setShowShipModal(true)} className="text-muted hover:text-foreground"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>}
                </div>
                <a href={getTrackingLink(tracking, carrier)} target="_blank" rel="noopener noreferrer" className="text-sm font-mono font-medium text-foreground hover:text-accent flex items-center gap-1 group transition-colors">
                   {tracking}
@@ -176,10 +176,10 @@ export default function CaseProcessBar({
               onClick={handleAdvanceClick}
               disabled={busy}
               className={`
-                px-3 py-1.5 rounded-md text-xs font-bold transition-all flex items-center gap-2
+                px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2
                 ${canAdvance 
-                  ? "bg-accent hover:bg-accent/80 text-white shadow-lg" 
-                  : "bg-surface text-muted cursor-not-allowed border border-border"}
+                  ? "bg-foreground text-background border-2 border-foreground hover:opacity-80 shadow-md" 
+                  : "bg-surface text-muted border-2 border-border cursor-not-allowed"}
               `}
             >
               {busy ? "Updating..." : <>{nextLabel} →</>}

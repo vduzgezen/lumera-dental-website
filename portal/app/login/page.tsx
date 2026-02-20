@@ -52,13 +52,31 @@ export default function LoginPage() {
       <div className="w-full max-w-sm relative z-10">
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-3 group">
-            <Image 
-              src="/Images/Lumera-Lab-White.png" 
-              alt="Lumera" 
-              width={320} 
-              height={80} 
-              className="h-16 w-auto"
-            />
+            
+            {/* WRAPPER 1: LIGHT MODE LOGO */}
+            <div className="block dark:hidden">
+              <Image 
+                src="/Images/Lumera-Lab-Black-and-Purple.png" 
+                alt="Lumera" 
+                width={320} 
+                height={80} 
+                className="h-16 w-auto"
+                priority
+              />
+            </div>
+
+            {/* WRAPPER 2: DARK MODE LOGO */}
+            <div className="hidden dark:block">
+              <Image 
+                src="/Images/Lumera-Lab-White.png" 
+                alt="Lumera" 
+                width={320} 
+                height={80} 
+                className="h-16 w-auto"
+                priority
+              />
+            </div>
+
           </Link>
         </div>
 
@@ -74,7 +92,7 @@ export default function LoginPage() {
               <input 
                 type="email" 
                 required 
-                className="w-full rounded-lg px-4 py-3 bg-surface-highlight border border-border text-foreground placeholder-muted focus:outline-none focus:border-accent/50 transition-all" 
+                className="w-full rounded-lg px-4 py-3 bg-surface-highlight border border-border text-foreground placeholder-muted focus:outline-none focus:border-[#9696e2]/50 transition-all" 
                 value={email} 
                 onChange={(e) => setEmail(e.target.value)} 
               />
@@ -84,7 +102,7 @@ export default function LoginPage() {
               <input 
                 type="password" 
                 required 
-                className="w-full rounded-lg px-4 py-3 bg-surface-highlight border border-border text-foreground placeholder-muted focus:outline-none focus:border-accent/50 transition-all" 
+                className="w-full rounded-lg px-4 py-3 bg-surface-highlight border border-border text-foreground placeholder-muted focus:outline-none focus:border-[#9696e2]/50 transition-all" 
                 value={password} 
                 onChange={(e) => setPassword(e.target.value)} 
               />
@@ -100,7 +118,7 @@ export default function LoginPage() {
           <button 
             type="submit" 
             disabled={loading} 
-            className="w-full rounded-lg py-3 text-sm font-bold bg-accent text-white hover:bg-accent/80 transition-colors disabled:opacity-50"
+            className="w-full rounded-lg py-3 text-sm font-bold bg-foreground text-background border-2 border-foreground hover:opacity-80 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 shadow-md"
           >
             {loading ? "Logging in..." : "Log In"}
           </button>
@@ -109,7 +127,7 @@ export default function LoginPage() {
         <div className="mt-8 text-center space-y-4">
           <p className="text-sm text-muted">
             Don&apos;t have an account?{" "}
-            <Link href="/signup" className="text-accent hover:text-foreground transition-colors font-medium">
+            <Link href="/signup" className="text-[#9696e2] hover:text-foreground transition-colors font-medium">
               Request Access
             </Link>
           </p>
