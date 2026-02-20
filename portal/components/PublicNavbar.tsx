@@ -2,8 +2,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { usePathname } from "next/navigation";
+import Logo from "@/components/ui/Logo";
 
 export default function PublicNavbar() {
   const pathname = usePathname();
@@ -27,13 +27,7 @@ export default function PublicNavbar() {
       <div className="container mx-auto px-6 h-16 flex items-center justify-between">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-2 group">
-          <Image 
-            src="/Images/Lumera-Lab-White.png" 
-            alt="Lumera" 
-            width={320} 
-            height={64} 
-            className="h-16 w-auto"
-          />
+          <Logo showText={true} className="h-16" />
         </Link>
 
         {/* Desktop Nav */}

@@ -1,4 +1,4 @@
-// portal/components/BillingList.tsx
+// portal/features/admin/components/BillingList.tsx
 "use client";
 
 import { useState, useMemo } from "react";
@@ -22,6 +22,7 @@ type BillingCase = {
 type Props = {
   cases: BillingCase[];
   isAdminOrLab: boolean;
+  showClinicColumn: boolean; // ✅ NEW PROP
   totalCount: number;
 };
 
@@ -34,6 +35,7 @@ const SortableHeader = ({
   label, colKey, sortConfig, onSort, align = "left", className = ""
 }: any) => {
   const isActive = sortConfig.key === colKey;
+
   return (
     <th 
       className={`
@@ -56,9 +58,10 @@ const SortableHeader = ({
   );
 };
 
-export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) {
+export default function BillingList({ cases, isAdminOrLab, showClinicColumn, totalCount }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
   const [loadingMore, setLoadingMore] = useState(false);
 
@@ -101,18 +104,21 @@ export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) 
     const newLimit = currentLimit + 50;
     params.set("limit", newLimit.toString());
     router.replace(`?${params.toString()}`, { scroll: false });
+
     setTimeout(() => setLoadingMore(false), 2000);
   };
 
+  // Dynamically calculate colSpan for the "No records" row
+  const colCount = 6 + (showClinicColumn ? 1 : 0) + (isAdminOrLab ? 1 : 0);
+
   return (
-    // ✅ Fixed: Using semantic border and bg colors
     <div className="flex-1 min-h-0 rounded-xl border border-border bg-surface overflow-hidden flex flex-col shadow-2xl">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <table className="w-full text-sm text-left border-collapse">
           <thead className="bg-surface text-muted sticky top-0 backdrop-blur-md z-10 border-b border-border">
             <tr>
               <SortableHeader label="Created On" colKey="date" sortConfig={sortConfig} onSort={handleSort} />
-              {isAdminOrLab && <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />}
+              {showClinicColumn && <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />}
               <SortableHeader label="Patient Name" colKey="patientName" sortConfig={sortConfig} onSort={handleSort} />
               <SortableHeader label="Alias" colKey="alias" sortConfig={sortConfig} onSort={handleSort} />
               {isAdminOrLab && <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={handleSort} />}
@@ -124,7 +130,7 @@ export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) 
           <tbody className="divide-y divide-border">
              {sortedCases.length === 0 ? (
               <tr>
-                <td colSpan={isAdminOrLab ? 8 : 6} className="p-12 text-center text-muted">
+                <td colSpan={colCount} className="p-12 text-center text-muted">
                    No records found matching your filters.
                 </td>
               </tr>
@@ -134,7 +140,7 @@ export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) 
                 return (
                   <tr key={c.id} className="hover:bg-[var(--accent-dim)] transition-colors">
                     <td className="p-4 text-muted">{new Date(c.orderDate).toLocaleDateString()}</td>
-                    {isAdminOrLab && <td className="p-4 text-muted">{c.clinic.name}</td>}
+                    {showClinicColumn && <td className="p-4 text-muted">{c.clinic.name}</td>}
                     <td className="p-4 font-medium text-foreground">{c.patientLastName}, {c.patientFirstName}</td>
                     <td className="p-4 font-mono text-xs text-muted">{c.patientAlias}</td>
                     {isAdminOrLab && <td className="p-4 text-muted">{c.doctorName || "—"}</td>}
@@ -154,7 +160,6 @@ export default function BillingList({ cases, isAdminOrLab, totalCount }: Props) 
         </table>
       </div>
 
-      {/* ✅ UNIFIED FOOTER: Using semantic colors */}
       <div className="flex-none h-14 p-3 border-t border-border bg-surface flex items-center justify-between">
         <span className="text-xs text-muted pl-2">
           Showing {cases.length} of {totalCount} records

@@ -1,4 +1,4 @@
-// portal/components/BillingToolbar.tsx
+// portal/features/admin/components/BillingToolbar.tsx
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
@@ -16,7 +16,9 @@ type Props = {
   qFilter: string;
   doctorFilter: string;
   clinicFilter: string;
+  availableClinics: { id: string; name: string }[];
   isAdminOrLab: boolean;
+  showClinicFilter: boolean;
   isFiltered: boolean;
 };
 
@@ -26,7 +28,9 @@ export default function BillingToolbar({
   qFilter,
   doctorFilter,
   clinicFilter,
+  availableClinics,
   isAdminOrLab,
+  showClinicFilter,
   isFiltered,
 }: Props) {
   const router = useRouter();
@@ -93,31 +97,42 @@ export default function BillingToolbar({
       </header>
 
       <div className="flex flex-wrap gap-2 items-center bg-surface p-2 rounded-xl border border-border">
+        
         {/* Year Select */}
-        <select
-          value={filters.year}
-          onChange={(e) => updateInstant("year", Number(e.target.value))}
-          className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:border-accent/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)]"
-        >
-          {years.map((y) => (
-            <option key={y} value={y} className="bg-surface">
-              {y}
-            </option>
-          ))}
-        </select>
+        <div className="relative flex items-center">
+          <select
+            value={filters.year}
+            onChange={(e) => updateInstant("year", Number(e.target.value))}
+            className="bg-surface-highlight border border-border rounded-lg pl-3 pr-8 py-1.5 text-sm text-foreground focus:border-accent/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)]"
+          >
+            {years.map((y) => (
+              <option key={y} value={y} className="bg-surface">
+                {y}
+              </option>
+            ))}
+          </select>
+          <svg className="w-4 h-4 text-muted absolute right-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
 
         {/* Month Select */}
-        <select
-          value={filters.month}
-          onChange={(e) => updateInstant("month", Number(e.target.value))}
-          className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:border-accent/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)]"
-        >
-          {MONTHS.map((m, i) => (
-            <option key={m} value={i + 1} className="bg-surface">
-              {m}
-            </option>
-          ))}
-        </select>
+        <div className="relative flex items-center">
+          <select
+            value={filters.month}
+            onChange={(e) => updateInstant("month", Number(e.target.value))}
+            className="bg-surface-highlight border border-border rounded-lg pl-3 pr-8 py-1.5 text-sm text-foreground focus:border-accent/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)]"
+          >
+            {MONTHS.map((m, i) => (
+              <option key={m} value={i + 1} className="bg-surface">
+                {m}
+              </option>
+            ))}
+          </select>
+          <svg className="w-4 h-4 text-muted absolute right-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </div>
 
         {/* Search */}
         <input
@@ -127,22 +142,35 @@ export default function BillingToolbar({
           className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-accent/50 outline-none w-48 transition"
         />
 
-        {/* Admin Filters */}
+        {/* Admin Doctor Filter */}
         {isAdminOrLab && (
-          <>
-            <input
-              value={filters.doctor}
-              onChange={(e) => updateInstant("doctor", e.target.value)}
-              placeholder="Filter by Doctor..."
-              className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-accent/50 outline-none w-40 transition"
-            />
-            <input
+          <input
+            value={filters.doctor}
+            onChange={(e) => updateInstant("doctor", e.target.value)}
+            placeholder="Filter by Doctor..."
+            className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-accent/50 outline-none w-40 transition"
+          />
+        )}
+        
+        {/* ✅ Multi-Clinic Dropdown Filter with Chevron */}
+        {showClinicFilter && (
+          <div className="relative flex items-center">
+            <select
               value={filters.clinic}
               onChange={(e) => updateInstant("clinic", e.target.value)}
-              placeholder="Filter by Clinic..."
-              className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-accent/50 outline-none w-40 transition"
-            />
-          </>
+              className="bg-surface-highlight border border-border rounded-lg pl-3 pr-8 py-1.5 text-sm text-foreground focus:border-accent/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)] max-w-[200px] truncate"
+            >
+              <option value="">All Clinics</option>
+              {availableClinics.map((c) => (
+                <option key={c.id} value={c.id} className="bg-surface">
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <svg className="w-4 h-4 text-muted absolute right-2.5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
         )}
 
         {isFiltered && (

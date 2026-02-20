@@ -112,18 +112,17 @@ export default function FileUploader({
         </div>
         
         {/* ✅ REDESIGNED: Tinted text with solid dark mode fallback */}
-        <div className="shrink-0 rounded-md bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white dark:bg-accent dark:text-white dark:border-accent px-3 py-1.5 text-xs font-bold transition-all shadow-sm">
+        <div className="shrink-0 rounded-md bg-foreground text-background border border-foreground px-3 py-1.5 text-xs font-bold transition-all shadow-sm cursor-pointer">
           Browse
         </div>
         <input type="file" accept={finalAccept} onChange={onFileChange} className="hidden" />
       </label>
 
       <div className="flex items-center gap-2">
-        {/* ✅ REDESIGNED: Tinted text with solid dark mode fallback */}
         <button
           onClick={send}
           disabled={busy || !file}
-          className="rounded-lg px-4 py-1.5 bg-accent/10 text-accent border border-accent/20 hover:bg-accent hover:text-white dark:bg-accent dark:text-white dark:border-accent text-xs font-bold disabled:opacity-50 transition-all duration-200 shadow-sm"
+          className="rounded-lg px-4 py-1.5 bg-foreground text-background border border-foreground text-xs font-bold hover:opacity-80 transition-all duration-200 shadow-sm cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "Uploading…" : "Upload"}
         </button>

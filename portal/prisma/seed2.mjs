@@ -1,143 +1,110 @@
-import { PrismaClient } from "@prisma/client";
-import crypto from "node:crypto";
+// prisma/seed2.mjs
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const PRODUCTS = ["ZIRCONIA", "EMAX", "NIGHTGUARD", "INLAY_ONLAY"];
-const MATERIALS = {
-  "ZIRCONIA": ["HT", "ML"],
-  "EMAX": [null],
-  "NIGHTGUARD": ["HARD", "SOFT"],
-  "INLAY_ONLAY": [null]
-};
-
-// Helpers
-const randomInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-const randomItem = (arr) => arr[Math.floor(Math.random() * arr.length)];
-const addDays = (date, days) => {
-  const result = new Date(date);
-  result.setDate(result.getDate() + days);
-  return result;
-};
-
 async function main() {
-  console.log("🚀 Starting Volume Data Injection...");
+  console.log("🧹 Wiping existing test data...");
+  // Wiping cases to give you a clean slate for the test
+  await prisma.dentalCase.deleteMany({});
+  await prisma.clinic.deleteMany({});
 
-  // 1. FETCH BASE USERS
-  const doctors = await prisma.user.findMany({
-    where: { role: "customer" },
-    include: { clinic: true }
+  console.log("🏥 Creating test clinic...");
+  const clinic = await prisma.clinic.create({
+    data: {
+      name: "North Dental Clinic",
+    }
   });
 
-  const salesRep = await prisma.user.findFirst({ where: { role: "sales" } });
-  const labUser = await prisma.user.findFirst({ where: { role: "lab" } });
+  // Set up controlled dates
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentMonth = now.getMonth(); 
 
-  if (doctors.length === 0) {
-    console.error("❌ No doctors found. Run seed.mjs first!");
-    process.exit(1);
-  }
+  // A date right in the middle of the current month
+  const thisMonthDate = new Date(currentYear, currentMonth, 15);
+  // A date in the middle of last month
+  const lastMonthDate = new Date(currentYear, currentMonth - 1, 15);
 
-  // 2. GENERATE CASES
-  const CASES_TO_CREATE = 60;
-  const BATCHES_TO_CREATE = 8;
-  const batches = [];
+  console.log("🦷 Seeding controlled test cases...");
 
-  // Create Shipping Batches (Past 30 days)
-  for (let i = 0; i < BATCHES_TO_CREATE; i++) {
-    batches.push({
-      id: crypto.randomUUID(),
-      carrier: randomItem(["UPS", "FedEx", "DHL"]),
-      tracking: `1Z${crypto.randomBytes(6).toString("hex").toUpperCase()}`,
-      shippedAt: addDays(new Date(), -randomInt(1, 30)),
-      totalCost: randomInt(50, 200) // Total batch cost to be distributed
-    });
-  }
-
-  console.log(`📦 Generated ${batches.length} shipping batches for finance testing.`);
-
-  const newCases = [];
-
-  for (let i = 0; i < CASES_TO_CREATE; i++) {
-    const doctor = randomItem(doctors);
-    const product = randomItem(PRODUCTS);
-    const material = randomItem(MATERIALS[product]);
-    const units = randomInt(1, 3);
-    const isRush = Math.random() > 0.9;
-    
-    // Determine lifecycle state
-    const rand = Math.random();
-    let status, stage, shippedAt, shippingBatchId, shippingCost, carrier, tracking;
-
-    if (rand < 0.2) {
-      status = "IN_DESIGN";
-      stage = "DESIGN";
-    } else if (rand < 0.4) {
-      status = "APPROVED";
-      stage = "DESIGN";
-    } else if (rand < 0.5) {
-      status = "IN_MILLING";
-      stage = "MILLING_GLAZING";
-    } else {
-      // SHIPPED / COMPLETED CASES
-      status = rand < 0.8 ? "SHIPPED" : "COMPLETED";
-      stage = status === "SHIPPED" ? "SHIPPING" : "COMPLETED";
-      
-      // Assign to a batch
-      const batch = randomItem(batches);
-      shippingBatchId = batch.id;
-      carrier = batch.carrier;
-      tracking = batch.tracking;
-      shippedAt = batch.shippedAt;
-      
-      // Simple distribution: If a batch has 5 cases, each gets cost/5 roughly.
-      // We'll just assign a static slice for simulation.
-      shippingCost = batch.totalCost / randomInt(3, 8); 
+  // CASE 1: Current Month, Active (Should be in billing and dashboard)
+  await prisma.dentalCase.create({
+    data: {
+      patientAlias: "BILL-001",
+      patientFirstName: "Active",
+      patientLastName: "Patient",
+      doctorName: "Dr. North",
+      clinicId: clinic.id,
+      orderDate: thisMonthDate,
+      status: "DESIGN", 
+      product: "ZIRCONIA",
+      units: 3,
+      cost: 300.00,
+      billingType: "BILLABLE",
+      toothCodes: "8, 9, 10"
     }
+  });
 
-    // Base Cost Calculation (Rough approximation for DB)
-    let unitPrice = 60;
-    if (product === "EMAX") unitPrice = 110;
-    if (doctor.clinic.priceTier === "IN_HOUSE") unitPrice -= 10;
-    const caseCost = units * unitPrice;
+  // CASE 2: Current Month, Completed (Should be in billing and dashboard)
+  await prisma.dentalCase.create({
+    data: {
+      patientAlias: "BILL-002",
+      patientFirstName: "Done",
+      patientLastName: "Patient",
+      doctorName: "Dr. North",
+      clinicId: clinic.id,
+      orderDate: thisMonthDate,
+      status: "COMPLETED",
+      product: "EMAX",
+      units: 1,
+      cost: 150.00,
+      billingType: "BILLABLE",
+      toothCodes: "4"
+    }
+  });
 
-    newCases.push({
-      clinicId: doctor.clinicId,
-      doctorUserId: doctor.id,
-      salesRepId: (i % 3 === 0) ? salesRep?.id : null, // Assign sales rep to 1/3rd
-      assigneeId: labUser?.id,
-      
-      patientAlias: `PAT-${1000 + i}`,
-      patientFirstName: ["John", "Jane", "Alice", "Bob", "Charlie"][i % 5],
-      patientLastName: `Doe-${i}`,
-      doctorName: doctor.name,
-      toothCodes: `${randomInt(1, 16)},${randomInt(17, 32)}`,
-      
-      orderDate: addDays(new Date(), -randomInt(5, 45)),
-      dueDate: addDays(new Date(), randomInt(2, 10)),
-      
-      product,
-      material,
-      serviceLevel: doctor.clinic.priceTier === "IN_HOUSE" ? "IN_HOUSE" : "STANDARD",
-      units,
-      cost: caseCost,
-      isRush,
-      
-      status,
-      stage,
-      
-      // Finance / Shipping Data
-      shippedAt,
-      shippingCarrier: carrier,
-      trackingNumber: tracking,
-      shippingBatchId,
-      shippingCost: shippingCost || 0
-    });
-  }
+  // CASE 3: Current Month, Cancelled (Should NOT be in billing, but ON dashboard)
+  await prisma.dentalCase.create({
+    data: {
+      patientAlias: "BILL-003",
+      patientFirstName: "Cancelled",
+      patientLastName: "Patient",
+      doctorName: "Dr. North",
+      clinicId: clinic.id,
+      orderDate: thisMonthDate,
+      status: "CANCELLED",
+      product: "NIGHTGUARD",
+      units: 1,
+      cost: 80.00,
+      billingType: "BILLABLE",
+      toothCodes: ""
+    }
+  });
 
-  // Insert in chunks
-  await prisma.dentalCase.createMany({ data: newCases });
+  // CASE 4: Last Month, Active (Should NOT be in current month billing, but ON dashboard)
+  await prisma.dentalCase.create({
+    data: {
+      patientAlias: "BILL-004",
+      patientFirstName: "Past",
+      patientLastName: "Patient",
+      doctorName: "Dr. North",
+      clinicId: clinic.id,
+      orderDate: lastMonthDate,
+      status: "MILLING_GLAZING",
+      product: "ZIRCONIA",
+      units: 2,
+      cost: 200.00,
+      billingType: "BILLABLE",
+      toothCodes: "18, 19"
+    }
+  });
 
-  console.log(`✅ Successfully injected ${newCases.length} cases.`);
+  console.log("✅ Seeding complete!");
+  console.log("--------------------------------------------------");
+  console.log("EXPECTED MAIN DASHBOARD COUNT: 4 Total Cases");
+  console.log("EXPECTED BILLING COUNT (CURRENT MONTH): 2 Cases, 4 Units, $450 Total");
+  console.log("--------------------------------------------------");
 }
 
 main()

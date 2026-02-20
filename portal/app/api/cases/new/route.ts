@@ -29,7 +29,7 @@ const CreateCaseSchema = z.object({
   designPreferences: z.string().optional(),
   serviceLevel: z.enum(["IN_HOUSE", "STANDARD"]).default("IN_HOUSE"),
   
-  isBridge: z.preprocess((val) => val === 'true' || val === true, z.boolean()), // ✅ CAST TO BOOLEAN
+  isBridge: z.preprocess((val) => val === 'true' || val === true, z.boolean()),
 
   scanHtml: z.instanceof(File, { message: "Scan Viewer HTML is required" }),
   rxPdf: z.instanceof(File, { message: "Rx PDF is required" }),
@@ -54,7 +54,7 @@ async function saveCaseFile(file: File, caseId: string, label: string) {
   const key = `cases/${caseId}/${label}_${safeName}`;
 
   await uploadFile(buf, key, file.type);
-
+  
   let kind = "OTHER";
   const lower = safeName.toLowerCase();
   if (lower.endsWith(".stl")) kind = "STL";
@@ -108,9 +108,21 @@ export async function POST(req: Request) {
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
+    
+    // This prevents foreign key crashes if the DB was reset or a user was deleted while logged in.
+    const activeSessionUser = await prisma.user.findUnique({
+      where: { id: session.userId },
+      select: { id: true }
+    });
+    
+    if (!activeSessionUser) {
+      return NextResponse.json({ 
+        error: "Your session is invalid or your account was removed. Please log out and log back in." 
+      }, { status: 401 });
+    }
 
     const form = await req.formData();
-
+    
     const getFile = (key: string) => {
       const f = form.get(key);
       return f instanceof File ? f : undefined;
@@ -135,7 +147,7 @@ export async function POST(req: Request) {
       designPreferences: form.get("designPreferences") || undefined,
       serviceLevel: form.get("serviceLevel") || "IN_HOUSE",
       
-      isBridge: form.get("isBridge"), // Handled by preprocess in Zod
+      isBridge: form.get("isBridge"), 
 
       scanHtml: getFile("scanHtml"),
       rxPdf: getFile("rxPdf"),
@@ -155,13 +167,10 @@ export async function POST(req: Request) {
 
     const data = validation.data;
 
-    // ✅ STRICT VALIDATION: Body Shade
-    // Must be present unless product is Nightguard
     if (data.product !== "NIGHTGUARD" && !data.shade) {
       return NextResponse.json({ error: "Body Shade is required." }, { status: 400 });
     }
 
-    // ✅ Verify Doctor (FETCH SALES REP HERE)
     const doctor = await prisma.user.findUnique({
       where: { id: data.doctorUserId },
       select: { 
@@ -173,7 +182,6 @@ export async function POST(req: Request) {
 
     if (!doctor) return NextResponse.json({ error: "Invalid doctor." }, { status: 400 });
 
-    // ✅ Verify Clinic
     const clinic = await prisma.clinic.findUnique({
       where: { id: data.clinicId },
       select: { id: true, priceTier: true },
@@ -182,6 +190,7 @@ export async function POST(req: Request) {
     if (!clinic) return NextResponse.json({ error: "Invalid clinic." }, { status: 400 });
 
     const uniqueAlias = await getUniqueAlias(data.patientAlias);
+    
     const cost = calculateEstimate(data.product, data.serviceLevel, data.toothCodes);
     const unitCount = data.toothCodes.split(",").filter(Boolean).length;
     const dueDate = data.dueDate ? new Date(data.dueDate) : addDays(data.orderDate, 8);
@@ -190,11 +199,12 @@ export async function POST(req: Request) {
       data: {
         clinicId: clinic.id,
         doctorUserId: doctor.id,
-        
-        // ✅ SNAPSHOT SALES REP
         salesRepId: doctor.salesRepId,
 
-        assigneeId: session.userId, 
+        // ✅ FIX: Only assign the session user if they are Lab or Admin. 
+        // Prevents P2003 foreign key constraint errors for doctors.
+        assigneeId: (session.role === "lab" || session.role === "admin") ? session.userId : null, 
+
         patientFirstName: data.patientFirstName,
         patientLastName: data.patientLastName,
         patientAlias: uniqueAlias,
@@ -207,7 +217,6 @@ export async function POST(req: Request) {
         material: data.material || null,
         serviceLevel: data.serviceLevel, 
         
-        // ✅ SAVE NEW SHADES
         shade: data.shade || null,
         shadeGingival: data.shadeGingival || null,
         shadeIncisal: data.shadeIncisal || null,
@@ -220,8 +229,6 @@ export async function POST(req: Request) {
         cost,
         billingType: "BILLABLE",
         invoiced: false,
-        
-        // ✅ PERSIST BRIDGE FLAG
         isBridge: data.isBridge,
       },
       select: { id: true },
@@ -234,6 +241,7 @@ export async function POST(req: Request) {
     if (data.modelBottom) await saveCaseFile(data.modelBottom, created.id, "model_bottom");
 
     return NextResponse.json({ ok: true, id: created.id });
+
   } catch (err: any) { 
     console.error("Create case error:", err);
     return NextResponse.json(

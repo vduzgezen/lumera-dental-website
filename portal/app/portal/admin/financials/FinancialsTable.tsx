@@ -4,6 +4,7 @@
 import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CopyableId from "@/components/CopyableId";
+import { formatProductName } from "@/lib/pricing"; // ✅ Imported formatter
 
 type SortConfig = {
   key: string | null;
@@ -148,7 +149,8 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
                         ) : <span className="text-white/20 italic text-xs">-</span>}
                     </td>
                     <td className="px-4 text-foreground">
-                        <div className="text-xs font-medium truncate">{r.product.replace(/_/g, " ")}</div>
+                        {/* ✅ Applied global formatter */}
+                        <div className="text-xs font-medium truncate capitalize">{formatProductName(r.product, !!r.isBridge)}</div>
                         {r.material && <div className="text-[10px] text-muted truncate">{r.material}</div>}
                     </td>
                     <td className="px-4 text-center text-muted">{r.units}</td>
@@ -163,7 +165,6 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
         </table>
       </div>
 
-      {/* ✅ UNIFIED FOOTER: SAME ROW */}
       <div className="flex-none h-14 p-3 border-t border-border bg-surface flex items-center justify-between">
         <span className="text-xs text-muted pl-2">
           Showing {rows.length} of {totalCount} records

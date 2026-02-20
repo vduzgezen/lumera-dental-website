@@ -5,7 +5,6 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CaseData, INITIAL_DATA, DoctorRow, ServiceLevel } from "./components/types";
 import { useTheme } from "@/components/ui/ThemeProvider";
-// ✅ Import Theme Hook
 
 import DoctorSelection from "./components/DoctorSelection";
 import CaseInfo from "./components/CaseInfo";
@@ -14,29 +13,31 @@ import ProductionFiles from "./components/ProductionFiles";
 
 export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
   const router = useRouter();
-  const { isDark } = useTheme(); // ✅ Get actual theme state
+  const { isDark } = useTheme(); 
   const [data, setData] = useState<CaseData>(INITIAL_DATA);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | undefined>();
   const [ok, setOk] = useState<string | undefined>();
 
-  // ✅ STABILIZED: Wrapped in useCallback to prevent infinite loops in children
   const update = useCallback((fields: Partial<CaseData>) => {
     setData(prev => ({ ...prev, ...fields }));
   }, []);
 
-  // ✅ AUTO-SELECT
+  // ✅ AUTO-SELECT FIX
   useEffect(() => {
     if (!data.doctorUserId && doctors.length > 0) {
       const first = doctors[0];
       const prefs = first.preferenceNote || first.defaultDesignPreferences || "";
       const clinics = first.clinic ? [first.clinic, ...first.secondaryClinics] : [...first.secondaryClinics];
+      
       let initialClinicId = "";
       let initialLevel: ServiceLevel = "STANDARD";
 
-      if (clinics.length === 1) {
-        initialClinicId = clinics[0].id;
-        if (clinics[0].priceTier === "IN_HOUSE") initialLevel = "IN_HOUSE";
+      // Guarantees we grab a clinic if they have one, resolving the empty state bug
+      if (clinics.length > 0) {
+        const targetClinic = first.clinic || clinics[0];
+        initialClinicId = targetClinic.id;
+        if (targetClinic.priceTier === "IN_HOUSE") initialLevel = "IN_HOUSE";
       }
 
       update({
@@ -72,7 +73,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     if (!data.patientFirstName.trim() || !data.patientLastName.trim()) return setErr("Patient Name is required.");
     if (data.toothCodes.length === 0) return setErr("Please select at least one tooth.");
     
-    // ✅ VALIDATION: Body Shade Required (unless Nightguard)
     if (data.product !== "NIGHTGUARD" && !data.shade.trim()) {
       return setErr("Body Shade is required for this product.");
     }
@@ -100,7 +100,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
       if (data.shade) fd.append("shade", data.shade);
       if (data.shadeGingival) fd.append("shadeGingival", data.shadeGingival);
       if (data.shadeIncisal) fd.append("shadeIncisal", data.shadeIncisal);
-      
       if (data.designPreferences) fd.append("designPreferences", data.designPreferences);
 
       if (data.scanHtml) fd.append("scanHtml", data.scanHtml);
@@ -123,7 +122,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
 
   return (
     <div className="flex-1 min-h-0 w-full max-w-5xl mx-auto overflow-y-auto custom-scrollbar pr-2 pb-20">
-      
       <form onSubmit={submit} className="space-y-6">
         <DoctorSelection doctors={doctors} data={data} update={update} />
         <CaseInfo data={data} update={update} />
@@ -131,15 +129,12 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
         <ProductionFiles data={data} update={update} />
 
         <div className="flex flex-col items-end gap-3 pt-6 border-t border-border">
-        
           {err && <p className="text-red-400 text-sm font-medium bg-red-500/10 px-3 py-1 rounded">{err}</p>}
           {ok && <p className="text-emerald-400 text-sm font-medium bg-emerald-500/10 px-3 py-1 rounded">{ok}</p>}
           
           <button
             type="submit"
             disabled={busy}
-            // ✅ FORCE OVERRIDE: Inline styles bypass Tailwind completely.
-            // If this stays white in light mode, your browser logic is broken.
             style={{
                 color: isDark ? 'white' : 'black',
                 borderColor: isDark ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.2)'

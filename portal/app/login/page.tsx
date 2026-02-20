@@ -3,7 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
+import Logo from "@/components/ui/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,31 +52,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm relative z-10">
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-3 group">
-            
-            {/* WRAPPER 1: LIGHT MODE LOGO */}
-            <div className="block dark:hidden">
-              <Image 
-                src="/Images/Lumera-Lab-Black-and-Purple.png" 
-                alt="Lumera" 
-                width={320} 
-                height={80} 
-                className="h-16 w-auto"
-                priority
-              />
-            </div>
-
-            {/* WRAPPER 2: DARK MODE LOGO */}
-            <div className="hidden dark:block">
-              <Image 
-                src="/Images/Lumera-Lab-White.png" 
-                alt="Lumera" 
-                width={320} 
-                height={80} 
-                className="h-16 w-auto"
-                priority
-              />
-            </div>
-
+            <Logo showText={true} className="h-16" />
           </Link>
         </div>
 
@@ -118,7 +94,7 @@ export default function LoginPage() {
           <button 
             type="submit" 
             disabled={loading} 
-            className="w-full rounded-lg py-3 text-sm font-bold bg-foreground text-background border-2 border-foreground hover:opacity-80 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 shadow-md"
+            className="w-full rounded-lg py-3 text-sm font-bold bg-[#9696e2] text-white shadow-md hover:bg-[#9696e2]/80 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? "Logging in..." : "Log In"}
           </button>
