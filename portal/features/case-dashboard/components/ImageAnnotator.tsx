@@ -1,13 +1,17 @@
 // features/case-dashboard/components/ImageAnnotator.tsx
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 interface ImageAnnotatorProps {
   file: File;
   onSave: (annotatedFile: File) => void;
   onCancel: () => void;
 }
+
+// Helper types to store drawing paths for Undo/Clear logic
+type Point = { x: number; y: number };
+type Stroke = Point[];
 
 export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotatorProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -18,13 +22,47 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
   const [zoom, setZoom] = useState(1);
   const [tool, setTool] = useState<'draw' | 'pan'>('draw');
   const [baseSize, setBaseSize] = useState({ w: 0, h: 0 });
+  const [baseImage, setBaseImage] = useState<HTMLImageElement | null>(null);
 
   // Interaction State
   const [isDrawing, setIsDrawing] = useState(false);
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0, scrollLeft: 0, scrollTop: 0 });
 
-  // Load image onto canvas
+  // Stroke History State for Undo/Erase
+  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [currentStroke, setCurrentStroke] = useState<Stroke>([]);
+
+  // Redraw Function: Clears canvas, repaints the image, and replays all saved strokes
+  const redrawCanvas = useCallback((overrideStrokes?: Stroke[]) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !baseImage) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    // Clear and redraw base image
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(baseImage, 0, 0, canvas.width, canvas.height);
+
+    // Redraw all saved strokes
+    const strokesToDraw = overrideStrokes || strokes;
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctx.strokeStyle = "#ef4444"; // Tailwind red-500
+
+    strokesToDraw.forEach(stroke => {
+      if (stroke.length === 0) return;
+      ctx.beginPath();
+      ctx.moveTo(stroke[0].x, stroke[0].y);
+      for (let i = 1; i < stroke.length; i++) {
+        ctx.lineTo(stroke[i].x, stroke[i].y);
+      }
+      ctx.stroke();
+    });
+  }, [baseImage, strokes]);
+
+  // Load image onto canvas on initial mount
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -42,6 +80,7 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
       canvas.height = img.height * scale;
       
       setBaseSize({ w: canvas.width, h: canvas.height });
+      setBaseImage(img);
       
       // Draw initial image
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
@@ -53,6 +92,7 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
   const startInteraction = (e: React.MouseEvent | React.TouchEvent) => {
     if (tool === 'draw') {
       setIsDrawing(true);
+      setCurrentStroke([]); // Start a fresh stroke path
       draw(e, true); // Pass true to force drawing an initial dot on click
     } else if (tool === 'pan') {
       const container = containerRef.current;
@@ -61,7 +101,7 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
       
       const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-      
+
       setPanStart({ 
         x: clientX, 
         y: clientY, 
@@ -74,6 +114,13 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
   const stopInteraction = () => {
     if (tool === 'draw') {
       setIsDrawing(false);
+      
+      // Save the completed stroke to history if it has points
+      if (currentStroke.length > 0) {
+        setStrokes(prev => [...prev, currentStroke]);
+        setCurrentStroke([]);
+      }
+
       const canvas = canvasRef.current;
       if (canvas) {
         const ctx = canvas.getContext("2d");
@@ -93,7 +140,7 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
       
       const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
       const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-      
+
       // Calculate how far we dragged
       const dx = clientX - panStart.x;
       const dy = clientY - panStart.y;
@@ -107,6 +154,7 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
   // The Drawing Logic
   const draw = (e: React.MouseEvent | React.TouchEvent, forceDrawing = false) => {
     if ((!isDrawing && !forceDrawing) || tool !== 'draw') return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
@@ -118,7 +166,6 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
     const scaleY = canvas.height / rect.height;
 
     let clientX, clientY;
-
     if ('touches' in e) {
       clientX = e.touches[0].clientX;
       clientY = e.touches[0].clientY;
@@ -130,8 +177,12 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
     const x = (clientX - rect.left) * scaleX;
     const y = (clientY - rect.top) * scaleY;
 
+    // Add point to current stroke history
+    setCurrentStroke(prev => [...prev, { x, y }]);
+
     ctx.lineWidth = 4;
     ctx.lineCap = "round";
+    ctx.lineJoin = "round";
     ctx.strokeStyle = "#ef4444"; // Tailwind red-500
 
     ctx.lineTo(x, y);
@@ -140,10 +191,24 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
     ctx.moveTo(x, y);
   };
 
+  // Undo Logic
+  const handleUndo = () => {
+    if (strokes.length === 0) return;
+    const newStrokes = strokes.slice(0, -1);
+    setStrokes(newStrokes);
+    redrawCanvas(newStrokes);
+  };
+
+  // Erase/Clear Logic
+  const handleEraseAll = () => {
+    setStrokes([]);
+    redrawCanvas([]);
+  };
+
   const handleSave = () => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    
+
     canvas.toBlob((blob) => {
       if (blob) {
         const newFile = new File([blob], `annotated-${file.name}`, { type: "image/png" });
@@ -173,16 +238,36 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
           <div className="flex items-center bg-surface border border-border rounded-lg p-1 shadow-sm">
              <button 
                onClick={() => setTool('draw')} 
-               className={`px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition-colors ${tool === 'draw' ? 'bg-foreground text-background' : 'hover:bg-[var(--accent-dim)] text-foreground'}`}
+               className={`px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition-all duration-200 ${tool === 'draw' ? 'bg-[var(--accent-dim)] text-accent shadow-sm' : 'text-muted hover:bg-surface-highlight hover:text-foreground'}`}
              >
                Draw
              </button>
              <button 
                onClick={() => setTool('pan')} 
-               className={`px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition-colors ${tool === 'pan' ? 'bg-foreground text-background' : 'hover:bg-[var(--accent-dim)] text-foreground'}`}
+               className={`px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition-all duration-200 ${tool === 'pan' ? 'bg-[var(--accent-dim)] text-accent shadow-sm' : 'text-muted hover:bg-surface-highlight hover:text-foreground'}`}
              >
                Pan
              </button>
+          </div>
+
+          {/* Undo & Erase Controls */}
+          <div className="flex items-center bg-surface border border-border rounded-lg p-1 shadow-sm">
+            <button 
+              onClick={handleUndo} 
+              disabled={strokes.length === 0}
+              className="p-1.5 rounded text-muted hover:bg-[var(--accent-dim)] hover:text-foreground cursor-pointer transition-colors disabled:opacity-30 disabled:cursor-not-allowed" 
+              title="Undo Last Stroke"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" /></svg>
+            </button>
+            <button 
+              onClick={handleEraseAll} 
+              disabled={strokes.length === 0}
+              className="p-1.5 rounded text-muted hover:bg-red-500/10 hover:text-red-500 cursor-pointer border-l border-border ml-1 transition-colors disabled:opacity-30 disabled:cursor-not-allowed" 
+              title="Clear All Annotations"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+            </button>
           </div>
 
           {/* Zoom Controls */}
@@ -262,7 +347,7 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
       
       <p className="mt-4 text-muted text-sm text-center">
         {tool === 'draw' 
-          ? "Draw Mode: Click and drag to annotate the image. Use the toolbar above to zoom." 
+          ? "Draw Mode: Click and drag to annotate the image. Use the Undo and Clear buttons to correct mistakes."
           : "Pan Mode: Click and drag to navigate around the zoomed image."}
       </p>
     </div>

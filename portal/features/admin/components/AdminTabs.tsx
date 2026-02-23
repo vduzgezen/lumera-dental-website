@@ -9,11 +9,14 @@ export function AdminTabs() {
   
   const Tab = ({ href, label }: { href: string; label: string }) => {
     const active = pathname.startsWith(href);
+
     return (
       <Link
         href={href}
-        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-          active ? "bg-accent text-white" : "text-muted hover:bg-[var(--accent-dim)] hover:text-foreground"
+        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm ${
+          active 
+            ? "bg-foreground text-background border-2 border-foreground" // ✅ Flips perfectly in Light/Dark
+            : "text-muted border-2 border-transparent bg-surface hover:bg-[var(--accent-dim)] hover:text-foreground hover:border-border"
         }`}
       >
         {label}

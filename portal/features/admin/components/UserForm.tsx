@@ -283,8 +283,22 @@ export default function UserForm({
         </form>
 
         <div className="p-4 border-t border-border bg-surface flex justify-end gap-3 rounded-b-xl shrink-0">
-          {onClose && <button type="button" onClick={onClose} className="px-4 py-2 text-muted hover:text-foreground transition">Cancel</button>}
-          <button onClick={handleSubmit} disabled={loading} className="px-6 py-2 bg-accent text-white font-bold rounded-lg hover:bg-accent/80 transition-colors">
+          {onClose && (
+            <button 
+              type="button" 
+              onClick={onClose} 
+              // ✅ FIX: Clean border, hover states, and pointer cursor
+              className="px-4 py-2 text-muted bg-surface hover:text-foreground hover:bg-[var(--accent-dim)] border border-transparent hover:border-border transition-all rounded-lg font-bold shadow-sm cursor-pointer"
+            >
+              Cancel
+            </button>
+          )}
+          <button 
+            onClick={handleSubmit} 
+            disabled={loading} 
+            // ✅ FIX: Perfectly flips between pure black/white depending on theme
+            className="px-6 py-2 bg-foreground text-background font-bold border-2 border-foreground rounded-lg hover:opacity-80 transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {loading ? "Saving..." : (isEdit ? "Update User" : "Create User")}
           </button>
         </div>

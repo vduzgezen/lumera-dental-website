@@ -5,7 +5,7 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import MillingFinanceTable from "./MillingFinanceTable";
 import MillingFinanceFilters from "./MillingFinanceFilters";
-import MillingFinanceStats from "./MillingFinanceStats"; // ✅ New Import
+import MillingFinanceStats from "./MillingFinanceStats";
 import { calculateProductionCosts } from "@/lib/cost-engine";
 
 export const dynamic = "force-dynamic";
@@ -53,13 +53,11 @@ export default async function MillingFinancePage({
   }
 
   // --- 2. Discovery & Aggregation Phase ---
-  // We fetch ALL matching records to calculate the summary totals accurately
   const allMatchingCases = await prisma.dentalCase.findMany({
     where,
     select: {
       shippingBatchId: true,
       shippedAt: true,
-      // Fields needed for Cost Calculation
       product: true,
       material: true,
       units: true,
@@ -74,19 +72,15 @@ export default async function MillingFinancePage({
   let totalShipping = 0;
   let totalUnits = 0;
   
-  // Use a Set to track unique batches for pagination
-  // We maintain order by pushing to array only when first seen
   const orderedUniqueBatchIds: string[] = [];
   const seenBatches = new Set<string>();
 
   for (const c of allMatchingCases) {
-    // 1. Pagination List Builder
     if (c.shippingBatchId && !seenBatches.has(c.shippingBatchId)) {
         seenBatches.add(c.shippingBatchId);
         orderedUniqueBatchIds.push(c.shippingBatchId);
     }
 
-    // 2. Financial Totals (Sum ALL matching cases)
     const costs = calculateProductionCosts(c.product, c.material, c.units, !!c.salesRepId);
     totalMilling += costs.milling;
     totalShipping += Number(c.shippingCost || 0);
@@ -113,6 +107,7 @@ export default async function MillingFinancePage({
 
   for (const c of cases) {
     const bid = c.shippingBatchId!;
+
     if (!batchMap[bid]) {
       batchMap[bid] = {
         id: bid,
@@ -126,7 +121,7 @@ export default async function MillingFinancePage({
     }
 
     const costs = calculateProductionCosts(c.product, c.material, c.units, !!c.salesRepId);
-    
+
     batchMap[bid].cases.push({
       ...c,
       cost: Number(c.cost), 
@@ -138,23 +133,21 @@ export default async function MillingFinancePage({
     batchMap[bid].millingTotal += costs.milling;
   }
 
-  // Preserve Sort Order from the ID list
   const sortedBatches = targetBatchIds
     .map(id => batchMap[id])
     .filter(Boolean);
 
   return (
-    <div className="flex flex-col h-full space-y-6 p-6 overflow-hidden">
+    <div className="flex flex-col h-full space-y-6 p-6 overflow-hidden bg-background">
       <header className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-white">Haus Finance</h1>
-          <p className="text-sm text-white/40">Track milling costs and shipping batch totals.</p>
+          <h1 className="text-2xl font-semibold text-foreground">Haus Finance</h1>
+          <p className="text-sm text-muted">Track milling costs and shipping batch totals.</p>
         </div>
         
         <MillingFinanceFilters />
       </header>
 
-      {/* ✅ Insert Summary Stats */}
       <MillingFinanceStats 
         totalDue={totalDue}
         totalUnits={totalUnits}
