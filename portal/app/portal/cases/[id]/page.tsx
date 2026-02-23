@@ -9,6 +9,7 @@ import CopyableId from "@/components/CopyableId";
 import CaseDetailSidebar from "@/components/CaseDetailSidebar";
 import AutoRefresh from "@/components/ui/AutoRefresh";
 import { getSignedFileUrl } from "@/lib/storage";
+import { formatProductName } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
@@ -42,11 +43,7 @@ function normalizeSlot(
   return null;
 }
 
-function formatProduct(product: string) {
-  const p = product.replace(/_/g, " ").toLowerCase();
-  if (p === "zirconia" || p === "emax") return p + " crown";
-  return p;
-}
+
 
 export default async function CaseDetailPage({ params }: { params: Params }) {
   const { id } = await params;
@@ -184,7 +181,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
                 </>
               )}
 
-              <span>Restoration: <span className="text-foreground capitalize">{formatProduct(item.product)}</span></span>
+              <span>Restoration: <span className="text-foreground capitalize">{formatProductName(item.product)}</span></span>
               <span>•</span>
               <span>Teeth: <span className="text-foreground">{item.toothCodes}</span></span>
               <span>•</span>

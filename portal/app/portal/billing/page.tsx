@@ -87,7 +87,6 @@ export default async function BillingPage({
   const end = new Date(selYear, selMonth, 0, 23, 59, 59, 999);
   
   where.orderDate = { gte: start, lte: end };
-  where.status = { not: "CANCELLED" };
 
   if (qFilter.trim()) {
     where.OR = [
@@ -126,6 +125,7 @@ export default async function BillingPage({
             product: true,
             units: true,
             cost: true,
+            status: true,
             billingType: true,
             clinic: { select: { name: true } },
         },

@@ -2,6 +2,7 @@
 "use client";
 
 import { CaseRow } from "../page";
+import { formatProductName } from "@/lib/pricing";
 
 type SortConfig = {
   key: string | null;
@@ -125,7 +126,7 @@ export default function MillingTable({
                 </td>
                 <td className="p-4">
                   <div className="flex flex-col">
-                    <span className="text-foreground font-medium">{c.product}</span>
+                    <span className="text-foreground font-medium">{formatProductName(c.product)}</span>
                     <span className="text-xs text-muted">
                       {c.material ? `${c.material} • ` : ""}
                       {c.serviceLevel?.replace(/_/g, " ") || "Standard"}

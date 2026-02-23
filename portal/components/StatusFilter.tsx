@@ -2,6 +2,7 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
 
+// ✅ Added CANCELLED to the list
 const ALL_STATUSES = [
   "IN_DESIGN",
   "CHANGES_REQUESTED",
@@ -9,7 +10,8 @@ const ALL_STATUSES = [
   "IN_MILLING",
   "SHIPPED",
   "COMPLETED",
-  "DELIVERED"
+  "DELIVERED",
+  "CANCELLED" 
 ];
 
 export default function StatusFilter({ 
@@ -51,12 +53,14 @@ export default function StatusFilter({
 
   // Logic: It is ONLY default if empty AND NOT explicitly "NONE"
   const isDefault = selection.size === 0 && !selection.has("NONE");
-  
+
   const getDefaultSet = () => {
     if (role === "customer") {
-        return new Set(ALL_STATUSES.filter(s => s !== "DELIVERED"));
+        // ✅ Added && s !== "CANCELLED"
+        return new Set(ALL_STATUSES.filter(s => s !== "DELIVERED" && s !== "CANCELLED"));
     } else {
-        return new Set(ALL_STATUSES.filter(s => s !== "COMPLETED" && s !== "DELIVERED"));
+        // ✅ Added && s !== "CANCELLED"
+        return new Set(ALL_STATUSES.filter(s => s !== "COMPLETED" && s !== "DELIVERED" && s !== "CANCELLED"));
     }
   };
   
@@ -120,6 +124,7 @@ export default function StatusFilter({
     if (s === "SHIPPED") return "text-blue-600 dark:text-blue-400";
     if (s === "COMPLETED") return "text-emerald-600 dark:text-emerald-400";
     if (s === "DELIVERED") return "text-purple-600 dark:text-purple-400";
+    if (s === "CANCELLED") return "text-gray-500 dark:text-gray-400"; // ✅ Added Cancelled styling here
     return "text-orange-600 dark:text-orange-400";
   };
 
@@ -154,7 +159,7 @@ export default function StatusFilter({
                   onClick={deselectAll}
                   className="text-xs text-accent hover:text-foreground font-medium px-2 py-1 rounded hover:bg-[var(--accent-dim)] transition-colors cursor-pointer"
                 >
-                   Deselect All
+                  Deselect All
                 </button>
               ) : (
                 <button
@@ -168,7 +173,8 @@ export default function StatusFilter({
             </div>
           </div>
 
-          <div className="max-h-[280px] overflow-y-auto custom-scrollbar p-1">
+          {/* ✅ CHANGED max-h-[280px] to max-h-[350px] right below */}
+          <div className="max-h-[350px] overflow-y-auto custom-scrollbar p-1">
              {ALL_STATUSES.map((status) => {
               const defaultSet = getDefaultSet();
               const isChecked = isDefault 
@@ -187,7 +193,7 @@ export default function StatusFilter({
                   <div className={`
                     w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0
                     ${isChecked ? "bg-accent border-accent" : "border-border bg-surface"}
-                  `}>
+                   `}>
                     {isChecked && (
                       <svg 
                         className="w-3 h-3 text-[var(--foreground)]" 
@@ -204,7 +210,7 @@ export default function StatusFilter({
                   </span>
                 </div>
               );
-             })}
+            })}
           </div>
           
           <div className="border-t border-border mt-1 pt-1 bg-surface-highlight">

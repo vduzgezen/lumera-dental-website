@@ -4,6 +4,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CopyableId from "@/components/CopyableId";
+import { formatProductName } from "@/lib/pricing";
 
 type CaseRowData = {
   id: string;
@@ -46,32 +47,37 @@ const DesignerAvatar = ({ name, email }: { name: string | null, email: string })
 // --- HELPER 2: Status Badge ---
 const StatusBadge = ({ status }: { status: string }) => {
   const s = status.toUpperCase();
-  const baseClasses = "inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold border uppercase tracking-wide shadow-sm transition-colors text-foreground dark:text-white";
-  let colorClasses = "";
+  const baseClasses = "inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold border uppercase tracking-wide shadow-sm transition-colors";
+  
+  // This baseline ensures text is Black-ish in Light Mode and White in Dark Mode
+  let colorClasses = "text-foreground dark:text-white ";
 
   switch (s) {
     case "APPROVED":
-      colorClasses = "bg-lime-300 border-lime-400 dark:bg-lime-500/20 dark:border-lime-500/40";
+      colorClasses += "bg-lime-300 border-lime-400 dark:bg-lime-500/20 dark:border-lime-500/40";
       break;
     case "IN_MILLING":
-      colorClasses = "bg-yellow-300 border-yellow-400 dark:bg-yellow-500/20 dark:border-yellow-500/40";
+      colorClasses += "bg-yellow-300 border-yellow-400 dark:bg-yellow-500/20 dark:border-yellow-500/40";
       break;
     case "SHIPPED":
-      colorClasses = "bg-blue-300 border-blue-400 dark:bg-blue-500/20 dark:border-blue-500/40";
+      colorClasses += "bg-blue-300 border-blue-400 dark:bg-blue-500/20 dark:border-blue-500/40";
       break;
     case "COMPLETED":
-      colorClasses = "bg-emerald-300 border-emerald-400 dark:bg-emerald-500/20 dark:border-emerald-500/40";
+      colorClasses += "bg-emerald-300 border-emerald-400 dark:bg-emerald-500/20 dark:border-emerald-500/40";
       break;
     case "DELIVERED":
-      colorClasses = "bg-purple-300 border-purple-400 dark:bg-purple-500/20 dark:border-purple-500/40";
+      colorClasses += "bg-purple-300 border-purple-400 dark:bg-purple-500/20 dark:border-purple-500/40";
       break;
     case "CHANGES_REQUESTED":
-      colorClasses = "bg-red-300 border-red-400 dark:bg-red-500/20 dark:border-red-500/40";
+      colorClasses += "bg-red-300 border-red-400 dark:bg-red-500/20 dark:border-red-500/40";
+      break;
+    case "CANCELLED":
+      colorClasses += "bg-surface-highlight border-border dark:bg-background dark:border-white/10";
       break;
     case "IN_DESIGN":
     case "DESIGN":
     default:
-      colorClasses = "bg-orange-300 border-orange-400 dark:bg-orange-500/20 dark:border-orange-500/40";
+      colorClasses += "bg-orange-300 border-orange-400 dark:bg-orange-500/20 dark:border-orange-500/40";
       break;
   }
 
@@ -81,12 +87,6 @@ const StatusBadge = ({ status }: { status: string }) => {
     </span>
   );
 };
-
-function formatProduct(product: string) {
-  const p = product.replace(/_/g, " ").toLowerCase();
-  if (p === "zirconia" || p === "emax") return p + " crown";
-  return p;
-}
 
 export default function CaseListRow({ data, role }: { data: CaseRowData, role: string }) {
   const router = useRouter();
@@ -150,7 +150,7 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
         </td>
       )}
 
-      <td className="p-3 text-muted capitalize">{formatProduct(data.product)}</td>
+      <td className="p-3 text-muted capitalize">{formatProductName(data.product)}</td>
       
       <td className="p-3 relative text-center">
          <div className={`transition-opacity duration-200 ${(role === "customer" && data.status === "COMPLETED") ? "group-hover:opacity-10" : ""}`}>

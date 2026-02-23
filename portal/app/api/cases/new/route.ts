@@ -19,7 +19,7 @@ const CreateCaseSchema = z.object({
   orderDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid Order Date"),
   dueDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid Due Date").optional(),
 
-  product: z.string().min(1, "Product is required"),
+  product: z.string().min(1, "Product is required"), // Accepts new composite keys: CROWN_ZIRCONIA_HT, IMPLANT_EMAX, etc.
   material: z.string().optional(),
   
   shade: z.string().optional(), 
@@ -96,12 +96,27 @@ async function getUniqueAlias(baseAlias: string) {
 
 function calculateEstimate(product: string, serviceLevel: string, toothCodes: string) {
   const units = toothCodes.split(",").filter(Boolean).length;
-  let basePrice = 0;
-  if (product === "ZIRCONIA") basePrice = serviceLevel === "IN_HOUSE" ? 55 : 65;
-  else if (product === "EMAX") basePrice = serviceLevel === "IN_HOUSE" ? 110 : 120;
-  else if (product === "NIGHTGUARD") basePrice = serviceLevel === "IN_HOUSE" ? 50 : 60;
-  else if (product === "INLAY_ONLAY") basePrice = serviceLevel === "IN_HOUSE" ? 65 : 75;
-  return basePrice * units;
+  const isInHouse = serviceLevel === "IN_HOUSE";
+  
+  // Handle new composite product keys
+  if (product.includes("IMPLANT")) {
+    if (product.includes("ZIRCONIA_ML")) return (isInHouse ? 245 : 260) * units;
+    if (product.includes("EMAX")) return (isInHouse ? 295 : 310) * units;
+    return (isInHouse ? 235 : 250) * units; // Default IMPLANT_ZIRCONIA_HT
+  }
+  
+  if (product.includes("NIGHTGUARD")) {
+    return (isInHouse ? 55 : 65) * units;
+  }
+  
+  if (product.includes("INLAY_ONLAY")) {
+    return (isInHouse ? 115 : 125) * units;
+  }
+  
+  // Crown pricing (default)
+  if (product.includes("EMAX")) return (isInHouse ? 115 : 125) * units;
+  if (product.includes("ZIRCONIA_ML")) return (isInHouse ? 65 : 75) * units;
+  return (isInHouse ? 55 : 65) * units; // Default ZIRCONIA_HT
 }
 
 export async function POST(req: Request) {
@@ -167,7 +182,7 @@ export async function POST(req: Request) {
 
     const data = validation.data;
 
-    if (data.product !== "NIGHTGUARD" && !data.shade) {
+    if (!data.product.includes("NIGHTGUARD") && !data.shade) {
       return NextResponse.json({ error: "Body Shade is required." }, { status: 400 });
     }
 
