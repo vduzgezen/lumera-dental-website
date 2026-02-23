@@ -262,7 +262,8 @@ export default function CommentsPanel({
             <input 
               type="file" 
               ref={fileInputRef}
-              accept="image/*"
+              // ✅ This explicit list guarantees every device allows screenshot selection
+              accept="image/jpeg, image/png, image/webp, image/heic, .jpg, .jpeg, .png, .webp, .heic"
               className="hidden"
               onChange={onFileSelect}
             />

@@ -7,7 +7,7 @@ import Logo from "@/components/ui/Logo";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@test.com");
+  const [email, setEmail] = useState("admin@lumera.com");
   const [password, setPassword] = useState("password12");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);

@@ -118,8 +118,16 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
 
   return (
     <tr
-      onClick={handleRowClick}
-      className="hover:bg-[var(--accent-dim)] transition-colors group cursor-pointer border-t border-border"
+      // ✅ Only attach the click handler if the case IS NOT cancelled
+      onClick={data.status === "CANCELLED" ? undefined : handleRowClick}
+      // ✅ Remove the hover effect and pointer cursor if the case IS cancelled
+      className={`
+        border-t border-border transition-colors group
+        ${data.status === "CANCELLED" 
+          ? "opacity-50 bg-surface/50" // Dim cancelled cases slightly to show they are inactive
+          : "hover:bg-[var(--accent-dim)] cursor-pointer"
+        }
+      `}
     >
       <td className="p-3">
         <CopyableId id={data.id} truncate />

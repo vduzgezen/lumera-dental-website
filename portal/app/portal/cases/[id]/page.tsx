@@ -1,7 +1,7 @@
 // app/portal/cases/[id]/page.tsx
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import CaseProcessBar from "@/components/CaseProcessBar";
 import CaseViewerTabs from "@/features/case-dashboard/components/CaseViewerTabs";
@@ -10,6 +10,7 @@ import CaseDetailSidebar from "@/components/CaseDetailSidebar";
 import AutoRefresh from "@/components/ui/AutoRefresh";
 import { getSignedFileUrl } from "@/lib/storage";
 import { formatProductName } from "@/lib/pricing";
+
 
 export const dynamic = "force-dynamic";
 type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
@@ -63,7 +64,13 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
       assigneeUser: { select: { id: true, name: true, email: true } }
     },
   });
+
   if (!item) return notFound();
+
+  // ✅ THE BOUNCER: Kick anyone out who tries to view a cancelled case
+  if (item.status === "CANCELLED") {
+    redirect("/portal/cases");
+  }
 
   if (session.role === "customer") {
     const isOwner = item.doctorUserId === session.userId;

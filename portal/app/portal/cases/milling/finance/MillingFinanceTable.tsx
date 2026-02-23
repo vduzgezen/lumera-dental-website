@@ -38,62 +38,63 @@ export default function MillingFinanceTable({
 
   if (batches.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center border border-white/10 rounded-xl bg-black/20">
-        <p className="text-white/40">No shipped batches found.</p>
+      <div className="flex-1 flex items-center justify-center border border-border rounded-xl bg-surface">
+        <p className="text-muted">No shipped batches found.</p>
       </div>
     );
   }
 
   return (
-    // ✅ FIX: Rounded corners & Overflow
-    <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-white/10 bg-black/20 overflow-hidden shadow-xl">
+    <div className="flex-1 flex flex-col min-h-0 rounded-xl border border-border bg-surface overflow-hidden shadow-xl transition-colors">
       <div className="flex-1 overflow-auto custom-scrollbar">
         <table className="w-full text-left text-sm border-collapse">
-          <thead className="bg-black/60 text-white/70 sticky top-0 backdrop-blur-md z-10 border-b border-white/10">
+          <thead className="bg-surface sticky top-0 backdrop-blur-md z-10 border-b border-border">
             <tr>
               <th className="p-4 w-10"></th>
-              <th className="p-4">Ship Date</th>
-              <th className="p-4">Tracking / Carrier</th>
-              <th className="p-4 text-center">Cases</th>
-              <th className="p-4 text-right">Shipping Cost</th>
-              <th className="p-4 text-right">Milling Fees</th>
-              <th className="p-4 text-right">Total Owed</th>
+              <th className="p-4 text-muted font-semibold">Ship Date</th>
+              <th className="p-4 text-muted font-semibold">Tracking / Carrier</th>
+              <th className="p-4 text-center text-muted font-semibold">Cases</th>
+              <th className="p-4 text-right text-muted font-semibold">Shipping Cost</th>
+              <th className="p-4 text-right text-muted font-semibold">Milling Fees</th>
+              <th className="p-4 text-right text-muted font-semibold">Total Owed</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-white/5">
+          <tbody className="divide-y divide-border">
             {batches.map((batch) => (
               <Fragment key={batch.id}>
                 <tr 
                   onClick={() => toggleBatch(batch.id)}
-                  className="hover:bg-white/5 cursor-pointer transition-colors group"
+                  className="hover:bg-[var(--accent-dim)] cursor-pointer transition-colors group"
                 >
-                  <td className="p-4">
+                  <td className="p-4 text-muted group-hover:text-accent">
                     {expandedBatches.has(batch.id) ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                   </td>
-                  <td className="p-4 font-medium">{new Date(batch.shippedAt).toLocaleDateString()}</td>
+                  <td className="p-4 font-medium text-foreground">{new Date(batch.shippedAt).toLocaleDateString()}</td>
                   <td className="p-4">
                     <div className="flex flex-col">
-                      <span className="text-xs text-white/40 uppercase font-bold">{batch.carrier}</span>
-                      <span className="font-mono text-blue-400">{batch.tracking}</span>
+                      <span className="text-xs text-muted uppercase font-bold">{batch.carrier}</span>
+                      <span className="font-mono text-blue-500">{batch.tracking}</span>
                     </div>
                   </td>
                   <td className="p-4 text-center">
-                    <span className="bg-white/5 px-2 py-1 rounded border border-white/10 text-xs">
+                    <span className="bg-surface-highlight px-2 py-1 rounded border border-border text-xs text-foreground">
                       {batch.cases.length} Units
                     </span>
                   </td>
-                  <td className="p-4 text-right text-orange-400">{formatCurrency(batch.totalShipping)}</td>
-                  <td className="p-4 text-right text-purple-400">{formatCurrency(batch.millingTotal)}</td>
-                  <td className="p-4 text-right font-bold text-white">
+                  
+                  <td className="p-4 text-right text-orange-500">{formatCurrency(batch.totalShipping)}</td>
+                  <td className="p-4 text-right text-purple-500">{formatCurrency(batch.millingTotal)}</td>
+                  <td className="p-4 text-right font-bold text-foreground">
                     {formatCurrency(batch.totalShipping + batch.millingTotal)}
                   </td>
                 </tr>
+                
                 {expandedBatches.has(batch.id) && (
                   <tr>
-                    <td colSpan={7} className="bg-black/40 p-0">
+                    <td colSpan={7} className="bg-surface-highlight p-0">
                       <div className="border-l-2 border-accent ml-6 my-2">
-                        <table className="w-full text-xs text-white/60">
-                          <thead className="text-[10px] uppercase tracking-wider text-white/30">
+                        <table className="w-full text-xs text-foreground">
+                          <thead className="text-[10px] uppercase tracking-wider text-muted border-b border-border">
                             <tr>
                               <th className="px-4 py-2">Case ID</th>
                               <th className="px-4 py-2">Clinic</th>
@@ -103,11 +104,11 @@ export default function MillingFinanceTable({
                           </thead>
                           <tbody>
                             {batch.cases.map((c: any) => (
-                              <tr key={c.id} className="border-t border-white/5">
-                                <td className="px-4 py-2 font-mono">#{c.id.slice(-6)}</td>
-                                <td className="px-4 py-2">{c.clinic.name}</td>
+                              <tr key={c.id} className="border-t border-border/50">
+                                <td className="px-4 py-2 font-mono text-muted">#{c.id.slice(-6)}</td>
+                                <td className="px-4 py-2 font-medium">{c.clinic.name}</td>
                                 <td className="px-4 py-2">{c.product} ({c.material || 'HT'})</td>
-                                <td className="px-4 py-2 text-right">{formatCurrency(c.millingFee)}</td>
+                                <td className="px-4 py-2 text-right font-medium">{formatCurrency(c.millingFee)}</td>
                               </tr>
                             ))}
                           </tbody>
@@ -122,9 +123,8 @@ export default function MillingFinanceTable({
         </table>
       </div>
 
-      {/* ✅ FIX: Fixed Height Footer (h-14) */}
-      <div className="flex-none h-14 p-3 border-t border-white/5 bg-white/[0.02] flex items-center justify-between">
-        <span className="text-xs text-white/40 pl-2">
+      <div className="flex-none h-14 p-3 border-t border-border bg-surface flex items-center justify-between">
+        <span className="text-xs text-muted pl-2">
           Showing {batches.length} of {totalCount} shipments
         </span>
         
@@ -132,7 +132,7 @@ export default function MillingFinanceTable({
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="text-xs font-bold text-white/80 hover:text-white px-3 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 transition-colors flex items-center gap-2"
+            className="text-xs font-bold text-foreground hover:text-accent px-3 py-1.5 rounded-lg bg-surface border border-border hover:bg-[var(--accent-dim)] transition-colors flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loadingMore ? "Loading..." : "Load More"}
           </button>
