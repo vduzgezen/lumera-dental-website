@@ -3,7 +3,7 @@
 
 import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { formatCurrency, BillingType } from "@/lib/pricing";
+import { formatCurrency, BillingType, formatProductName } from "@/lib/pricing";
 
 type BillingCase = {
   id: string;
@@ -15,6 +15,7 @@ type BillingCase = {
   product: string;
   units: number;
   cost: number | string;
+  status: string; // ✅ ADDED
   billingType: string;
   clinic: { name: string };
 };
@@ -137,6 +138,9 @@ export default function BillingList({ cases, isAdminOrLab, showClinicColumn, tot
             ) : (
               sortedCases.map((c) => {
                 const isWarranty = c.billingType === BillingType.WARRANTY;
+                const isCancelled = c.status === "CANCELLED"; // ✅ Check for cancellation
+                const displayCost = Number(c.cost);
+
                 return (
                   <tr key={c.id} className="hover:bg-[var(--accent-dim)] transition-colors">
                     <td className="p-4 text-muted">{new Date(c.orderDate).toLocaleDateString()}</td>
@@ -144,13 +148,23 @@ export default function BillingList({ cases, isAdminOrLab, showClinicColumn, tot
                     <td className="p-4 font-medium text-foreground">{c.patientLastName}, {c.patientFirstName}</td>
                     <td className="p-4 font-mono text-xs text-muted">{c.patientAlias}</td>
                     {isAdminOrLab && <td className="p-4 text-muted">{c.doctorName || "—"}</td>}
+  
                     <td className="p-4 text-muted">
-                      {c.product.replace(/_/g, " ")}
-                      {isWarranty && <span className="ml-2 px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 uppercase tracking-wide">Warranty</span>}
+                      {/* ✅ Render the product name */}
+                      {formatProductName(c.product)}
+                      
+                      {/* ✅ Render the tags */}
+                      <div className="flex items-center gap-2 mt-1">
+                        {isWarranty && <span className="px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 uppercase tracking-wide">Warranty</span>}
+                        {isCancelled && <span className="px-2 py-0.5 rounded text-[10px] bg-gray-500/10 text-gray-500 border border-gray-500/20 uppercase tracking-wide">Cancelled</span>}
+                      </div>
                     </td>
+   
                     <td className="p-4 text-center text-muted">{c.units}</td>
-                    <td className={`p-4 text-right font-mono ${isWarranty ? "text-muted line-through" : "text-emerald-600"}`}>
-                      {formatCurrency(Number(c.cost))}
+                    
+                    {/* ✅ Cost rendering logic */}
+                    <td className={`p-4 text-right font-mono ${isWarranty ? "text-muted line-through" : isCancelled && displayCost === 0 ? "text-muted" : "text-emerald-600"}`}>
+                      {formatCurrency(displayCost)}
                     </td>
                   </tr>
                 );

@@ -73,7 +73,7 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     if (!data.patientFirstName.trim() || !data.patientLastName.trim()) return setErr("Patient Name is required.");
     if (data.toothCodes.length === 0) return setErr("Please select at least one tooth.");
     
-    if (data.product !== "NIGHTGUARD" && !data.shade.trim()) {
+    if (!data.product.includes("NIGHTGUARD") && !data.shade.trim()) {
       return setErr("Body Shade is required for this product.");
     }
 
@@ -100,7 +100,15 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
       if (data.shade) fd.append("shade", data.shade);
       if (data.shadeGingival) fd.append("shadeGingival", data.shadeGingival);
       if (data.shadeIncisal) fd.append("shadeIncisal", data.shadeIncisal);
-      if (data.designPreferences) fd.append("designPreferences", data.designPreferences);
+      // Append retention type to design preferences for implants
+      let finalDesignPreferences = data.designPreferences || "";
+      if (data.restorationType === "IMPLANT" && data.retentionType) {
+        const retentionNote = `Retention Type: ${data.retentionType === "SCREW" ? "Screw Retained" : "Cement Retained"}`;
+        finalDesignPreferences = finalDesignPreferences 
+          ? `${finalDesignPreferences}\n${retentionNote}` 
+          : retentionNote;
+      }
+      if (finalDesignPreferences) fd.append("designPreferences", finalDesignPreferences);
 
       if (data.scanHtml) fd.append("scanHtml", data.scanHtml);
       if (data.rxPdf) fd.append("rxPdf", data.rxPdf);

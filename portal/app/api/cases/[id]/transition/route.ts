@@ -2,8 +2,9 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client"; // ✅ Changed from 'type { Prisma }' to '{ Prisma }' to access Prisma.Decimal
 import type { CaseStatus, ProductionStage } from "@/lib/types";
+import { calculateProductionCosts } from "@/lib/cost-engine";
 
 function stageForStatus(to: CaseStatus): ProductionStage {
   switch (to) {
@@ -15,8 +16,8 @@ function stageForStatus(to: CaseStatus): ProductionStage {
       return "COMPLETED";
     case "DELIVERED":
       return "DELIVERED";
-    case "CANCELLED": // ✅ Add Cancelled handler
-      return "DESIGN"; // Can default back to design stage, the status overrides the UI.
+    case "CANCELLED": 
+      return "DESIGN"; 
     case "APPROVED":
     default:
       return "DESIGN";
@@ -34,6 +35,7 @@ export async function POST(
   const body = await req.json().catch(() => ({}));
   const to = body?.to as CaseStatus | undefined;
   const note: string | undefined = body?.note;
+  const waiveFee: boolean = body?.waiveFee === true; 
 
   if (!to) return NextResponse.json({ error: "Missing 'to' status" }, { status: 400 });
 
@@ -46,9 +48,7 @@ export async function POST(
 
   // ✅ DOCTOR PERMISSIONS
   if (session.role === "customer") {
-    // ✅ Added CANCELLED to allowed doctor actions
     const allowedForDoctor: CaseStatus[] = ["APPROVED", "CHANGES_REQUESTED", "DELIVERED", "CANCELLED"];
-    
     if (!allowedForDoctor.includes(to)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -86,16 +86,45 @@ export async function POST(
   const newStage = stageForStatus(to);
   const at = new Date();
 
+  // ✅ CANCELLATION FEE LOGIC
+  let finalCost = item.cost; // Inferred as Prisma.Decimal
+
+  if (to === "CANCELLED") {
+    // 1. Can only waive fee if Admin or Lab
+    const canWaive = (session.role === "admin" || session.role === "lab") && waiveFee;
+
+    if (canWaive) {
+       finalCost = new Prisma.Decimal(0); // ✅ Wrapped in Prisma.Decimal
+    } else {
+       // 2. Calculate dynamic fee based on state
+       const hasDesignFiles = item.files.some((f: any) => String(f.label).startsWith("design_stl_") || String(f.label) === "design_only");
+       const isProduced = ["MILLING_GLAZING", "SHIPPING", "COMPLETED", "DELIVERED"].includes(item.stage) || ["IN_MILLING", "SHIPPED", "COMPLETED", "DELIVERED"].includes(item.status);
+       
+       const costs = calculateProductionCosts(item.product, item.material, item.units, !!item.salesRepId);
+
+       if (isProduced) {
+          // If produced, they pay the actual cost incurred (Haus + Design)
+          finalCost = new Prisma.Decimal(costs.milling + costs.design); // ✅ Wrapped
+       } else if (hasDesignFiles) {
+          // If just designed, they pay the design fee 
+          finalCost = new Prisma.Decimal(costs.design); // ✅ Wrapped
+       } else {
+          // Cancelled before any work was done
+          finalCost = new Prisma.Decimal(0); // ✅ Wrapped
+       }
+    }
+  }
+
   await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
     await tx.dentalCase.update({
       where: { id },
       data: {
         status: to,
-        // Don't change the stage if they are just cancelling it, leave it where it died
         stage: to === "CANCELLED" ? item.stage : newStage,
         designedAt: to === "READY_FOR_REVIEW" ? at : item.designedAt,
         milledAt: to === "IN_MILLING" ? at : item.milledAt,
         shippedAt: to === "SHIPPED" ? at : item.shippedAt,
+        cost: finalCost, // ✅ Successfully passes back the Decimal
       },
     });
 

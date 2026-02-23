@@ -1,10 +1,9 @@
 // app/portal/cases/page.tsx
 import { getSession } from "@/lib/auth";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation"; // ✅ Added redirect
 import MillingView from "./MillingView";
 import StandardView from "./StandardView";
 
-// Re-export shared type for backward compatibility with other components
 export type { CaseRow } from "./types";
 
 export const dynamic = "force-dynamic";
@@ -19,8 +18,9 @@ export default async function CasesPage({
 
   const sp = await searchParams;
 
+  // ✅ If a milling user lands on the standard cases page, redirect them to their dedicated view
   if (session.role === "milling") {
-    return <MillingView searchParams={sp} />;
+    redirect("/portal/cases/milling");
   }
 
   return <StandardView searchParams={sp} session={session} />;

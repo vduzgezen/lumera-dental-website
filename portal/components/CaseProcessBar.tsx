@@ -13,7 +13,7 @@ export default function CaseProcessBar({
   role,
   carrier,
   tracking,
-  files = [], // ✅ Receive files
+  files = [],
 }: {
   caseId: string;
   stage: ProductionStage;
@@ -27,15 +27,19 @@ export default function CaseProcessBar({
   const [err, setErr] = useState<string | null>(null);
   const [showShipModal, setShowShipModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
+  
+  // ✅ New state for Admin/Lab fee waiver
+  const [waiveFee, setWaiveFee] = useState(false);
 
   // Status Checks
   const isFullyDelivered = status === "DELIVERED";
   const isShippedOrDone = ["SHIPPED", "COMPLETED", "DELIVERED"].includes(status);
   const isCancelled = status === "CANCELLED";
 
-  // Permissions - 🔒 LOCKED TO ADMIN ONLY (For advancing)
+  // Permissions
   const isAdmin = role === "admin";
   const isDoctor = role === "customer";
+  const isAdminOrLab = role === "admin" || role === "lab";
 
   // --- LOGIC: Cancel Warnings ---
   const hasDesignFiles = files.some(f => String(f.label).startsWith("design_stl_") || String(f.label) === "design_only");
@@ -52,7 +56,6 @@ export default function CaseProcessBar({
     nextLabel = "Start Milling";
 
     const isApproved = ["APPROVED", "IN_MILLING", "SHIPPED", "COMPLETED", "DELIVERED"].includes(status);
-    
     if (isApproved) {
       if (role === "lab") {
          canAdvance = false;
@@ -112,14 +115,15 @@ export default function CaseProcessBar({
 
   async function handleCancelCase() {
     setBusy(true);
-    await submitStatusChange("CANCELLED");
+    // Pass waiveFee flag to backend
+    await submitStatusChange("CANCELLED", waiveFee);
   }
 
-  async function submitStatusChange(newStatus: string) {
+  async function submitStatusChange(newStatus: string, waive: boolean = false) {
     setBusy(true); setErr(null);
     try {
       const res = await fetch(`/api/cases/${caseId}/transition`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: newStatus }),
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ to: newStatus, waiveFee: waive }),
       });
       if (!res.ok) throw new Error("Failed");
       window.location.reload();
@@ -184,7 +188,7 @@ export default function CaseProcessBar({
 
         {/* ACTION BUTTONS */}
         {!isCancelled && (
-          <div className="flex items-start gap-3"> {/* ✅ Changed items-center to items-start */}
+          <div className="flex items-start gap-3"> 
             
             {/* 🛑 CANCEL CASE BUTTON */}
             {!isFullyDelivered && (
@@ -243,22 +247,64 @@ export default function CaseProcessBar({
                 Are you sure you want to cancel this case? This action cannot be undone.
               </p>
 
-              {/* Dynamic Warnings */}
-              {isProduced ? (
-                <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex gap-3">
-                  <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  <p className="text-xs text-red-600 dark:text-red-400 font-medium leading-relaxed">
-                    This case is already in production. If you cancel now, you may be charged a production cancellation fee.
-                  </p>
-                </div>
-              ) : hasDesignFiles ? (
-                <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg flex gap-3">
-                  <svg className="w-5 h-5 text-orange-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                  <p className="text-xs text-orange-600 dark:text-orange-400 font-medium leading-relaxed">
-                    This case has already been designed. If you cancel now, you may be charged a $5 design cancellation fee.
-                  </p>
-                </div>
-              ) : null}
+              {/* 👨‍⚕️ DOCTOR VIEW: Standard Warnings */}
+              {!isAdminOrLab && (
+                <>
+                  {isProduced ? (
+                    <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-lg flex gap-3">
+                      <svg className="w-5 h-5 text-red-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                      <p className="text-xs text-red-600 dark:text-red-400 font-medium leading-relaxed">
+                        This case is already in production. If you cancel now, you will be charged a production cancellation fee.
+                      </p>
+                    </div>
+                  ) : hasDesignFiles ? (
+                    <div className="p-3 bg-orange-500/10 border border-orange-500/20 rounded-lg flex gap-3">
+                      <svg className="w-5 h-5 text-orange-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                      <p className="text-xs text-orange-600 dark:text-orange-400 font-medium leading-relaxed">
+                        This case has already been designed. If you cancel now, you will be charged a design cancellation fee.
+                      </p>
+                    </div>
+                  ) : null}
+                </>
+              )}
+
+              {/* 🛠️ ADMIN/LAB VIEW: Detailed Breakdown & Waive Option */}
+              {isAdminOrLab && (
+                 <div className={`p-4 rounded-xl border transition-colors ${waiveFee ? "bg-emerald-500/10 border-emerald-500/20" : "bg-surface-highlight border-border"}`}>
+                    <div className="flex items-start justify-between gap-4 mb-2">
+                        <div>
+                            <span className="text-xs font-bold text-foreground block mb-1">Administrative Cancellation</span>
+                            <span className="text-[10px] text-muted leading-tight block max-w-[200px]">
+                                {isProduced 
+                                    ? "Case is in production. Cancelling will apply a penalty fee matching Vendor Costs." 
+                                    : hasDesignFiles 
+                                        ? "Case is designed. Cancelling will apply a penalty fee matching Design Costs." 
+                                        : "Case has no work completed. No penalty fee will be applied."}
+                            </span>
+                        </div>
+                        
+                        {/* Dynamic Fee Pill */}
+                        <div className={`px-2 py-1 rounded text-xs font-mono font-bold whitespace-nowrap ${waiveFee ? "text-emerald-500 line-through" : "bg-red-500/10 text-red-500 border border-red-500/20"}`}>
+                            {isProduced ? "Production Fee" : hasDesignFiles ? "Design Fee" : "No Fee"}
+                        </div>
+                    </div>
+
+                    {/* Waive Checkbox */}
+                    {(isProduced || hasDesignFiles) && (
+                        <label className="flex items-center gap-2 mt-4 pt-3 border-t border-border cursor-pointer group">
+                            <input 
+                                type="checkbox" 
+                                checked={waiveFee}
+                                onChange={(e) => setWaiveFee(e.target.checked)}
+                                className="w-4 h-4 accent-emerald-500 cursor-pointer"
+                            />
+                            <span className="text-xs font-medium text-foreground group-hover:text-emerald-400 transition-colors">
+                                Waive cancellation fee for this customer
+                            </span>
+                        </label>
+                    )}
+                 </div>
+              )}
             </div>
 
             <div className="flex justify-end gap-3">

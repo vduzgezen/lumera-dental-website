@@ -8,7 +8,7 @@ import Logo from "@/components/ui/Logo";
 import ThemeToggle from "@/components/ui/ThemeToggle";
 import { 
   LayoutDashboard, FolderOpen, CreditCard, LogOut,
-  ChevronRight, ChevronLeft, ShieldCheck, DollarSign
+  ChevronRight, ChevronLeft, ShieldCheck, DollarSign, Factory
 } from "lucide-react";
 
 const COOKIE_NAME = "lumera_sidebar_v2";
@@ -56,6 +56,7 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
 
   const navItems = [
     { label: "Dashboard", href: "/portal/cases", icon: LayoutDashboard, roles: ["customer", "lab", "admin", "milling", "sales"] },
+    { label: "Haus Milling", href: "/portal/cases/milling", icon: Factory, roles: ["admin"] },
     { label: "New Case", href: "/portal/cases/new", icon: FolderOpen, roles: ["lab", "admin"] },
     { label: "Billing", href: "/portal/billing", icon: CreditCard, roles: ["customer", "admin"] },
     { label: "Milling Finance", href: "/portal/cases/milling/finance", icon: DollarSign, roles: ["milling", "admin"] },
@@ -94,8 +95,9 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
           let isActive = false;
           if (item.label === "Dashboard") {
              const isFinance = pathname.startsWith("/portal/cases/milling/finance");
+             const isMilling = pathname.startsWith("/portal/cases/milling"); // ✅ Added milling check
              const isNew = pathname.startsWith("/portal/cases/new");
-             isActive = pathname.startsWith("/portal/cases") && !isFinance && !isNew;
+             isActive = pathname.startsWith("/portal/cases") && !isFinance && !isMilling && !isNew;
           } else {
              isActive = pathname.startsWith(item.href);
           }
