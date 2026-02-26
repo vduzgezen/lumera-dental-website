@@ -31,6 +31,11 @@ export default async function MillingFinancePage({
     shippingBatchId: { not: null }
   };
 
+  // ✅ NEW: Scope to milling center for milling role users
+  if (session.role === "milling" && session.millingCenterId) {
+    where.millingCenterId = session.millingCenterId;
+  }
+
   // Date Filter
   if (month) {
     const start = new Date(year, month - 1, 1);
@@ -141,8 +146,8 @@ export default async function MillingFinancePage({
     <div className="flex flex-col h-full space-y-6 p-6 overflow-hidden bg-background">
       <header className="flex flex-col gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-foreground">Haus Finance</h1>
-          <p className="text-sm text-muted">Track milling costs and shipping batch totals.</p>
+          <h1 className="text-2xl font-semibold text-foreground">Milling Center Finance</h1>
+          <p className="text-sm text-muted">Track production costs and shipping batch totals.</p>
         </div>
         
         <MillingFinanceFilters />

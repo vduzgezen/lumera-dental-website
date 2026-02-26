@@ -73,7 +73,8 @@ export default function RemakeOptions({ data, onChange }: Props) {
                     className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-foreground focus:ring-1 focus:ring-foreground outline-none transition-all cursor-pointer shadow-sm"
                 >
                     <option value="CUSTOMER" className="bg-surface">Customer Liable (Full Charge)</option>
-                    <option value="PRODUCTION" className="bg-surface">Production Error (Haus Pays)</option>
+                    {/* ✅ UPDATED: Generic terminology */}
+                    <option value="PRODUCTION" className="bg-surface">Production Error (Milling Center Pays)</option>
                     <option value="DESIGN" className="bg-surface">Design Error (Designer Pays)</option>
                     <option value="FREE" className="bg-surface">Free / Warranty (No Charge)</option>
                 </select>

@@ -7,6 +7,10 @@ import { uploadFile } from "@/lib/storage";
 
 const MAX_FILE_BYTES = 500 * 1024 * 1024;
 
+// ✅ Default Milling Center ID (fallback for new cases)
+// In production, this should be an environment variable or first available center
+const DEFAULT_MILLING_CENTER_ID = process.env.DEFAULT_MILLING_CENTER_ID || null;
+
 // --- ZOD SCHEMA ---
 const CreateCaseSchema = z.object({
   patientFirstName: z.string().min(1, "First Name is required"),
@@ -95,6 +99,26 @@ async function getUniqueAlias(baseAlias: string) {
   });
   const nextSuffix = (maxSuffix + 1).toString().padStart(2, "0");
   return `${root}${nextSuffix}`;
+}
+
+// ✅ Helper to get or create default milling center
+async function getDefaultMillingCenterId(): Promise<string | null> {
+  // 1. Try environment variable first
+  if (DEFAULT_MILLING_CENTER_ID) {
+    const exists = await prisma.millingCenter.findUnique({
+      where: { id: DEFAULT_MILLING_CENTER_ID },
+      select: { id: true }
+    });
+    if (exists) return DEFAULT_MILLING_CENTER_ID;
+  }
+
+  // 2. Fall back to first available milling center
+  const firstCenter = await prisma.millingCenter.findFirst({
+    orderBy: { createdAt: "asc" },
+    select: { id: true }
+  });
+
+  return firstCenter?.id || null;
 }
 
 // ✅ MATCH THIS HELPER WITH THE FRONTEND
@@ -248,12 +272,17 @@ export async function POST(req: Request) {
     const unitCount = data.toothCodes.split(",").filter(Boolean).length;
     const dueDate = data.dueDate ? new Date(data.dueDate) : addDays(data.orderDate, 8);
     
+    // ✅ Get default milling center for new cases
+    const millingCenterId = await getDefaultMillingCenterId();
+    
     const created = await prisma.dentalCase.create({
       data: {
         clinicId: clinic.id,
         doctorUserId: doctor.id,
         salesRepId: doctor.salesRepId,
-        assigneeId: (session.role === "lab" || session.role === "admin") ? session.userId : null, 
+        assigneeId: (session.role === "lab" || session.role === "admin") ? session.userId : null,
+        // ✅ NEW: Assign to default milling center
+        millingCenterId: millingCenterId,
         patientFirstName: data.patientFirstName,
         patientLastName: data.patientLastName,
         patientAlias: uniqueAlias,

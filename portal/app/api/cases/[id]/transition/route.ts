@@ -103,7 +103,7 @@ export async function POST(
        const costs = calculateProductionCosts(item.product, item.material, item.units, !!item.salesRepId);
 
        if (isProduced) {
-          // If produced, they pay the actual cost incurred (Haus + Design)
+          // ✅ UPDATED: Generic terminology - If produced, they pay the actual cost incurred (Milling + Design)
           finalCost = new Prisma.Decimal(costs.milling + costs.design); // ✅ Wrapped
        } else if (hasDesignFiles) {
           // If just designed, they pay the design fee 

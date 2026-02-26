@@ -1,5 +1,6 @@
 // app/portal/cases/MillingView.tsx
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 import MillingDashboard from "./milling/MillingDashboard";
 import AutoRefresh from "@/components/ui/AutoRefresh";
 
@@ -8,6 +9,8 @@ export default async function MillingView({
 }: { 
   searchParams: Record<string, string | string[] | undefined> 
 }) {
+  const session = await getSession();
+  
   // Helpers (Local to this view)
   const getParam = (key: string) => {
     const value = searchParams[key];
@@ -26,9 +29,15 @@ export default async function MillingView({
   const doctorParam = getParam("doctor");
   const zipParam = getParam("zip");
 
+  // ✅ Build base where clause with Milling Center scoping
   const whereMilling: any = {
       stage: { in: ["DESIGN", "MILLING_GLAZING", "SHIPPING", "COMPLETED", "DELIVERED"] }
   };
+
+  // ✅ NEW: Scope to milling center for lab users
+  if (session?.role === "lab" && session.millingCenterId) {
+    whereMilling.millingCenterId = session.millingCenterId;
+  }
 
   let targetStatuses: string[] = [];
   if (statusParams.length > 0) {
@@ -77,12 +86,24 @@ export default async function MillingView({
           }
       }),
       prisma.dentalCase.findMany({
-          where: { stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] } },
+          where: { 
+            stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] },
+            // ✅ Apply same scoping for doctor list
+            ...(session?.role === "lab" && session.millingCenterId 
+              ? { millingCenterId: session.millingCenterId } 
+              : {})
+          },
           distinct: ['doctorName'],
           select: { doctorName: true, doctorUser: { select: { name: true } } }
       }),
       prisma.dentalCase.findMany({
-          where: { stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] } },
+          where: { 
+            stage: { in: ["MILLING_GLAZING", "SHIPPING", "COMPLETED"] },
+            // ✅ Apply same scoping for zip list
+            ...(session?.role === "lab" && session.millingCenterId 
+              ? { millingCenterId: session.millingCenterId } 
+              : {})
+          },
           distinct: ['doctorUserId'],
           select: { doctorUser: { select: { address: { select: { zipCode: true } } } } }
       })
