@@ -69,7 +69,8 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
         case "product": aVal = a.product; bVal = b.product; break;
         case "units": aVal = a.units; bVal = b.units; break;
         case "revenue": aVal = Number(a.cost); bVal = Number(b.cost); break;
-        case "haus": aVal = a.millingCost; bVal = b.millingCost; break;
+        // ✅ RENAMED: "haus" -> "milling"
+        case "milling": aVal = a.millingCost; bVal = b.millingCost; break;
         case "design": aVal = a.designCost; bVal = b.designCost; break;
         case "comm": aVal = a.commissionCost; bVal = b.commissionCost; break;
         case "margin": aVal = a.margin; bVal = b.margin; break;
@@ -114,7 +115,8 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
                 <SortableHeader label="Product" colKey="product" sortConfig={sortConfig} onSort={handleSort} className="min-w-[120px]" />
                 <SortableHeader label="Units" colKey="units" sortConfig={sortConfig} onSort={handleSort} className="w-[50px]" align="center" />
                 <SortableHeader label="Revenue" colKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-emerald-500" align="right" />
-                <SortableHeader label="Haus Cost" colKey="haus" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-blue-500" align="right" />
+                {/* ✅ RENAMED: "Haus Cost" -> "Milling Cost" */}
+                <SortableHeader label="Milling Cost" colKey="milling" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-blue-500" align="right" />
                 <SortableHeader label="Design Fee" colKey="design" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-purple-500" align="right" />
                 <SortableHeader label="Comm." colKey="comm" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-orange-500" align="right" />
                 <SortableHeader label="Margin" colKey="margin" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-foreground" align="right" />

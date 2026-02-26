@@ -23,7 +23,7 @@ export default function MillingHeader({
   return (
     <header className="flex items-center justify-between h-10">
       <div className="flex items-baseline gap-3">
-        <h1 className="text-2xl font-semibold text-foreground">Milling Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-foreground">Production Dashboard</h1>
         <span className="text-sm text-muted">Queue: {queueCount}</span>
       </div>
 

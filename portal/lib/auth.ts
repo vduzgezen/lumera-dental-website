@@ -6,6 +6,7 @@ export type Session = {
   userId: string;
   role: "customer" | "lab" | "admin" | "milling";
   clinicId?: string;
+  millingCenterId?: string; // ✅ NEW: For lab user scoping
   iat?: number;
   exp?: number;
 };

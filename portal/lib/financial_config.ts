@@ -83,12 +83,13 @@ export const CLIENT_PRICING = {
 // ============================================================
 
 export const VENDOR_COSTS = {
-  HAUS_MILLING: {
+  // ✅ RENAMED: HAUS_MILLING -> MILLING (Generic for multi-tenant)
+  MILLING: {
     // Crowns
     [PRODUCT_KEYS.CROWN_ZIRCONIA_HT]: 30.00,
     [PRODUCT_KEYS.CROWN_ZIRCONIA_ML]: 37.00,
     [PRODUCT_KEYS.CROWN_EMAX]: 85.00,
-    // Implants (Haus Cost: HT $109, ML $116, Emax $164)
+    // Implants (Milling Center Cost: HT $109, ML $116, Emax $164)
     [PRODUCT_KEYS.IMPLANT_ZIRCONIA_HT]: 109.00,
     [PRODUCT_KEYS.IMPLANT_ZIRCONIA_ML]: 116.00,
     [PRODUCT_KEYS.IMPLANT_EMAX]: 164.00,

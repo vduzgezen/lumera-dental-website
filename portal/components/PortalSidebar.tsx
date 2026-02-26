@@ -36,7 +36,6 @@ interface Props {
 
 export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
   const pathname = usePathname();
-  
   const [expanded, setExpanded] = useState(defaultOpen);
   const [loggingOut, setLoggingOut] = useState(false);
 
@@ -48,18 +47,18 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
   const toggleSidebar = () => {
     const next = !expanded;
     setExpanded(next);
-    
     // Save new V2 cookie
     setSidebarCookie(next);
     window.localStorage.setItem(COOKIE_NAME, String(next));
   };
 
   const navItems = [
-    { label: "Dashboard", href: "/portal/cases", icon: LayoutDashboard, roles: ["customer", "lab", "admin", "milling", "sales"] },
-    { label: "Haus Milling", href: "/portal/cases/milling", icon: Factory, roles: ["admin"] },
+    // ✅ FIX: Removed "milling" from the general Dashboard so they only see the Production one
+    { label: "Dashboard", href: "/portal/cases", icon: LayoutDashboard, roles: ["customer", "lab", "admin", "sales"] },
     { label: "New Case", href: "/portal/cases/new", icon: FolderOpen, roles: ["lab", "admin"] },
     { label: "Billing", href: "/portal/billing", icon: CreditCard, roles: ["customer", "admin"] },
-    { label: "Milling Finance", href: "/portal/cases/milling/finance", icon: DollarSign, roles: ["milling", "admin"] },
+    { label: "Production Dashboard", href: "/portal/cases/milling", icon: Factory, roles: ["milling", "admin"] },
+    { label: "Production Finance", href: "/portal/cases/milling/finance", icon: DollarSign, roles: ["milling", "admin"] },
     { label: "Admin", href: "/portal/admin/users", icon: ShieldCheck, roles: ["admin"] },
   ];
 
@@ -93,11 +92,15 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
       <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto custom-scrollbar flex flex-col items-center">
         {filteredNav.map((item) => {
           let isActive = false;
+          
+          // ✅ FIX: Strict routing logic for both Dashboard AND Production Dashboard
           if (item.label === "Dashboard") {
-             const isFinance = pathname.startsWith("/portal/cases/milling/finance");
-             const isMilling = pathname.startsWith("/portal/cases/milling"); // ✅ Added milling check
+             const isMilling = pathname.startsWith("/portal/cases/milling");
              const isNew = pathname.startsWith("/portal/cases/new");
-             isActive = pathname.startsWith("/portal/cases") && !isFinance && !isMilling && !isNew;
+             isActive = pathname.startsWith("/portal/cases") && !isMilling && !isNew;
+          } else if (item.label === "Production Dashboard") {
+             const isFinance = pathname.startsWith("/portal/cases/milling/finance");
+             isActive = pathname.startsWith("/portal/cases/milling") && !isFinance;
           } else {
              isActive = pathname.startsWith(item.href);
           }

@@ -72,18 +72,19 @@ export default async function FinancialsPage({
 
   // 2. Scorecard Calculations
   let totalRevenue = 0;
-  let totalOwedHaus = 0;
+  // ✅ RENAMED: totalOwedHaus -> totalOwedMilling
+  let totalOwedMilling = 0;
   let totalOwedDesigners = 0;
   let totalOwedSales = 0;
   
   for (const c of summaryCases) {
     const costs = calculateProductionCosts(c.product, c.material, c.units, !!c.salesRepId);
     totalRevenue += Number(c.cost);
-    totalOwedHaus += costs.milling;
+    totalOwedMilling += costs.milling;
     totalOwedDesigners += costs.design;
     totalOwedSales += costs.commission;
   }
-  const netProfit = totalRevenue - totalOwedHaus - totalOwedDesigners - totalOwedSales;
+  const netProfit = totalRevenue - totalOwedMilling - totalOwedDesigners - totalOwedSales;
 
   // 3. Fetch Paginated Table Data
   const [tableCases, designers, salesReps] = await Promise.all([
@@ -175,8 +176,9 @@ export default async function FinancialsPage({
             <div className="text-2xl font-light text-foreground">{formatMoney(totalRevenue)}</div>
         </div>
         <div className="p-4 rounded-xl bg-surface border border-blue-500/30 shadow-sm transition-colors">
-            <div className="text-[10px] text-blue-500 uppercase font-bold tracking-wider mb-1">Owed to Haus</div>
-            <div className="text-2xl font-light text-foreground">{formatMoney(totalOwedHaus)}</div>
+            {/* ✅ UPDATED: "Owed to Haus" -> "Owed to Milling" */}
+            <div className="text-[10px] text-blue-500 uppercase font-bold tracking-wider mb-1">Owed to Milling</div>
+            <div className="text-2xl font-light text-foreground">{formatMoney(totalOwedMilling)}</div>
         </div>
         <div className="p-4 rounded-xl bg-surface border border-purple-500/30 shadow-sm transition-colors">
             <div className="text-[10px] text-purple-500 uppercase font-bold tracking-wider mb-1">{designerLabel}</div>

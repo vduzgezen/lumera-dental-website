@@ -118,7 +118,8 @@ export default function ShippingModal({
         {/* 💰 Batch Value */}
         <div className="bg-surface rounded-lg p-3 border border-border space-y-2">
             <div className="flex justify-between items-center text-sm">
-                <span className="text-muted">Batch Value (Haus)</span>
+                {/* ✅ RENAMED: "Batch Value (Haus)" -> "Batch Value (Milling)" */}
+                <span className="text-muted">Batch Value (Milling)</span>
                 <span className="font-bold text-foreground">{formatMoney(batchValue)}</span>
             </div>
             

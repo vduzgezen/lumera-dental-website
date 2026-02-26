@@ -18,7 +18,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Email and password are required" }, { status: 400 });
     }
 
-    const user = await prisma.user.findUnique({ where: { email } });
+    // ✅ Fetch user with millingCenterId for lab users
+    const user = await prisma.user.findUnique({ 
+      where: { email },
+      select: {
+        id: true,
+        email: true,
+        password: true,
+        role: true,
+        clinicId: true,
+        millingCenterId: true, // ✅ NEW: Include milling center
+      }
+    });
+    
     if (!user) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
@@ -28,12 +40,24 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid credentials" }, { status: 401 });
     }
 
-    // ✅ Generate Token
-    const token = signToken({
+    // ✅ Generate Token with millingCenterId for lab users
+    const tokenPayload: {
+      userId: string;
+      role: string;
+      clinicId?: string | null;
+      millingCenterId?: string | null;
+    } = {
       userId: user.id,
       role: user.role,
       clinicId: user.clinicId ?? null,
-    });
+    };
+
+    // Only include millingCenterId for lab users
+    if (user.role === "lab" && user.millingCenterId) {
+      tokenPayload.millingCenterId = user.millingCenterId;
+    }
+
+    const token = signToken(tokenPayload);
 
     // ✅ Set Secure Cookie
     const jar = await cookies();

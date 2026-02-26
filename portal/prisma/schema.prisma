@@ -48,7 +48,7 @@ model User {
   email           String   @unique
   password        String   // Hashed
   name            String?
-  phoneNumber     String?  
+  phoneNumber     String? 
   preferenceNote  String? 
 
   role            String   // customer, lab, admin, milling
@@ -72,6 +72,10 @@ model User {
   addressId       String?
   address         Address? @relation(fields: [addressId], references: [id])
 
+  // ✅ NEW: Milling Center Assignment for lab users
+  millingCenterId String?
+  millingCenter   MillingCenter? @relation(fields: [millingCenterId], references: [id])
+
   doctorCases     DentalCase[] @relation("DoctorCases")
   workingCases    DentalCase[] @relation("WorkingCases")
 
@@ -79,6 +83,19 @@ model User {
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+// ✅ NEW: Milling Center Model for Multi-Tenant Support
+model MillingCenter {
+  id        String   @id @default(cuid())
+  name      String
+  
+  // Relations
+  users     User[]   // Lab users assigned to this center
+  cases     DentalCase[] // Cases being manufactured here
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 // --- SUPPORTING MODELS ------------------------------------------------------
@@ -102,9 +119,9 @@ model Address {
   id        String   @id @default(cuid())
   street    String?
   city      String?
-  state     String?
-  zipCode   String?
-  country   String?  @default("USA")
+  state      String?
+  zipCode    String?
+  country    String?  @default("USA")
   users     User[]
   clinics   Clinic[]
   createdAt DateTime @default(now())
@@ -128,6 +145,10 @@ model DentalCase {
   // Lab Assignee
   assigneeId     String?
   assigneeUser   User?    @relation("WorkingCases", fields: [assigneeId], references: [id])
+
+  // ✅ NEW: Milling Center Assignment
+  millingCenterId String?
+  millingCenter   MillingCenter? @relation(fields: [millingCenterId], references: [id])
 
   patientAlias   String
   patientFirstName String? 
@@ -197,6 +218,7 @@ model DentalCase {
 
   @@index([clinicId])
   @@index([doctorUserId])
+  @@index([millingCenterId])
   @@index([status])
   @@index([createdAt])
   @@index([orderDate])
