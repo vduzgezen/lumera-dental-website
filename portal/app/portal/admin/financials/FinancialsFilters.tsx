@@ -38,18 +38,14 @@ export default function FinancialsFilters({
     setClinicInput(clinicFilter);
   }, [doctorFilter, clinicFilter]);
 
-  // ✅ STABILIZE UPDATE FUNCTION
   const update = useCallback((updates: Record<string, string>) => {
     const url = new URL(window.location.href);
     
-    // ✅ 1. Reset pagination limit whenever a filter changes
+    // 1. Reset pagination limit whenever a filter changes
     url.searchParams.delete("limit");
 
-    // ✅ 2. Update Params
+    // 2. Update Params
     Object.entries(updates).forEach(([key, val]) => {
-        // FIX: Removed '&& val !== "ALL"' check.
-        // We MUST allow "ALL" to be sent so the server knows to fetch the full year
-        // instead of defaulting to the current month.
         if (val) {
             url.searchParams.set(key, val);
         } else {
@@ -72,54 +68,54 @@ export default function FinancialsFilters({
   const hasFilter = designerId || salesRepId || doctorFilter || clinicFilter || selMonth === "ALL" || selYear !== currentYear;
 
   return (
-    <div className="flex flex-wrap items-center gap-3 bg-black/20 p-2 rounded-xl border border-white/5">
+    <div className="flex flex-wrap items-center gap-3 bg-surface p-2 rounded-xl border border-border shadow-sm transition-colors">
       {/* Time Window */}
       <div className="flex items-center gap-2">
         <select 
           value={selYear}
           onChange={(e) => update({ year: e.target.value })}
-          className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none cursor-pointer hover:bg-white/5 transition-colors"
+          className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:border-accent/50 focus:ring-1 focus:ring-accent/50 outline-none cursor-pointer hover:bg-[var(--accent-dim)] transition-colors shadow-sm"
         >
-          {years.map(y => <option key={y} value={y} className="bg-[#1a1a1a]">{y}</option>)}
+          {years.map(y => <option key={y} value={y} className="bg-surface text-foreground">{y}</option>)}
         </select>
 
         <select 
           value={selMonth}
           onChange={(e) => update({ month: e.target.value })}
-          className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none cursor-pointer hover:bg-white/5 transition-colors"
+          className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:border-accent/50 focus:ring-1 focus:ring-accent/50 outline-none cursor-pointer hover:bg-[var(--accent-dim)] transition-colors shadow-sm"
         >
-          <option value="ALL" className="bg-[#1a1a1a]">Full Year</option>
+          <option value="ALL" className="bg-surface text-foreground">Full Year</option>
           {MONTHS.map((m, i) => (
-            <option key={m} value={i + 1} className="bg-[#1a1a1a]">{m}</option>
+            <option key={m} value={i + 1} className="bg-surface text-foreground">{m}</option>
           ))}
         </select>
       </div>
 
-      <div className="w-px h-6 bg-white/10 mx-1 hidden sm:block" />
+      <div className="w-px h-6 bg-border mx-1 hidden sm:block" />
 
       {/* Text Filters */}
       <input 
         placeholder="Doctor Name" 
         value={docInput}
         onChange={(e) => setDocInput(e.target.value)}
-        className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none w-32 lg:w-40 focus:border-blue-500/50 transition-colors placeholder-white/30" 
+        className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground outline-none w-32 lg:w-40 focus:border-accent/50 focus:ring-1 focus:ring-accent/50 transition-colors placeholder-muted shadow-sm" 
       />
       <input 
         placeholder="Clinic Name" 
         value={clinicInput}
         onChange={(e) => setClinicInput(e.target.value)}
-        className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white outline-none w-32 lg:w-40 focus:border-blue-500/50 transition-colors placeholder-white/30" 
+        className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground outline-none w-32 lg:w-40 focus:border-accent/50 focus:ring-1 focus:ring-accent/50 transition-colors placeholder-muted shadow-sm" 
       />
 
       {/* Designer Filter */}
       <select 
         value={designerId}
         onChange={(e) => update({ designer: e.target.value })}
-        className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none cursor-pointer min-w-[130px] hover:bg-white/5 transition-colors"
+        className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:border-accent/50 focus:ring-1 focus:ring-accent/50 outline-none cursor-pointer min-w-[130px] hover:bg-[var(--accent-dim)] transition-colors shadow-sm"
       >
-        <option value="" className="bg-[#1a1a1a]">All Designers</option>
+        <option value="" className="bg-surface text-foreground">All Designers</option>
         {designers.map(d => (
-          <option key={d.id} value={d.id} className="bg-[#1a1a1a]">{d.name || d.email}</option>
+          <option key={d.id} value={d.id} className="bg-surface text-foreground">{d.name || d.email}</option>
         ))}
       </select>
 
@@ -127,11 +123,11 @@ export default function FinancialsFilters({
       <select 
         value={salesRepId}
         onChange={(e) => update({ salesRep: e.target.value })}
-        className="bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-sm text-white focus:border-blue-500/50 outline-none cursor-pointer min-w-[130px] hover:bg-white/5 transition-colors"
+        className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground focus:border-accent/50 focus:ring-1 focus:ring-accent/50 outline-none cursor-pointer min-w-[130px] hover:bg-[var(--accent-dim)] transition-colors shadow-sm"
       >
-        <option value="" className="bg-[#1a1a1a]">All Sales Reps</option>
+        <option value="" className="bg-surface text-foreground">All Sales Reps</option>
         {salesReps.map(r => (
-          <option key={r.id} value={r.id} className="bg-[#1a1a1a]">{r.name || r.email}</option>
+          <option key={r.id} value={r.id} className="bg-surface text-foreground">{r.name || r.email}</option>
         ))}
       </select>
 
@@ -139,9 +135,9 @@ export default function FinancialsFilters({
       {hasFilter && (
         <button 
           onClick={() => router.replace("/portal/admin/financials")}
-          className="text-xs text-white/40 hover:text-white transition px-2 font-medium"
+          className="text-xs font-bold text-muted bg-surface hover:text-foreground hover:bg-[var(--accent-dim)] border border-transparent hover:border-border px-3 py-1.5 rounded-md cursor-pointer transition-all shadow-sm"
         >
-          Reset
+          Reset Filters
         </button>
       )}
     </div>

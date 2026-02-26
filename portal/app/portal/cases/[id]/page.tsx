@@ -215,11 +215,12 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
             comments={uiComments}
             events={item.events}
             currentUserName={currentUserName}
-            designPreferences={item.designPreferences}
+            doctorPreferences={item.doctorPreferences}
             assigneeId={item.assigneeId}
             designers={designers}
             toothCodes={item.toothCodes}
             isBridge={item.isBridge}
+            product={item.product}
           />
         </div>
 

@@ -19,17 +19,23 @@ const CreateCaseSchema = z.object({
   orderDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid Order Date"),
   dueDate: z.string().refine((d) => !isNaN(Date.parse(d)), "Invalid Due Date").optional(),
 
-  product: z.string().min(1, "Product is required"), // Accepts new composite keys: CROWN_ZIRCONIA_HT, IMPLANT_EMAX, etc.
+  product: z.string().min(1, "Product is required"),
   material: z.string().optional(),
   
   shade: z.string().optional(), 
   shadeGingival: z.string().optional(),
   shadeIncisal: z.string().optional(),
   
-  designPreferences: z.string().optional(),
+  doctorPreferences: z.string().optional(),
   serviceLevel: z.enum(["IN_HOUSE", "STANDARD"]).default("IN_HOUSE"),
   
   isBridge: z.preprocess((val) => val === 'true' || val === true, z.boolean()),
+  
+  // ✅ NEW REMAKE SCHEMA FIELDS
+  isRemake: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional().default(false),
+  hasRemakeInsurance: z.preprocess((val) => val === 'true' || val === true, z.boolean()).optional().default(false),
+  remakeType: z.string().optional(),
+  originalCaseId: z.string().optional(),
 
   scanHtml: z.instanceof(File, { message: "Scan Viewer HTML is required" }),
   rxPdf: z.instanceof(File, { message: "Rx PDF is required" }),
@@ -54,14 +60,13 @@ async function saveCaseFile(file: File, caseId: string, label: string) {
   const key = `cases/${caseId}/${label}_${safeName}`;
 
   await uploadFile(buf, key, file.type);
-  
   let kind = "OTHER";
   const lower = safeName.toLowerCase();
   if (lower.endsWith(".stl")) kind = "STL";
   else if (lower.endsWith(".ply")) kind = "PLY";
   else if (lower.endsWith(".obj")) kind = "OBJ";
   else if (lower.endsWith(".pdf")) kind = "PDF";
-
+  
   await prisma.caseFile.create({
     data: {
       caseId,
@@ -79,7 +84,6 @@ async function getUniqueAlias(baseAlias: string) {
     where: { patientAlias: { startsWith: root } },
     select: { patientAlias: true }
   });
-
   if (existing.length === 0) return baseAlias;
 
   let maxSuffix = -1;
@@ -89,42 +93,68 @@ async function getUniqueAlias(baseAlias: string) {
       maxSuffix = suffix;
     }
   });
-
   const nextSuffix = (maxSuffix + 1).toString().padStart(2, "0");
   return `${root}${nextSuffix}`;
 }
 
-function calculateEstimate(product: string, serviceLevel: string, toothCodes: string) {
+// ✅ MATCH THIS HELPER WITH THE FRONTEND
+function getInsurancePrice(product: string): number {
+  const p = (product || "").toUpperCase();
+  if (p.includes("IMPLANT")) return 30.00;
+  if (p.includes("NIGHTGUARD")) return 10.00;
+  return 15.00; // Default for Crowns, Inlays, etc.
+}
+
+// ✅ UPDATED CALCULATION ENGINE WITH DYNAMIC INSURANCE
+function calculateEstimate(
+  product: string, 
+  serviceLevel: string, 
+  toothCodes: string,
+  isRemake: boolean,
+  remakeType: string | undefined,
+  hasRemakeInsurance: boolean
+) {
   const units = toothCodes.split(",").filter(Boolean).length;
+  
+  // 1. If it's a remake and someone else is liable, charge the clinic $0.
+  if (isRemake && remakeType && ["PRODUCTION", "DESIGN", "FREE"].includes(remakeType)) {
+      return 0;
+  }
+
+  // 2. Otherwise, calculate standard base cost
   const isInHouse = serviceLevel === "IN_HOUSE";
+  let baseCost = 0;
   
-  // Handle new composite product keys
   if (product.includes("IMPLANT")) {
-    if (product.includes("ZIRCONIA_ML")) return (isInHouse ? 245 : 260) * units;
-    if (product.includes("EMAX")) return (isInHouse ? 295 : 310) * units;
-    return (isInHouse ? 235 : 250) * units; // Default IMPLANT_ZIRCONIA_HT
+    if (product.includes("ZIRCONIA_ML")) baseCost = (isInHouse ? 245 : 260) * units;
+    else if (product.includes("EMAX")) baseCost = (isInHouse ? 295 : 310) * units;
+    else baseCost = (isInHouse ? 235 : 250) * units;
+  } 
+  else if (product.includes("NIGHTGUARD")) {
+    baseCost = (isInHouse ? 55 : 65) * units;
+  } 
+  else if (product.includes("INLAY_ONLAY")) {
+    baseCost = (isInHouse ? 115 : 125) * units;
+  } 
+  else {
+    if (product.includes("EMAX")) baseCost = (isInHouse ? 115 : 125) * units;
+    else if (product.includes("ZIRCONIA_ML")) baseCost = (isInHouse ? 65 : 75) * units;
+    else baseCost = (isInHouse ? 55 : 65) * units;
   }
-  
-  if (product.includes("NIGHTGUARD")) {
-    return (isInHouse ? 55 : 65) * units;
+
+  // 3. Add Dynamic Insurance if selected
+  if (hasRemakeInsurance) {
+      baseCost += (getInsurancePrice(product) * units);
   }
-  
-  if (product.includes("INLAY_ONLAY")) {
-    return (isInHouse ? 115 : 125) * units;
-  }
-  
-  // Crown pricing (default)
-  if (product.includes("EMAX")) return (isInHouse ? 115 : 125) * units;
-  if (product.includes("ZIRCONIA_ML")) return (isInHouse ? 65 : 75) * units;
-  return (isInHouse ? 55 : 65) * units; // Default ZIRCONIA_HT
+
+  return baseCost;
 }
 
 export async function POST(req: Request) {
   try {
     const session = await getSession();
     if (!session) return NextResponse.json({ error: "Please sign in." }, { status: 401 });
-    
-    // This prevents foreign key crashes if the DB was reset or a user was deleted while logged in.
+
     const activeSessionUser = await prisma.user.findUnique({
       where: { id: session.userId },
       select: { id: true }
@@ -159,10 +189,16 @@ export async function POST(req: Request) {
       shadeIncisal: form.get("shadeIncisal") || undefined,
 
       material: form.get("material") || undefined,
-      designPreferences: form.get("designPreferences") || undefined,
+      doctorPreferences: form.get("doctorPreferences") || undefined,
       serviceLevel: form.get("serviceLevel") || "IN_HOUSE",
       
       isBridge: form.get("isBridge"), 
+      
+      // ✅ EXTRACT NEW FIELDS
+      isRemake: form.get("isRemake"),
+      hasRemakeInsurance: form.get("hasRemakeInsurance"),
+      remakeType: form.get("remakeType") || undefined,
+      originalCaseId: form.get("originalCaseId") || undefined,
 
       scanHtml: getFile("scanHtml"),
       rxPdf: getFile("rxPdf"),
@@ -170,7 +206,7 @@ export async function POST(req: Request) {
       modelTop: getFile("modelTop"),
       modelBottom: getFile("modelBottom"),
     };
-
+    
     const validation = CreateCaseSchema.safeParse(rawData);
     if (!validation.success) {
       const firstError = validation.error.issues[0];
@@ -194,36 +230,33 @@ export async function POST(req: Request) {
         salesRepId: true 
       },
     });
-
+    
     if (!doctor) return NextResponse.json({ error: "Invalid doctor." }, { status: 400 });
-
+    
     const clinic = await prisma.clinic.findUnique({
       where: { id: data.clinicId },
       select: { id: true, priceTier: true },
     });
-
+    
     if (!clinic) return NextResponse.json({ error: "Invalid clinic." }, { status: 400 });
 
     const uniqueAlias = await getUniqueAlias(data.patientAlias);
     
-    const cost = calculateEstimate(data.product, data.serviceLevel, data.toothCodes);
+    // ✅ CALL UPDATED ESTIMATE FUNCTION
+    const cost = calculateEstimate(data.product, data.serviceLevel, data.toothCodes, data.isRemake, data.remakeType, data.hasRemakeInsurance);
+    
     const unitCount = data.toothCodes.split(",").filter(Boolean).length;
     const dueDate = data.dueDate ? new Date(data.dueDate) : addDays(data.orderDate, 8);
-
+    
     const created = await prisma.dentalCase.create({
       data: {
         clinicId: clinic.id,
         doctorUserId: doctor.id,
         salesRepId: doctor.salesRepId,
-
-        // ✅ FIX: Only assign the session user if they are Lab or Admin. 
-        // Prevents P2003 foreign key constraint errors for doctors.
         assigneeId: (session.role === "lab" || session.role === "admin") ? session.userId : null, 
-
         patientFirstName: data.patientFirstName,
         patientLastName: data.patientLastName,
         patientAlias: uniqueAlias,
-     
         doctorName: doctor.name ?? null,
         toothCodes: data.toothCodes,
         orderDate: new Date(data.orderDate),
@@ -231,24 +264,27 @@ export async function POST(req: Request) {
         product: data.product,
         material: data.material || null,
         serviceLevel: data.serviceLevel, 
-        
         shade: data.shade || null,
         shadeGingival: data.shadeGingival || null,
         shadeIncisal: data.shadeIncisal || null,
-        
-        designPreferences: data.designPreferences || null,
+        doctorPreferences: data.doctorPreferences || null,
         status: "IN_DESIGN",
-    
         stage: "DESIGN",
         units: unitCount,
         cost,
         billingType: "BILLABLE",
         invoiced: false,
+        
+        // ✅ PASS NEW FIELDS TO DB
         isBridge: data.isBridge,
+        isRemake: data.isRemake,
+        hasRemakeInsurance: data.hasRemakeInsurance,
+        remakeType: data.remakeType || null,
+        originalCaseId: data.originalCaseId || null,
       },
       select: { id: true },
     });
-
+    
     await saveCaseFile(data.scanHtml, created.id, "scan_html");
     await saveCaseFile(data.rxPdf, created.id, "rx_pdf");
     if (data.constructionInfo) await saveCaseFile(data.constructionInfo, created.id, "construction_info");
@@ -256,7 +292,7 @@ export async function POST(req: Request) {
     if (data.modelBottom) await saveCaseFile(data.modelBottom, created.id, "model_bottom");
 
     return NextResponse.json({ ok: true, id: created.id });
-
+    
   } catch (err: any) { 
     console.error("Create case error:", err);
     return NextResponse.json(

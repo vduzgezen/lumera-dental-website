@@ -22,7 +22,7 @@ export default async function ClinicsPage() {
     <div className="flex flex-col h-full space-y-4">
       <ClinicListClient clinics={clinics} />
 
-      <div className="flex-none text-center text-xs text-white/30 pt-2 border-t border-white/5">
+      <div className="flex-none text-center text-xs text-muted pt-2 border-t border-border">
         {totalClinics > clinics.length 
             ? `Showing first ${clinics.length} of ${totalClinics} clinics.` 
             : `Showing all ${clinics.length} clinics.`}

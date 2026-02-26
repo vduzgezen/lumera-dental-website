@@ -65,7 +65,7 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
       update({
         doctorUserId: newId,
         doctorName: doc.name || doc.email,
-        designPreferences: newPrefs,
+        doctorPreferences: newPrefs,
         clinicId: autoClinicId,
         serviceLevel: newServiceLevel
       });

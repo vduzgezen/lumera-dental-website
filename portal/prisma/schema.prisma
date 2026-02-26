@@ -146,7 +146,7 @@ model DentalCase {
   shadeGingival  String?     // NEW
   shadeIncisal   String?     // NEW
   
-  designPreferences String?
+  doctorPreferences String?
   
   // Billing
   billingType    String      @default("BILLABLE") 
@@ -158,6 +158,12 @@ model DentalCase {
   
   invoiceId      String?
   invoice        Invoice?    @relation(fields: [invoiceId], references: [id])
+
+  // ✅ REMAKE & INSURANCE LOGIC
+  isRemake           Boolean     @default(false)
+  remakeType         String?     // "CUSTOMER", "PRODUCTION", "DESIGN", "FREE"
+  originalCaseId     String?     // Links to the ID of the original case
+  hasRemakeInsurance Boolean     @default(false)
 
   // Production
   dueDate        DateTime?

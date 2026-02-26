@@ -65,7 +65,7 @@ export interface CaseData {
   shadeGingival?: string; // Optional
   shadeIncisal?: string;  // Optional
   
-  designPreferences: string;
+  doctorPreferences: string;
   
   toothCodes: string[];
   isBridge: boolean;      // ✅ NEW: Bridge Flag
@@ -75,6 +75,11 @@ export interface CaseData {
   constructionInfo: File | null;
   modelTop: File | null;
   modelBottom: File | null;
+
+  isRemake: boolean;
+  remakeType?: "CUSTOMER" | "PRODUCTION" | "DESIGN" | "FREE";
+  originalCaseId?: string;
+  hasRemakeInsurance: boolean;
 }
 
 const today = new Date();
@@ -105,10 +110,15 @@ export const INITIAL_DATA: CaseData = {
   shade: "",
   shadeGingival: "",
   shadeIncisal: "",
-  designPreferences: "",
+  doctorPreferences: "",
   
   toothCodes: [],
   isBridge: false, // Default to single unit
+
+  isRemake: false,
+  remakeType: undefined,
+  originalCaseId: undefined,
+  hasRemakeInsurance: false,
   
   scanHtml: null,
   rxPdf: null,
