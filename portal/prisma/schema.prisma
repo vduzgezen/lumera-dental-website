@@ -53,12 +53,12 @@ model User {
 
   role            String   // customer, lab, admin, milling
   
-  invitationToken String? @unique 
+  invitationToken String?  @unique 
   defaultDesignPreferences String?
   
   // PRIMARY CLINIC (One-to-Many)
   clinicId        String?
-  clinic          Clinic? @relation(fields: [clinicId], references: [id])
+  clinic          Clinic?  @relation(fields: [clinicId], references: [id])
 
   // ✅ SECONDARY CLINICS (Many-to-Many)
   secondaryClinics Clinic[] @relation("DoctorSecondaryClinics")
@@ -119,9 +119,9 @@ model Address {
   id        String   @id @default(cuid())
   street    String?
   city      String?
-  state      String?
-  zipCode    String?
-  country    String?  @default("USA")
+  state     String?
+  zipCode   String?
+  country   String?  @default("USA")
   users     User[]
   clinics   Clinic[]
   createdAt DateTime @default(now())
@@ -168,6 +168,7 @@ model DentalCase {
   shadeIncisal   String?     // NEW
   
   doctorPreferences String?
+  caseNotes         String?  // ✅ NEW: Dedicated Designer/Production Notes
   
   // Billing
   billingType    String      @default("BILLABLE") 
@@ -201,9 +202,8 @@ model DentalCase {
   shippingCarrier String?
   trackingNumber  String?
   shippingEta     DateTime?
-  shippingCost    Decimal? @default(0.00) // ✅ NEW: Store actual cost
+  shippingCost    Decimal?    @default(0.00) // ✅ NEW: Store actual cost
   shippingBatchId String?
-
   needsReview        Boolean   @default(false)
   reviewQuestion     String?
   reviewRequestedAt  DateTime?
@@ -229,7 +229,7 @@ model Invoice {
   id          String        @id @default(cuid())
   clinicId    String
   clinic      Clinic        @relation(fields: [clinicId], references: [id])
-  
+   
   amount      Decimal
   status      String        @default("UNPAID")
   dueDate     DateTime      

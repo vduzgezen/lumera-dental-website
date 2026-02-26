@@ -41,7 +41,7 @@ function getOutputSuffix(dbLabel: string): string {
   return "_File";
 }
 
-// ✅ NEW: Helper to generate the Order Ticket Text
+// ✅ UPDATED: Helper to generate the Order Ticket Text with Designer Notes
 function generateOrderTicket(c: any): string {
   // 1. Clean up Product Name (Remove redundancy if product already contains material name)
   const rawProduct = c.product.replace(/_/g, " ");
@@ -53,7 +53,6 @@ function generateOrderTicket(c: any): string {
   }
 
   const isImplant = c.product.includes("IMPLANT");
-  
   // 2. Extract retention type
   let retentionLine = "";
   if (isImplant) {
@@ -89,8 +88,8 @@ Attn: ${c.doctorName || "Doctor"}
 ${c.clinic?.address?.street || "No Street Provided"}
 ${c.clinic?.address?.city || "No City"}, ${c.clinic?.address?.state || ""} ${c.clinic?.address?.zipCode || ""}
 =========================================
-NOTES:
-${c.doctorPreferences || "None"}
+NOTES (PRODUCTION / DESIGNER):
+${c.caseNotes || "None"}
 =========================================`;
 }
 

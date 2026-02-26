@@ -168,7 +168,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
           role={session.role as any}
           carrier={item.shippingCarrier}
           tracking={item.trackingNumber}
-          files={item.files} // ✅ ADD THIS LINE
+          files={item.files} 
         />
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0">
@@ -216,6 +216,7 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
             events={item.events}
             currentUserName={currentUserName}
             doctorPreferences={item.doctorPreferences}
+            caseNotes={item.caseNotes as string} // ✅ PASSED THE PROP HERE
             assigneeId={item.assigneeId}
             designers={designers}
             toothCodes={item.toothCodes}
