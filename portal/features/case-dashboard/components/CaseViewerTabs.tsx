@@ -112,31 +112,40 @@ export default function CaseViewerTabs({
   const isAppliance = !isBridge && teeth.length === 0;
 
   // 2. Design Tabs
-  if (isBridge || isAppliance) {
-     const hasSingleDesign = !!designOnly3D;
-     if (hasSingleDesign) {
-         tabs.push({ key: "design_only", label: "Design", disabled: false });
-     }
-     hasAllDesigns = hasSingleDesign;
-  } else {
-     let allIndividualPresent = true;
-     
-     teeth.forEach(tooth => {
-         const key = `design_stl_${tooth}`;
-         const url = getFileUrl(files, key);
-         if (url) {
-            tabs.push({ key, label: `Design #${tooth}`, disabled: false });
-         } else {
-            allIndividualPresent = false;
-         }
-     });
+  // First, check for a generic, merged, or appliance design file
+  if (designOnly3D) {
+      tabs.push({ key: "design_only", label: "Design", disabled: false });
+      hasAllDesigns = true;
+  }
 
-     if (tabs.length === 1 && designOnly3D) {
-        tabs.push({ key: "design_only", label: "Design", disabled: false });
-        hasAllDesigns = true;
-     } else {
-        hasAllDesigns = teeth.length > 0 && allIndividualPresent;
-     }
+  // Next, check for any individual tooth design files
+  let allIndividualPresent = true;
+  if (teeth.length > 0) {
+      teeth.forEach(tooth => {
+          const key = `design_stl_${tooth}`;
+          const url = getFileUrl(files, key);
+          if (url) {
+              tabs.push({ key, label: `Design #${tooth}`, disabled: false });
+          } else {
+              allIndividualPresent = false;
+          }
+      });
+      
+      // If we don't have a generic design, our "hasAllDesigns" flag depends on having every single tooth file
+      if (!designOnly3D) {
+          hasAllDesigns = allIndividualPresent;
+      }
+  } else if (!designOnly3D) {
+      // If there are no teeth specified AND no generic design, then we don't have the designs.
+      hasAllDesigns = false;
+  }
+
+  // Edge Case: Sometimes a full-arch appliance gets uploaded as 'design_stl_' or 'design_stl_undefined'.
+  // We should catch that and display it.
+  const genericToothlessDesign = getFileUrl(files, "design_stl_") || getFileUrl(files, "design_stl_undefined");
+  if (genericToothlessDesign && !designOnly3D) {
+      tabs.push({ key: "design_stl_", label: "Appliance Design", disabled: false });
+      hasAllDesigns = true;
   }
 
   // 3. Design + Model

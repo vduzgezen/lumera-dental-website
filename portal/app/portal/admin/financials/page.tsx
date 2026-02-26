@@ -27,7 +27,6 @@ export default async function FinancialsPage({
 
   const sp = await searchParams;
   const now = new Date();
-  
   const year = Number(sp.year) || now.getFullYear();
   const monthParam = sp.month; 
   const month = monthParam ? (monthParam === "ALL" ? "ALL" : parseInt(monthParam)) : now.getMonth() + 1;
@@ -53,13 +52,13 @@ export default async function FinancialsPage({
     orderDate: { gte: start, lte: end },
     status: { not: "CANCELLED" },
   };
+
   if (designerId) where.assigneeId = designerId;
   if (salesRepId) where.salesRepId = salesRepId;
   if (doctorFilter) where.doctorName = { contains: doctorFilter, mode: 'insensitive' };
   if (clinicFilter) where.clinic = { name: { contains: clinicFilter, mode: 'insensitive' } };
 
   // 1. Fetch Summary Data (For Scorecards & Total Count)
-  // We fetch ALL matching records here (lightweight select) to ensure scorecards represent the full month/year
   const summaryCases = await prisma.dentalCase.findMany({
     where,
     select: {
@@ -87,7 +86,6 @@ export default async function FinancialsPage({
   const netProfit = totalRevenue - totalOwedHaus - totalOwedDesigners - totalOwedSales;
 
   // 3. Fetch Paginated Table Data
-  // This fetch is heavy (includes relations) but limited by 'take'
   const [tableCases, designers, salesReps] = await Promise.all([
     prisma.dentalCase.findMany({
       where,
@@ -140,6 +138,7 @@ export default async function FinancialsPage({
   const designerLabel = designerId 
     ? `Owed to ${designers.find(d => d.id === designerId)?.name?.split(' ')[0] || 'Designer'}`
     : "Owed to Designers";
+
   const salesLabel = salesRepId
     ? `Owed to ${salesReps.find(r => r.id === salesRepId)?.name?.split(' ')[0] || 'Rep'}`
     : "Sales Comm.";
@@ -149,8 +148,8 @@ export default async function FinancialsPage({
       {/* Header */}
       <div className="flex-none flex items-center justify-between">
          <div className="flex items-center gap-4">
-            <h1 className="text-2xl font-semibold text-white hidden sm:block">Admin</h1>
-            <div className="h-6 w-px bg-white/10 hidden sm:block" />
+            <h1 className="text-2xl font-semibold text-foreground hidden sm:block">Admin</h1>
+            <div className="h-6 w-px bg-border hidden sm:block" />
             <AdminTabs />
          </div>
       </div>
@@ -171,25 +170,25 @@ export default async function FinancialsPage({
 
       {/* Scorecards */}
       <div className="flex-none grid grid-cols-2 md:grid-cols-5 gap-4">
-        <div className="p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
-            <div className="text-[10px] text-emerald-400 uppercase font-bold tracking-wider mb-1">Total Revenue</div>
-            <div className="text-2xl font-light text-white">{formatMoney(totalRevenue)}</div>
+        <div className="p-4 rounded-xl bg-surface border border-emerald-500/30 shadow-sm transition-colors">
+            <div className="text-[10px] text-emerald-500 uppercase font-bold tracking-wider mb-1">Total Revenue</div>
+            <div className="text-2xl font-light text-foreground">{formatMoney(totalRevenue)}</div>
         </div>
-        <div className="p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
-            <div className="text-[10px] text-blue-400 uppercase font-bold tracking-wider mb-1">Owed to Haus</div>
-            <div className="text-2xl font-light text-white">{formatMoney(totalOwedHaus)}</div>
+        <div className="p-4 rounded-xl bg-surface border border-blue-500/30 shadow-sm transition-colors">
+            <div className="text-[10px] text-blue-500 uppercase font-bold tracking-wider mb-1">Owed to Haus</div>
+            <div className="text-2xl font-light text-foreground">{formatMoney(totalOwedHaus)}</div>
         </div>
-        <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
-            <div className="text-[10px] text-purple-400 uppercase font-bold tracking-wider mb-1">{designerLabel}</div>
-            <div className="text-2xl font-light text-white">{formatMoney(totalOwedDesigners)}</div>
+        <div className="p-4 rounded-xl bg-surface border border-purple-500/30 shadow-sm transition-colors">
+            <div className="text-[10px] text-purple-500 uppercase font-bold tracking-wider mb-1">{designerLabel}</div>
+            <div className="text-2xl font-light text-foreground">{formatMoney(totalOwedDesigners)}</div>
         </div>
-        <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/20">
-            <div className="text-[10px] text-orange-400 uppercase font-bold tracking-wider mb-1">{salesLabel}</div>
-            <div className="text-2xl font-light text-white">{formatMoney(totalOwedSales)}</div>
+        <div className="p-4 rounded-xl bg-surface border border-orange-500/30 shadow-sm transition-colors">
+            <div className="text-[10px] text-orange-500 uppercase font-bold tracking-wider mb-1">{salesLabel}</div>
+            <div className="text-2xl font-light text-foreground">{formatMoney(totalOwedSales)}</div>
         </div>
-        <div className="p-4 rounded-xl bg-white/5 border border-white/10">
-            <div className="text-[10px] text-white/50 uppercase font-bold tracking-wider mb-1">Net Profit</div>
-            <div className="text-2xl font-light text-white">{formatMoney(netProfit)}</div>
+        <div className="p-4 rounded-xl bg-surface border border-border shadow-sm transition-colors">
+            <div className="text-[10px] text-muted uppercase font-bold tracking-wider mb-1">Net Profit</div>
+            <div className="text-2xl font-light text-foreground">{formatMoney(netProfit)}</div>
         </div>
       </div>
 

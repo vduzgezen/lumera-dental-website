@@ -16,11 +16,12 @@ type Props = {
   comments: any[];
   events: any[];   
   currentUserName: string;
-  designPreferences?: string | null;
+  doctorPreferences?: string | null;
   assigneeId?: string | null;
   designers?: { id: string; name: string | null; email: string }[];
   toothCodes: string;
   isBridge: boolean;
+  product: string; // ✅ NEW: We need the product name to explicitly check for nightguards
 };
 
 function fmtDate(d?: Date | string | null) {
@@ -35,14 +36,14 @@ export default function CaseDetailSidebar({
   comments,
   events,
   currentUserName,
-  designPreferences,
+  doctorPreferences,
   assigneeId,
   designers = [],
   toothCodes,
-  isBridge
+  isBridge,
+  product
 }: Props) {
   const STORAGE_KEY = "lumera.sidebarTab";
-  
   const isInternal = role === "lab" || role === "admin" || role === "milling";
 
   const [activeTab, setActiveTab] = useState<"files" | "discussion" | "history" | "preferences">(
@@ -78,7 +79,7 @@ export default function CaseDetailSidebar({
     return {
       scanHtml: labels.has("scan_html"),
       designHtml: labels.has("design_with_model_html"),
-      designOnly: labels.has("design_only"),
+      designOnly: labels.has("design_only") || labels.has("design_stl_undefined") || labels.has("design_stl_"), // ✅ Catch edge cases
       rx: labels.has("rx_pdf"),
       construction: labels.has("construction_info"),
       modelTop: labels.has("model_top"),
@@ -90,8 +91,8 @@ export default function CaseDetailSidebar({
     return toothCodes.split(",").map(t => t.trim()).filter(Boolean);
   }, [toothCodes]);
 
-  // ✅ FIX: Determine if it's an appliance (No Bridge AND No Teeth)
-  const isAppliance = !isBridge && teeth.length === 0;
+  // ✅ FIX: Bulletproof Appliance Check. If it says Nightguard, it's an appliance regardless of tooth codes.
+  const isAppliance = (!isBridge && teeth.length === 0) || product.toUpperCase().includes("NIGHTGUARD");
 
   const InternalNav = () => (
     <div className="h-14 flex items-center px-3 border-b border-border bg-surface shrink-0 gap-3">
@@ -173,7 +174,7 @@ export default function CaseDetailSidebar({
                          <div className="flex items-center justify-between mb-2">
                              <span className="text-xs font-medium text-foreground/80">Design HTML</span>
                             {fileStatus.designHtml && <span className="text-[10px] text-accent">✓ Ready</span>}
-                        </div>
+                         </div>
                         <HtmlViewerUploader caseId={caseId} role={role} label="design_with_model_html" description="Exocad Web Viewer (Design)" />
                     </div>
 
@@ -182,7 +183,7 @@ export default function CaseDetailSidebar({
                           // BRIDGE OR APPLIANCE: Single File Uploader
                           <div>
                             <div className="flex items-center justify-between mb-2">
-                                <span className="text-xs font-medium text-foreground/80">{isAppliance ? "Appliance Design (STL)" : "Bridge Design (STL)"}</span>
+                              <span className="text-xs font-medium text-foreground/80">{isAppliance ? "Appliance Design (STL)" : "Bridge Design (STL)"}</span>
                                 {fileStatus.designOnly && <span className="text-[10px] text-accent">✓ Ready</span>}
                             </div>
                             <FileUploader caseId={caseId} role={role} label="design_only" description={isAppliance ? "Appliance STL" : "Merged Bridge STL"} />
@@ -191,7 +192,7 @@ export default function CaseDetailSidebar({
                           // INDIVIDUAL UNITS
                           <div className="space-y-4">
                              <div className="flex items-center justify-between mb-1">
-                                <span className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Individual Designs</span>
+                                 <span className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Individual Designs</span>
                              </div>
                              {teeth.map((tooth) => {
                                 const label = `design_stl_${tooth}`;
@@ -203,7 +204,7 @@ export default function CaseDetailSidebar({
                                           {hasFile && <span className="text-[10px] text-accent">✓ Ready</span>}
                                       </div>
                                       <FileUploader caseId={caseId} role={role} label={label as any} description={`Design #${tooth} (STL)`} />
-                                  </div>
+                                   </div>
                                 );
                              })}
                              
@@ -226,7 +227,7 @@ export default function CaseDetailSidebar({
                     <div className="text-[10px] font-bold text-accent uppercase tracking-wider border-b border-border pb-1">Production</div>
                     
                     <div className="bg-surface p-3 rounded-lg border border-border space-y-2">
-                        <div className="flex items-center justify-between">
+                         <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-foreground/80">Rx PDF</span>
                              {fileStatus.rx && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
@@ -234,15 +235,15 @@ export default function CaseDetailSidebar({
                     </div>
 
                     <div className="bg-surface p-3 rounded-lg border border-border space-y-2">
-                        <div className="flex items-center justify-between">
+                         <div className="flex items-center justify-between">
                              <span className="text-xs font-medium text-foreground/80">Construction Info</span>
                              {fileStatus.construction && <span className="text-[10px] text-accent">✓ Ready</span>}
-                        </div>
+                         </div>
                         <FileUploader caseId={caseId} role={role} label="construction_info" description="Construction/Milling Params" />
                      </div>
 
                     <div className="bg-surface p-3 rounded-lg border border-border space-y-2">
-                        <div className="flex items-center justify-between">
+                         <div className="flex items-center justify-between">
                              <span className="text-xs font-medium text-foreground/80">Model Top</span>
                              {fileStatus.modelTop && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
@@ -261,7 +262,7 @@ export default function CaseDetailSidebar({
           </div>
         )}
 
-        {/* ✅ DISCUSSION TAB (Default for Doctors) */}
+        {/* ✅ DISCUSSION TAB */}
         <div className={`flex-1 flex flex-col min-h-0 p-4 animate-in fade-in duration-200 ${activeTab === "discussion" ? "flex" : "hidden"}`}>
              <CommentsPanel caseId={caseId} comments={comments} canPost={true} currentUserName={currentUserName} currentUserRole={role} />
         </div>
@@ -277,20 +278,20 @@ export default function CaseDetailSidebar({
                     {ev.note && <div className="mt-2 text-xs text-foreground/80 bg-surface p-2 rounded border border-border italic">&quot;{ev.note}&quot;</div>}
                   </div>
                 ))}
-               </div>
+                </div>
             )}
         </div>
 
         {/* PREFERENCES TAB (Internal Only) */}
         {isInternal && (
           <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 animate-in fade-in duration-200 ${activeTab === "preferences" ? "block" : "hidden"}`}>
-            {designPreferences ? (
+            {doctorPreferences ? (
               <div className="space-y-2">
                 <h4 className="text-xs font-bold text-accent uppercase tracking-wider">Doctor Preferences</h4>
-                <div className="bg-surface border border-border rounded-lg p-3"><p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{designPreferences}</p></div>
+                <div className="bg-surface border border-border rounded-lg p-3"><p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{doctorPreferences}</p></div>
               </div>
             ) : (
-               <div className="flex flex-col items-center justify-center h-20 text-muted text-sm italic">No preferences set for this case.</div>
+              <div className="flex flex-col items-center justify-center h-20 text-muted text-sm italic">No preferences set for this case.</div>
             )}
           </div>
         )}

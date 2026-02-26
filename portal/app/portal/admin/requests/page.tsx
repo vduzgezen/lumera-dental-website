@@ -23,7 +23,7 @@ export default async function RequestsPage() {
       
       <RequestListClient requests={requests} />
 
-      <div className="flex-none text-center text-xs text-white/30 pt-2 border-t border-white/5">
+      <div className="flex-none text-center text-xs text-muted pt-2 border-t border-border">
         {totalPending > requests.length 
             ? `Showing recent ${requests.length} of ${totalPending} pending requests.` 
             : `Showing all ${requests.length} pending requests.`}

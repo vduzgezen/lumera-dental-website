@@ -21,7 +21,7 @@ export const CreateCaseSchema = z.object({
   billingType: BillingEnum.default(BillingType.BILLABLE),
   shade: z.string().optional(),
   material: z.string().optional(),
-  designPreferences: z.string().optional(),
+  doctorPreferences: z.string().optional(),
   scanHtml: FileSchema.refine((f) => f.size > 0, "Scan HTML file is empty"),
   rxPdf: FileSchema.refine((f) => f.size > 0, "Rx PDF file is empty"),
   constructionInfo: FileSchema.optional().nullable(),

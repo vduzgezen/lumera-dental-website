@@ -9,6 +9,7 @@ import { useTheme } from "@/components/ui/ThemeProvider";
 import DoctorSelection from "./components/DoctorSelection";
 import CaseInfo from "./components/CaseInfo";
 import TeethSelection from "./components/TeethSelection";
+import RemakeOptions from "./components/RemakeOptions"; // ✅ IMPORTED REMAKE OPTIONS
 import ProductionFiles from "./components/ProductionFiles";
 
 export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
@@ -23,7 +24,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     setData(prev => ({ ...prev, ...fields }));
   }, []);
 
-  // ✅ AUTO-SELECT FIX
   useEffect(() => {
     if (!data.doctorUserId && doctors.length > 0) {
       const first = doctors[0];
@@ -33,7 +33,6 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
       let initialClinicId = "";
       let initialLevel: ServiceLevel = "STANDARD";
 
-      // Guarantees we grab a clinic if they have one, resolving the empty state bug
       if (clinics.length > 0) {
         const targetClinic = first.clinic || clinics[0];
         initialClinicId = targetClinic.id;
@@ -43,14 +42,13 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
       update({
         doctorUserId: first.id,
         doctorName: first.name || first.email,
-        designPreferences: prefs,
+        doctorPreferences: prefs,
         clinicId: initialClinicId,
         serviceLevel: initialLevel
       });
     }
   }, [doctors, data.doctorUserId, update]);
 
-  // ✅ AUTO-ALIAS
   useEffect(() => {
     const last = (data.patientLastName || "XX").replace(/[^a-zA-Z]/g, "").slice(0, 2).padEnd(2, "X");
     const first = (data.patientFirstName || "XX").replace(/[^a-zA-Z]/g, "").slice(0, 2).padEnd(2, "X");
@@ -72,13 +70,15 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
     if (!data.clinicId) return setErr("Please select a clinic.");
     if (!data.patientFirstName.trim() || !data.patientLastName.trim()) return setErr("Patient Name is required.");
     if (data.toothCodes.length === 0) return setErr("Please select at least one tooth.");
-    
     if (!data.product.includes("NIGHTGUARD") && !data.shade.trim()) {
       return setErr("Body Shade is required for this product.");
     }
 
     if (!data.scanHtml) return setErr("Please upload a scan viewer HTML file.");
     if (!data.rxPdf) return setErr("Please upload the Rx PDF.");
+    
+    // ✅ NEW: Remake specific validation
+    if (data.isRemake && !data.remakeType) return setErr("Please specify who is liable for the remake.");
     
     setBusy(true);
     try {
@@ -100,15 +100,23 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
       if (data.shade) fd.append("shade", data.shade);
       if (data.shadeGingival) fd.append("shadeGingival", data.shadeGingival);
       if (data.shadeIncisal) fd.append("shadeIncisal", data.shadeIncisal);
-      // Append retention type to design preferences for implants
-      let finalDesignPreferences = data.designPreferences || "";
+
+      let finalDoctorPreferences = data.doctorPreferences || "";
+      
       if (data.restorationType === "IMPLANT" && data.retentionType) {
         const retentionNote = `Retention Type: ${data.retentionType === "SCREW" ? "Screw Retained" : "Cement Retained"}`;
-        finalDesignPreferences = finalDesignPreferences 
-          ? `${finalDesignPreferences}\n${retentionNote}` 
+        finalDoctorPreferences = finalDoctorPreferences 
+          ? `${finalDoctorPreferences}\n${retentionNote}` 
           : retentionNote;
       }
-      if (finalDesignPreferences) fd.append("designPreferences", finalDesignPreferences);
+      
+      if (finalDoctorPreferences) fd.append("doctorPreferences", finalDoctorPreferences);
+
+      // ✅ SEND REMAKE DATA TO API
+      fd.append("isRemake", data.isRemake.toString());
+      fd.append("hasRemakeInsurance", data.hasRemakeInsurance.toString());
+      if (data.remakeType) fd.append("remakeType", data.remakeType);
+      if (data.originalCaseId) fd.append("originalCaseId", data.originalCaseId);
 
       if (data.scanHtml) fd.append("scanHtml", data.scanHtml);
       if (data.rxPdf) fd.append("rxPdf", data.rxPdf);
@@ -118,6 +126,7 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
 
       const r = await fetch("/api/cases/new", { method: "POST", body: fd });
       const j = await r.json().catch(() => ({}));
+
       if (!r.ok) throw new Error(j.error || "Create failed");
 
       setOk("Case created. Redirecting…");
@@ -134,6 +143,10 @@ export default function NewCaseForm({ doctors }: { doctors: DoctorRow[] }) {
         <DoctorSelection doctors={doctors} data={data} update={update} />
         <CaseInfo data={data} update={update} />
         <TeethSelection data={data} update={update} />
+        
+        {/* ✅ RENDER NEW REMAKE MODULE HERE */}
+        <RemakeOptions data={data} onChange={update} />
+        
         <ProductionFiles data={data} update={update} />
 
         <div className="flex flex-col items-end gap-3 pt-6 border-t border-border">

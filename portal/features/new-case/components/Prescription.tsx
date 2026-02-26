@@ -27,7 +27,7 @@ export default function Prescription({ data, onChange }: Props) {
           <select
             value={data.product}
             onChange={(e) => onChange({ product: e.target.value as ProductType })}
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition appearance-none"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition-colors duration-200 appearance-none"
           >
             {PRODUCTS.map(p => (
               <option key={p} value={p} className="bg-gray-900">
@@ -43,7 +43,7 @@ export default function Prescription({ data, onChange }: Props) {
             value={data.material || ""}
             onChange={(e) => onChange({ material: e.target.value as any })}
             placeholder="e.g. Zirconia"
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200"
           />
         </div>
       </div>
@@ -59,7 +59,7 @@ export default function Prescription({ data, onChange }: Props) {
             value={data.shade}
             onChange={(e) => onChange({ shade: e.target.value })}
             placeholder={isShadeRequired ? "Required (e.g. A2)" : "Optional"}
-            className={`w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition ${isShadeRequired && !data.shade ? "border-red-500/50" : "border-border"}`}
+            className={`w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200 ${isShadeRequired && !data.shade ? "border-red-500/50" : "border-border"}`}
           />
         </div>
 
@@ -70,7 +70,7 @@ export default function Prescription({ data, onChange }: Props) {
             value={data.shadeGingival || ""}
             onChange={(e) => onChange({ shadeGingival: e.target.value })}
             placeholder="e.g. Pink"
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200"
           />
         </div>
 
@@ -81,21 +81,21 @@ export default function Prescription({ data, onChange }: Props) {
             value={data.shadeIncisal || ""}
             onChange={(e) => onChange({ shadeIncisal: e.target.value })}
             placeholder="e.g. Translucent"
-            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition"
+            className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200"
           />
         </div>
       </div>
        
+      {/* ROW 3: Doctor Preferences */}
       <div className="space-y-2">
         <div className="flex justify-between items-center">
-            <label className="text-sm font-medium text-muted">Designer Preferences</label>
+            <label className="text-sm font-medium text-muted">Doctor Preferences</label>
             <span className="text-[10px] text-muted">Auto-filled from doctor profile</span>
         </div>
         <textarea
-          value={data.designPreferences || ""}
-          onChange={(e) => onChange({ designPreferences: e.target.value })}
-          placeholder="E.g. Contacts heavy, light occlusion, open embrasures..."
-          className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition h-24 resize-none"
+          value={data.doctorPreferences || ""}
+          onChange={(e) => onChange({ doctorPreferences: e.target.value })}
+          className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none h-24 resize-none transition-colors duration-200"
         />
       </div>
     </div>

@@ -218,17 +218,16 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
        </div>
       )}
 
-      {/* 4. DESIGN PREFERENCES */}
+      {/* 4. DOCTOR PREFERENCES */}
       <div className="space-y-2">
          <div className="flex justify-between items-center">
-             <label className="text-sm font-medium text-muted">Designer Preferences</label>
+             <label className="text-sm font-medium text-muted">Doctor Preferences</label>
              <span className="text-[10px] text-muted">Auto-filled from doctor profile</span>
          </div>
          <textarea
-           value={data.designPreferences}
-           onChange={(e) => update({ designPreferences: e.target.value })}
-           placeholder="E.g. Contacts heavy, light occlusion, open embrasures..."
-           className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200 h-24 resize-none"
+           value={data.doctorPreferences || ""}
+           onChange={(e) => update({ doctorPreferences: e.target.value })}
+           className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition-colors duration-200 h-24 resize-none"
          />
          {data.retentionType && (
            <p className="text-xs text-accent">
@@ -236,7 +235,6 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
            </p>
          )}
       </div>
-
     </div>
   );
 }

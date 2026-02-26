@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CopyableId from "@/components/CopyableId";
-import { formatProductName } from "@/lib/pricing"; // ✅ Imported formatter
+import { formatProductName } from "@/lib/pricing";
 
 type SortConfig = {
   key: string | null;
@@ -22,11 +22,12 @@ const SortableHeader = ({
   label, colKey, sortConfig, onSort, className = "", align = "left"
 }: any) => {
   const isActive = sortConfig.key === colKey;
+
   return (
     <th 
       className={`
         h-12 p-0 font-medium cursor-pointer transition-colors duration-200 select-none group border-b-2 outline-none whitespace-nowrap align-middle
-        ${isActive ? "text-accent border-accent" : "text-muted border-transparent hover:text-foreground"}
+        ${isActive ? "text-accent border-accent" : "text-muted border-transparent hover:text-foreground hover:bg-[var(--accent-dim)]"}
         ${className}
       `}
       onClick={() => onSort(colKey)}
@@ -51,10 +52,13 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
 
   const sortedRows = useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) return rows;
+    const key = sortConfig.key;
+    const direction = sortConfig.direction;
+
     return [...rows].sort((a, b) => {
       let aVal: any = "";
       let bVal: any = "";
-      switch (sortConfig.key) {
+      switch (key) {
         case "alias": aVal = a.patientAlias; bVal = b.patientAlias; break;
         case "id": aVal = a.id; bVal = b.id; break;
         case "doctor": aVal = a.doctorName || ""; bVal = b.doctorName || ""; break;
@@ -70,8 +74,8 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
         case "comm": aVal = a.commissionCost; bVal = b.commissionCost; break;
         case "margin": aVal = a.margin; bVal = b.margin; break;
       }
-      if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
+      if (aVal < bVal) return direction === "asc" ? -1 : 1;
+      if (aVal > bVal) return direction === "asc" ? 1 : -1;
       return 0;
     });
   }, [rows, sortConfig]);
@@ -95,7 +99,7 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
   };
 
   return (
-    <div className="flex-1 min-h-0 rounded-xl border border-border bg-surface overflow-hidden flex flex-col shadow-2xl">
+    <div className="flex-1 min-h-0 rounded-xl border border-border bg-surface overflow-hidden flex flex-col shadow-2xl transition-colors">
       <div className="flex-1 overflow-auto custom-scrollbar">
         <table className="w-full text-left text-sm min-w-[1800px]">
           <thead className="bg-surface text-muted sticky top-0 backdrop-blur-md z-10 border-b border-border h-12">
@@ -109,11 +113,11 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
                 <SortableHeader label="Sales Rep" colKey="rep" sortConfig={sortConfig} onSort={handleSort} className="w-[120px]" />
                 <SortableHeader label="Product" colKey="product" sortConfig={sortConfig} onSort={handleSort} className="min-w-[120px]" />
                 <SortableHeader label="Units" colKey="units" sortConfig={sortConfig} onSort={handleSort} className="w-[50px]" align="center" />
-                <SortableHeader label="Revenue" colKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-emerald-400" align="right" />
-                <SortableHeader label="Haus Cost" colKey="haus" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-blue-400" align="right" />
-                <SortableHeader label="Design Fee" colKey="design" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-purple-400" align="right" />
-                <SortableHeader label="Comm." colKey="comm" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-orange-400" align="right" />
-                <SortableHeader label="Margin" colKey="margin" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px]" align="right" />
+                <SortableHeader label="Revenue" colKey="revenue" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-emerald-500" align="right" />
+                <SortableHeader label="Haus Cost" colKey="haus" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-blue-500" align="right" />
+                <SortableHeader label="Design Fee" colKey="design" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-purple-500" align="right" />
+                <SortableHeader label="Comm." colKey="comm" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-orange-500" align="right" />
+                <SortableHeader label="Margin" colKey="margin" sortConfig={sortConfig} onSort={handleSort} className="min-w-[60px] text-foreground" align="right" />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -126,38 +130,37 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
                 <tr key={r.id} className="hover:bg-[var(--accent-dim)] transition-colors group h-12">
                     <td className="px-4 font-medium text-foreground truncate">{r.patientAlias}</td>
                     <td className="px-4"><CopyableId id={r.id} truncate /></td>
-                    <td className="px-4 text-foreground/80 truncate">{r.doctorName || "—"}</td>
+                    <td className="px-4 text-foreground/90 truncate">{r.doctorName || "—"}</td>
                     <td className="px-4 text-muted text-xs truncate">{r.clinic.name}</td>
                     <td className="px-4 text-muted text-xs font-mono">{new Date(r.createdAt).toLocaleDateString()}</td>
                     <td className="px-4 text-muted">
                         {r.designerName ? (
                             <div className="flex items-center gap-2">
-                                <div className="w-5 h-5 rounded-full bg-purple-500/10 text-purple-300 text-[10px] font-bold flex items-center justify-center border border-purple-500/20 shrink-0">
+                                <div className="w-5 h-5 rounded-full bg-purple-500/10 text-purple-500 text-[10px] font-bold flex items-center justify-center border border-purple-500/20 shrink-0">
                                     {r.designerName.substring(0, 1).toUpperCase()}
                                 </div>
-                                <span className="text-xs truncate max-w-[120px]" title={r.designerName}>{r.designerName}</span>
+                                <span className="text-xs truncate max-w-[120px] text-foreground" title={r.designerName}>{r.designerName}</span>
                             </div>
-                        ) : <span className="text-white/20 italic text-xs">-</span>}
+                        ) : <span className="text-muted/50 italic text-xs">-</span>}
                     </td>
-                    <td className="px-4 text-white/70">
+                    <td className="px-4 text-foreground">
                         {r.salesRepName ? (
                             <div className="flex items-center gap-2">
-                                <span className="text-xs bg-orange-500/10 text-orange-300 px-2 py-0.5 rounded border border-orange-500/20 truncate max-w-[100px]" title={r.salesRepName}>
+                                <span className="text-xs bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded border border-orange-500/20 truncate max-w-[100px]" title={r.salesRepName}>
                                     {r.salesRepName.split(' ')[0]}
                                 </span>
                             </div>
-                        ) : <span className="text-white/20 italic text-xs">-</span>}
+                        ) : <span className="text-muted/50 italic text-xs">-</span>}
                     </td>
                     <td className="px-4 text-foreground">
-                        {/* ✅ Applied global formatter */}
                         <div className="text-xs font-medium truncate capitalize">{formatProductName(r.product, !!r.isBridge)}</div>
                         {r.material && <div className="text-[10px] text-muted truncate">{r.material}</div>}
                     </td>
                     <td className="px-4 text-center text-muted">{r.units}</td>
-                    <td className="px-4 text-right font-medium text-emerald-400/90">{formatMoney(Number(r.cost))}</td>
-                    <td className="px-4 text-right text-blue-300/80">{formatMoney(r.millingCost)}</td>
-                    <td className="px-4 text-right text-purple-300/80">{formatMoney(r.designCost)}</td>
-                    <td className="px-4 text-right text-orange-300/80">{formatMoney(r.commissionCost)}</td>
+                    <td className="px-4 text-right font-medium text-emerald-500/90">{formatMoney(Number(r.cost))}</td>
+                    <td className="px-4 text-right text-blue-500/90">{formatMoney(r.millingCost)}</td>
+                    <td className="px-4 text-right text-purple-500/90">{formatMoney(r.designCost)}</td>
+                    <td className="px-4 text-right text-orange-500/90">{formatMoney(r.commissionCost)}</td>
                     <td className="px-4 text-right font-bold text-foreground">{formatMoney(r.margin)}</td>
                 </tr>
             ))}
@@ -174,7 +177,7 @@ export default function FinancialsTable({ rows, totalCount }: { rows: any[], tot
           <button
             onClick={handleLoadMore}
             disabled={loadingMore}
-            className="px-4 py-1.5 rounded-lg bg-surface hover:bg-[var(--accent-dim)] text-xs font-bold text-foreground transition-colors flex items-center gap-2 border border-border"
+            className="px-4 py-1.5 rounded-lg bg-surface hover:bg-[var(--accent-dim)] text-xs font-bold text-foreground transition-all flex items-center gap-2 border border-border cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
           >
             {loadingMore ? (
               <>

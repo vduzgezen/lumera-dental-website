@@ -15,11 +15,11 @@ function getFormattedDate() {
   return `${mm}-${dd}-${yyyy}`;
 }
 
-// ✅ Allow dots for shades like "A3.5", allow hyphens, strip others
+// Allow dots for shades like "A3.5", allow hyphens, strip others
 function sanitize(str: string | null | undefined) {
   if (!str) return "";
-  const safe = str.replace(/\//g, "-"); // Replace slashes with hyphens (e.g. A2/A3 -> A2-A3)
-  return safe.replace(/[^a-zA-Z0-9.-]/g, ""); 
+  const safe = str.replace(/\//g, "-"); 
+  return safe.replace(/[^a-zA-Z0-9.-]/g, "");
 }
 
 function toCamelCase(str: string | null | undefined): string {
@@ -36,9 +36,62 @@ function getOutputSuffix(dbLabel: string): string {
   if (l === "model_top") return "_ModelTop";
   if (l === "model_bottom") return "_ModelBottom";
   if (l === "rx_pdf") return "_RX";
-  if (l === "design_only") return "_Design"; // ✅ Only design_only gets _Design.stl
-  if (l === "construction_info") return "_Design"; // Matches suffix but gets .constructionInfo extension below
+  if (l === "design_only") return "_Design";
+  if (l === "construction_info") return "_Design";
   return "_File";
+}
+
+// ✅ NEW: Helper to generate the Order Ticket Text
+function generateOrderTicket(c: any): string {
+  // 1. Clean up Product Name (Remove redundancy if product already contains material name)
+  const rawProduct = c.product.replace(/_/g, " ");
+  const rawMaterial = c.material ? c.material.replace(/_/g, " ") : "";
+  
+  let productDisplay = rawProduct;
+  if (rawMaterial && !rawProduct.includes(rawMaterial)) {
+      productDisplay += ` (${rawMaterial})`;
+  }
+
+  const isImplant = c.product.includes("IMPLANT");
+  
+  // 2. Extract retention type
+  let retentionLine = "";
+  if (isImplant) {
+     const prefs = (c.doctorPreferences || "").toUpperCase();
+     const retentionType = prefs.includes("SCREW RETAINED") ? "SCREW RETAINED" : 
+                           prefs.includes("CEMENT RETAINED") ? "CEMENT RETAINED" : "SEE NOTES / UNKNOWN";
+     retentionLine = `RETENTION:  ${retentionType}\n`;
+  }
+
+  // 3. Clean up Shade formatting (Only show what was actually requested)
+  const shadeParts = [];
+  if (c.shade) shadeParts.push(`Body: ${c.shade}`);
+  if (c.shadeGingival) shadeParts.push(`Gingival: ${c.shadeGingival}`);
+  if (c.shadeIncisal) shadeParts.push(`Incisal: ${c.shadeIncisal}`);
+  
+  const shadeDisplay = shadeParts.length > 0 ? shadeParts.join(" | ") : "None Required";
+
+  return `=========================================
+LUMERA DENTAL - PRODUCTION TICKET
+=========================================
+CASE ID:    ${c.id}
+PATIENT:    ${c.patientAlias} (${c.patientFirstName || ""} ${c.patientLastName || ""})
+DOCTOR:     ${c.doctorName || "Unknown Doctor"}
+CLINIC:     ${c.clinic?.name || "Unknown Clinic"}
+-----------------------------------------
+PRODUCT:    ${productDisplay}
+${retentionLine}TOOTH #:    ${c.toothCodes}
+SHADE:      ${shadeDisplay}
+-----------------------------------------
+SHIP TO:
+${c.clinic?.name || "Unknown Clinic"}
+Attn: ${c.doctorName || "Doctor"}
+${c.clinic?.address?.street || "No Street Provided"}
+${c.clinic?.address?.city || "No City"}, ${c.clinic?.address?.state || ""} ${c.clinic?.address?.zipCode || ""}
+=========================================
+NOTES:
+${c.doctorPreferences || "None"}
+=========================================`;
 }
 
 export async function POST(req: Request) {
@@ -59,7 +112,9 @@ export async function POST(req: Request) {
       }
     });
 
-    const fileList: { key: string; archivePath: string; isMock?: boolean }[] = [];
+    // We now store a Buffer payload for dynamically generated text files alongside S3 keys
+    const fileList: { key?: string; archivePath: string; isMock?: boolean; textPayload?: string }[] = [];
+    
     const rootFolder = `Download_${getFormattedDate()}`;
 
     for (const c of cases) {
@@ -77,10 +132,10 @@ export async function POST(req: Request) {
         material = "";
       }
       
-      // ✅ FORMAT: DoeJohn_A5-A2-A2_ZirconiaMl
       const caseFolderName = `${last}${first}_${shade}_${type}${material}`;
-      
-      // ✅ UPDATED: Removed 'design_with_model' and 'scan'
+      const caseFolderPath = path.join(rootFolder, routingFolder, caseFolderName);
+
+      // 1. Queue the STL/PDF Files
       const relevantLabels = [
         "model_top", 
         "model_bottom", 
@@ -101,11 +156,18 @@ export async function POST(req: Request) {
         if (file.label === "construction_info") ext = ".constructionInfo";
 
         const finalFileName = `${alias}${suffix}${ext}`;
-        const archivePath = path.join(rootFolder, routingFolder, caseFolderName, finalFileName);
+        const archivePath = path.join(caseFolderPath, finalFileName);
         
         const isMock = key.startsWith("mock/");
         fileList.push({ key, archivePath, isMock });
       }
+
+      // 2. ✅ Queue the Auto-Generated Order Ticket for THIS specific case
+      const ticketContent = generateOrderTicket(c);
+      fileList.push({
+          archivePath: path.join(caseFolderPath, `Order_Ticket_${c.patientAlias}.txt`),
+          textPayload: ticketContent
+      });
     }
 
     if (fileList.length === 0) {
@@ -133,16 +195,21 @@ export async function POST(req: Request) {
 
         for (const f of fileList) {
           try {
+            // ✅ Handle generated Text Files
+            if (f.textPayload) {
+                archive.append(f.textPayload, { name: f.archivePath });
+                continue;
+            }
+
+            // Handle standard S3 / Mock files
             if (f.isMock) {
-               // ✅ Support for mock testing files
                archive.append(`Mock file content for ${f.archivePath}\n(Testing only)`, { name: f.archivePath });
-            } else {
+            } else if (f.key) {
                const s3Stream = await getFileStream(f.key);
                archive.append(s3Stream as Readable, { name: f.archivePath });
             }
           } catch (e) {
             console.warn(`[Batch Download] Skipping missing file key: ${f.key}`, e);
-            // Insert placeholder error file so the technician knows a file was expected but missing
             archive.append(`Error: File missing from storage.\nKey: ${f.key}`, { name: `${f.archivePath}.ERROR.txt` });
           }
         }

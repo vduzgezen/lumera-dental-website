@@ -21,7 +21,7 @@ export default async function AddressesPage() {
     <div className="flex flex-col h-full space-y-4">
       <AddressListClient addresses={addresses} />
 
-      <div className="flex-none text-center text-xs text-white/30 pt-2 border-t border-white/5">
+      <div className="flex-none text-center text-xs text-muted pt-2 border-t border-border">
         {total > addresses.length 
             ? `Showing recent ${addresses.length} of ${total} addresses.` 
             : `Showing all ${addresses.length} addresses.`}
