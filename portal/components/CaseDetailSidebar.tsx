@@ -6,6 +6,7 @@ import HtmlViewerUploader from "@/features/case-dashboard/components/HtmlViewerU
 import FileUploader from "@/components/ui/FileUploader";
 import CommentsPanel from "@/features/case-dashboard/components/CommentsPanel";
 import DesignerPicker from "@/components/DesignerPicker";
+import PreferencesTab from "@/features/case-dashboard/components/PreferencesTab"; // ✅ IMPORT NEW TAB
 import { CaseFile } from "@prisma/client";
 import type { Role } from "@/lib/types";
 
@@ -17,11 +18,12 @@ type Props = {
   events: any[];   
   currentUserName: string;
   doctorPreferences?: string | null;
+  caseNotes?: string | null;
   assigneeId?: string | null;
   designers?: { id: string; name: string | null; email: string }[];
   toothCodes: string;
   isBridge: boolean;
-  product: string; // ✅ NEW: We need the product name to explicitly check for nightguards
+  product: string; 
 };
 
 function fmtDate(d?: Date | string | null) {
@@ -37,6 +39,7 @@ export default function CaseDetailSidebar({
   events,
   currentUserName,
   doctorPreferences,
+  caseNotes,
   assigneeId,
   designers = [],
   toothCodes,
@@ -79,7 +82,7 @@ export default function CaseDetailSidebar({
     return {
       scanHtml: labels.has("scan_html"),
       designHtml: labels.has("design_with_model_html"),
-      designOnly: labels.has("design_only") || labels.has("design_stl_undefined") || labels.has("design_stl_"), // ✅ Catch edge cases
+      designOnly: labels.has("design_only") || labels.has("design_stl_undefined") || labels.has("design_stl_"), 
       rx: labels.has("rx_pdf"),
       construction: labels.has("construction_info"),
       modelTop: labels.has("model_top"),
@@ -91,7 +94,6 @@ export default function CaseDetailSidebar({
     return toothCodes.split(",").map(t => t.trim()).filter(Boolean);
   }, [toothCodes]);
 
-  // ✅ FIX: Bulletproof Appliance Check. If it says Nightguard, it's an appliance regardless of tooth codes.
   const isAppliance = (!isBridge && teeth.length === 0) || product.toUpperCase().includes("NIGHTGUARD");
 
   const InternalNav = () => (
@@ -103,7 +105,7 @@ export default function CaseDetailSidebar({
         <select
           value={activeTab}
           onChange={(e) => handleTabChange(e.target.value as any)}
-          className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground appearance-none focus:border-accent/50 outline-none cursor-pointer"
+          className="w-full bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground appearance-none focus:border-accent/50 outline-none cursor-pointer transition-colors duration-200"
         >
           <option value="files">📂 Files & Uploads</option>
           <option value="discussion">💬 Discussion ({comments.length})</option>
@@ -129,6 +131,7 @@ export default function CaseDetailSidebar({
       >
          Discussion
       </button>
+  
       <button
         onClick={() => handleTabChange("history")}
         className={`flex-1 h-full flex items-center justify-center text-sm font-medium border-b-2 transition-colors ${
@@ -141,10 +144,10 @@ export default function CaseDetailSidebar({
   );
 
   return (
-    <div className="flex flex-col h-full rounded-xl border border-border bg-background overflow-hidden shadow-2xl">
+    <div className="flex flex-col h-full rounded-xl border border-border bg-background overflow-hidden shadow-2xl transition-colors duration-200">
       
       {role === "admin" && (
-        <div className="p-3 border-b border-border bg-background">
+        <div className="p-3 border-b border-border bg-background transition-colors duration-200">
           <div className="flex items-center justify-between mb-1">
              <div className="text-[10px] font-bold text-muted uppercase tracking-wider">Assigned Designer</div>
           </div>
@@ -154,7 +157,7 @@ export default function CaseDetailSidebar({
 
       {isInternal ? <InternalNav /> : <CustomerNav />}
 
-      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-background">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-background transition-colors duration-200">
         
         {isInternal && (
           <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 animate-in fade-in duration-200 ${activeTab === "files" ? "block" : "hidden"}`}>
@@ -162,37 +165,35 @@ export default function CaseDetailSidebar({
                  <div className="space-y-3">
                     <div className="text-[10px] font-bold text-accent uppercase tracking-wider border-b border-border pb-1">Visualization</div>
                     
-                    <div className="bg-surface p-3 rounded-lg border border-border">
-                         <div className="flex items-center justify-between mb-2">
+                    <div className="bg-surface p-3 rounded-lg border border-border transition-colors duration-200">
+                        <div className="flex items-center justify-between mb-2">
                              <span className="text-xs font-medium text-foreground/80">Scan HTML</span>
                             {fileStatus.scanHtml && <span className="text-[10px] text-accent">✓ Ready</span>}
-                         </div>
+                        </div>
                         <HtmlViewerUploader caseId={caseId} role={role} label="scan_html" description="Exocad Web Viewer (Scan)" />
                     </div>
 
-                    <div className="bg-surface p-3 rounded-lg border border-border">
-                         <div className="flex items-center justify-between mb-2">
+                    <div className="bg-surface p-3 rounded-lg border border-border transition-colors duration-200">
+                        <div className="flex items-center justify-between mb-2">
                              <span className="text-xs font-medium text-foreground/80">Design HTML</span>
                             {fileStatus.designHtml && <span className="text-[10px] text-accent">✓ Ready</span>}
-                         </div>
+                        </div>
                         <HtmlViewerUploader caseId={caseId} role={role} label="design_with_model_html" description="Exocad Web Viewer (Design)" />
                     </div>
 
-                    <div className="bg-surface p-3 rounded-lg border border-border">
+                    <div className="bg-surface p-3 rounded-lg border border-border transition-colors duration-200">
                         {isBridge || isAppliance ? (
-                          // BRIDGE OR APPLIANCE: Single File Uploader
                           <div>
                             <div className="flex items-center justify-between mb-2">
-                              <span className="text-xs font-medium text-foreground/80">{isAppliance ? "Appliance Design (STL)" : "Bridge Design (STL)"}</span>
+                               <span className="text-xs font-medium text-foreground/80">{isAppliance ? "Appliance Design (STL)" : "Bridge Design (STL)"}</span>
                                 {fileStatus.designOnly && <span className="text-[10px] text-accent">✓ Ready</span>}
                             </div>
                             <FileUploader caseId={caseId} role={role} label="design_only" description={isAppliance ? "Appliance STL" : "Merged Bridge STL"} />
                           </div>
                         ) : (
-                          // INDIVIDUAL UNITS
                           <div className="space-y-4">
                              <div className="flex items-center justify-between mb-1">
-                                 <span className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Individual Designs</span>
+                                <span className="text-xs font-bold text-foreground/80 uppercase tracking-wider">Individual Designs</span>
                              </div>
                              {teeth.map((tooth) => {
                                 const label = `design_stl_${tooth}`;
@@ -200,11 +201,11 @@ export default function CaseDetailSidebar({
                                 return (
                                   <div key={tooth} className="pt-2 border-t border-border/50 first:border-0 first:pt-0">
                                       <div className="flex items-center justify-between mb-2">
-                                          <span className="text-xs font-medium text-foreground/80">Tooth #{tooth}</span>
+                                        <span className="text-xs font-medium text-foreground/80">Tooth #{tooth}</span>
                                           {hasFile && <span className="text-[10px] text-accent">✓ Ready</span>}
                                       </div>
                                       <FileUploader caseId={caseId} role={role} label={label as any} description={`Design #${tooth} (STL)`} />
-                                   </div>
+                                  </div>
                                 );
                              })}
                              
@@ -226,31 +227,31 @@ export default function CaseDetailSidebar({
                 <div className="space-y-3">
                     <div className="text-[10px] font-bold text-accent uppercase tracking-wider border-b border-border pb-1">Production</div>
                     
-                    <div className="bg-surface p-3 rounded-lg border border-border space-y-2">
-                         <div className="flex items-center justify-between">
+                    <div className="bg-surface p-3 rounded-lg border border-border space-y-2 transition-colors duration-200">
+                        <div className="flex items-center justify-between">
                               <span className="text-xs font-medium text-foreground/80">Rx PDF</span>
                              {fileStatus.rx && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
                         <FileUploader caseId={caseId} role={role} label="rx_pdf" accept=".pdf" description="Prescription PDF" />
                     </div>
 
-                    <div className="bg-surface p-3 rounded-lg border border-border space-y-2">
-                         <div className="flex items-center justify-between">
+                    <div className="bg-surface p-3 rounded-lg border border-border space-y-2 transition-colors duration-200">
+                        <div className="flex items-center justify-between">
                              <span className="text-xs font-medium text-foreground/80">Construction Info</span>
                              {fileStatus.construction && <span className="text-[10px] text-accent">✓ Ready</span>}
-                         </div>
+                        </div>
                         <FileUploader caseId={caseId} role={role} label="construction_info" description="Construction/Milling Params" />
                      </div>
 
-                    <div className="bg-surface p-3 rounded-lg border border-border space-y-2">
-                         <div className="flex items-center justify-between">
+                    <div className="bg-surface p-3 rounded-lg border border-border space-y-2 transition-colors duration-200">
+                        <div className="flex items-center justify-between">
                              <span className="text-xs font-medium text-foreground/80">Model Top</span>
                              {fileStatus.modelTop && <span className="text-[10px] text-accent">✓ Ready</span>}
                         </div>
                         <FileUploader caseId={caseId} role={role} label="model_top" accept=".stl,.ply" description="Upper Model STL" />
                    </div>
 
-                    <div className="bg-surface p-3 rounded-lg border border-border space-y-2">
+                    <div className="bg-surface p-3 rounded-lg border border-border space-y-2 transition-colors duration-200">
                         <div className="flex items-center justify-between">
                              <span className="text-xs font-medium text-foreground/80">Model Bottom</span>
                               {fileStatus.modelBottom && <span className="text-[10px] text-accent">✓ Ready</span>}
@@ -262,7 +263,7 @@ export default function CaseDetailSidebar({
           </div>
         )}
 
-        {/* ✅ DISCUSSION TAB */}
+        {/* DISCUSSION TAB */}
         <div className={`flex-1 flex flex-col min-h-0 p-4 animate-in fade-in duration-200 ${activeTab === "discussion" ? "flex" : "hidden"}`}>
              <CommentsPanel caseId={caseId} comments={comments} canPost={true} currentUserName={currentUserName} currentUserRole={role} />
         </div>
@@ -273,27 +274,24 @@ export default function CaseDetailSidebar({
               <div className="relative border-l border-border ml-2 space-y-6 pt-2">
                 {events.map((ev) => (
                   <div key={ev.id} className="ml-4 relative">
-                    <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-accent border border-background" />
-                     <div className="flex flex-col"><span className="text-sm font-medium text-foreground">{ev.to.replace(/_/g, " ")}</span><span className="text-xs text-muted font-mono mt-0.5">{fmtDate(ev.at)}</span></div>
-                    {ev.note && <div className="mt-2 text-xs text-foreground/80 bg-surface p-2 rounded border border-border italic">&quot;{ev.note}&quot;</div>}
+                    <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-accent border border-background transition-colors duration-200" />
+                    <div className="flex flex-col"><span className="text-sm font-medium text-foreground">{ev.to.replace(/_/g, " ")}</span><span className="text-xs text-muted font-mono mt-0.5">{fmtDate(ev.at)}</span></div>
+                    {ev.note && <div className="mt-2 text-xs text-foreground/80 bg-surface p-2 rounded border border-border italic transition-colors duration-200">&quot;{ev.note}&quot;</div>}
                   </div>
                 ))}
-                </div>
+              </div>
             )}
         </div>
 
-        {/* PREFERENCES TAB (Internal Only) */}
+        {/* ✅ PREFERENCES TAB (Extracted for cleaner architecture) */}
         {isInternal && (
-          <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 animate-in fade-in duration-200 ${activeTab === "preferences" ? "block" : "hidden"}`}>
-            {doctorPreferences ? (
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold text-accent uppercase tracking-wider">Doctor Preferences</h4>
-                <div className="bg-surface border border-border rounded-lg p-3"><p className="text-sm text-foreground/90 whitespace-pre-wrap leading-relaxed">{doctorPreferences}</p></div>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-20 text-muted text-sm italic">No preferences set for this case.</div>
-            )}
-          </div>
+           <PreferencesTab 
+             isActive={activeTab === "preferences"}
+             caseId={caseId}
+             doctorPreferences={doctorPreferences}
+             caseNotes={caseNotes}
+             role={role}
+           />
         )}
       </div>
     </div>
