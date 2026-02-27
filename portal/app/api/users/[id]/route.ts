@@ -41,14 +41,11 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
      set: secondaryIds.map((cid: string) => ({ id: cid }))
   };
 
-  // ✅ FIXED: Sales Rep Logic using Relation Syntax
-  // We cannot set 'salesRepId' directly. We must use connect/disconnect.
+  // Sales Rep Logic
   let salesRepConfig = undefined;
   if (data.salesRepId) {
-    // If an ID is provided, Connect it
     salesRepConfig = { connect: { id: data.salesRepId } };
   } else {
-    // If ID is empty/null, Disconnect it
     salesRepConfig = { disconnect: true };
   }
 
@@ -58,10 +55,11 @@ export async function PUT(req: Request, props: { params: Promise<{ id: string }>
     role: data.role,
     clinic: clinicConfig,
     secondaryClinics: secondaryConfig,
-    salesRep: salesRepConfig, // ✅ Use the relation object
+    salesRep: salesRepConfig, 
     phoneNumber: data.phoneNumber || null,
     preferenceNote: data.preferenceNote || null,
-    address: addressConfig
+    address: addressConfig,
+    requiresStrictDesignApproval: data.requiresStrictDesignApproval === true // ✅ Save to DB
   };
 
   try {

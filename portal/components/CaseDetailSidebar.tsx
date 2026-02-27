@@ -6,7 +6,8 @@ import HtmlViewerUploader from "@/features/case-dashboard/components/HtmlViewerU
 import FileUploader from "@/components/ui/FileUploader";
 import CommentsPanel from "@/features/case-dashboard/components/CommentsPanel";
 import DesignerPicker from "@/components/DesignerPicker";
-import PreferencesTab from "@/features/case-dashboard/components/PreferencesTab"; // ✅ IMPORT NEW TAB
+import PreferencesTab from "@/features/case-dashboard/components/PreferencesTab";
+import HistoryTab from "@/features/case-dashboard/components/HistoryTab"; // ✅ IMPORT NEW TAB
 import { CaseFile } from "@prisma/client";
 import type { Role } from "@/lib/types";
 
@@ -25,11 +26,6 @@ type Props = {
   isBridge: boolean;
   product: string; 
 };
-
-function fmtDate(d?: Date | string | null) {
-  if (!d) return "—";
-  return new Date(d).toLocaleString();
-}
 
 export default function CaseDetailSidebar({
   caseId,
@@ -159,6 +155,7 @@ export default function CaseDetailSidebar({
 
       <div className="flex-1 flex flex-col min-h-0 overflow-hidden bg-background transition-colors duration-200">
         
+        {/* FILES TAB */}
         {isInternal && (
           <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 animate-in fade-in duration-200 ${activeTab === "files" ? "block" : "hidden"}`}>
              <div className="space-y-8">
@@ -201,7 +198,7 @@ export default function CaseDetailSidebar({
                                 return (
                                   <div key={tooth} className="pt-2 border-t border-border/50 first:border-0 first:pt-0">
                                       <div className="flex items-center justify-between mb-2">
-                                        <span className="text-xs font-medium text-foreground/80">Tooth #{tooth}</span>
+                                         <span className="text-xs font-medium text-foreground/80">Tooth #{tooth}</span>
                                           {hasFile && <span className="text-[10px] text-accent">✓ Ready</span>}
                                       </div>
                                       <FileUploader caseId={caseId} role={role} label={label as any} description={`Design #${tooth} (STL)`} />
@@ -236,26 +233,26 @@ export default function CaseDetailSidebar({
                     </div>
 
                     <div className="bg-surface p-3 rounded-lg border border-border space-y-2 transition-colors duration-200">
-                        <div className="flex items-center justify-between">
+                         <div className="flex items-center justify-between">
                              <span className="text-xs font-medium text-foreground/80">Construction Info</span>
                              {fileStatus.construction && <span className="text-[10px] text-accent">✓ Ready</span>}
-                        </div>
+                         </div>
                         <FileUploader caseId={caseId} role={role} label="construction_info" description="Construction/Milling Params" />
                      </div>
 
                     <div className="bg-surface p-3 rounded-lg border border-border space-y-2 transition-colors duration-200">
-                        <div className="flex items-center justify-between">
+                         <div className="flex items-center justify-between">
                              <span className="text-xs font-medium text-foreground/80">Model Top</span>
                              {fileStatus.modelTop && <span className="text-[10px] text-accent">✓ Ready</span>}
-                        </div>
+                         </div>
                         <FileUploader caseId={caseId} role={role} label="model_top" accept=".stl,.ply" description="Upper Model STL" />
                    </div>
 
                     <div className="bg-surface p-3 rounded-lg border border-border space-y-2 transition-colors duration-200">
-                        <div className="flex items-center justify-between">
+                         <div className="flex items-center justify-between">
                              <span className="text-xs font-medium text-foreground/80">Model Bottom</span>
                               {fileStatus.modelBottom && <span className="text-[10px] text-accent">✓ Ready</span>}
-                        </div>
+                         </div>
                         <FileUploader caseId={caseId} role={role} label="model_bottom" accept=".stl,.ply" description="Lower Model STL" />
                    </div>
                 </div>
@@ -268,22 +265,10 @@ export default function CaseDetailSidebar({
              <CommentsPanel caseId={caseId} comments={comments} canPost={true} currentUserName={currentUserName} currentUserRole={role} />
         </div>
 
-        {/* HISTORY TAB */}
-        <div className={`flex-1 overflow-y-auto custom-scrollbar p-4 animate-in fade-in duration-200 ${activeTab === "history" ? "block" : "hidden"}`}>
-            {events.length === 0 ? <p className="text-muted text-sm">No events yet.</p> : (
-              <div className="relative border-l border-border ml-2 space-y-6 pt-2">
-                {events.map((ev) => (
-                  <div key={ev.id} className="ml-4 relative">
-                    <div className="absolute -left-[21px] top-1.5 w-2.5 h-2.5 rounded-full bg-accent border border-background transition-colors duration-200" />
-                    <div className="flex flex-col"><span className="text-sm font-medium text-foreground">{ev.to.replace(/_/g, " ")}</span><span className="text-xs text-muted font-mono mt-0.5">{fmtDate(ev.at)}</span></div>
-                    {ev.note && <div className="mt-2 text-xs text-foreground/80 bg-surface p-2 rounded border border-border italic transition-colors duration-200">&quot;{ev.note}&quot;</div>}
-                  </div>
-                ))}
-              </div>
-            )}
-        </div>
+        {/* ✅ INJECTED HISTORY TAB */}
+        <HistoryTab isActive={activeTab === "history"} events={events} />
 
-        {/* ✅ PREFERENCES TAB (Extracted for cleaner architecture) */}
+        {/* PREFERENCES TAB */}
         {isInternal && (
            <PreferencesTab 
              isActive={activeTab === "preferences"}

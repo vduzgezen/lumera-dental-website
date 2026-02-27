@@ -16,6 +16,7 @@ async function signCommentAttachments(comment: any) {
         return { ...att, url: signed };
       } catch (e) {
         console.error("Failed to sign URL:", att.url);
+        
         return att;
       }
     })
@@ -40,7 +41,6 @@ export async function POST(
       where: { id: caseId },
       select: { id: true, doctorUserId: true, clinicId: true }
     });
-
     if (!dentalCase) {
       return NextResponse.json({ error: "Case not found" }, { status: 404 });
     }
@@ -57,7 +57,6 @@ export async function POST(
 
     const json = await request.json();
     const { body, attachmentFileId } = json;
-    
     if (!body && !attachmentFileId) {
       return NextResponse.json({ error: "Body or attachment required" }, { status: 400 });
     }
@@ -70,7 +69,6 @@ export async function POST(
         body: body || "",
       },
     });
-
     // 2. Link the attachment if present
     if (attachmentFileId) {
       await prisma.caseFile.update({
@@ -81,6 +79,16 @@ export async function POST(
       });
     }
 
+    // ✅ NEW: Update unread flags based on author's role
+    const isDoctor = session.role === "customer";
+    await prisma.dentalCase.update({
+        where: { id: caseId },
+        data: {
+            unreadForLab: isDoctor ? true : undefined,
+            unreadForDoctor: !isDoctor ? true : undefined
+        }
+    });
+
     // 3. Fetch result with attachments
     const finalComment = await prisma.caseComment.findUnique({
       where: { id: newComment.id },
@@ -88,7 +96,6 @@ export async function POST(
         attachments: true,
       } as any,
     });
-
     const signedComment = await signCommentAttachments(finalComment);
 
     return NextResponse.json(signedComment);
@@ -113,7 +120,6 @@ export async function GET(
     where: { id },
     select: { id: true, doctorUserId: true, clinicId: true }
   });
-
   if (!dentalCase) {
     return NextResponse.json({ error: "Case not found" }, { status: 404 });
   }
@@ -135,7 +141,6 @@ export async function GET(
       attachments: true,
     } as any, 
   });
-
   const signedComments = await Promise.all(comments.map(signCommentAttachments));
 
   return NextResponse.json({ comments: signedComments });

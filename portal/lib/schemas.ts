@@ -35,7 +35,8 @@ export type CreateCaseInput = z.infer<typeof CreateCaseSchema>;
 export const CreateUserSchema = z.object({
   email: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required"),
-  role: z.enum(["customer", "lab", "admin", "milling"]).default("customer"),
+  // ✅ FIX: Added "sales" to the allowed roles so the API doesn't reject Sales Reps
+  role: z.enum(["customer", "lab", "admin", "milling", "sales"]).default("customer"),
   phoneNumber: z.string().optional(),
   
   // Logic: Either clinicId OR newClinicName must be present for doctors

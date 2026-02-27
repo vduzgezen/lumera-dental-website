@@ -19,6 +19,7 @@ model Clinic {
   addressId String?
   address   Address? @relation(fields: [addressId], references: [id])
   phone     String?
+  
   // BILLING & FINANCIALS
   billingCycleDay Int     @default(1) 
   paymentTerms    Int     @default(30) 
@@ -29,6 +30,7 @@ model Clinic {
   bankName        String?
   bankLast4       String? 
   routingNumber   String?
+  
   // RELATIONS
   users           User[] // Primary doctors (One-to-Many)
   
@@ -55,6 +57,9 @@ model User {
   
   invitationToken String?  @unique 
   defaultDesignPreferences String?
+  
+  // ✅ TRIAGE ENGINE
+  requiresStrictDesignApproval Boolean @default(false)
   
   // PRIMARY CLINIC (One-to-Many)
   clinicId        String?
@@ -204,6 +209,13 @@ model DentalCase {
   shippingEta     DateTime?
   shippingCost    Decimal?    @default(0.00) // ✅ NEW: Store actual cost
   shippingBatchId String?
+
+  // ✅ TRIAGE & NOTIFICATION ENGINE
+  actionRequiredBy   String?     // "DOCTOR", "LAB", or null
+  unreadForDoctor    Boolean     @default(false)
+  unreadForLab       Boolean     @default(false)
+
+  // Legacy review fields (can keep for backward compatibility during transition)
   needsReview        Boolean   @default(false)
   reviewQuestion     String?
   reviewRequestedAt  DateTime?
@@ -222,6 +234,8 @@ model DentalCase {
   @@index([status])
   @@index([createdAt])
   @@index([orderDate])
+  // ✅ Indexing the new flag for hyper-fast "float to top" sorting
+  @@index([actionRequiredBy])
   @@map("Case")
 }
 
@@ -250,7 +264,7 @@ model Payment {
   clinic      Clinic        @relation(fields: [clinicId], references: [id])
   
   amount      Decimal
-  method      String        
+  method      String 
   referenceId String?
   postedAt    DateTime      @default(now())
 }

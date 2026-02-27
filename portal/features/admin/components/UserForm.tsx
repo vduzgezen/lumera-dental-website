@@ -1,10 +1,10 @@
-// portal/components/UserForm.tsx
+// portal/features/admin/components/UserForm.tsx
 "use client";
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AddressPicker, { AddressData } from "@/components/AddressPicker";
 import SearchableSelect from "@/components/SearchableSelect";
-import ClinicForm from "./ClinicForm"; 
+import ClinicForm from "./ClinicForm";
 
 type Clinic = { id: string; name: string };
 type UserOption = { id: string; name: string | null; email: string };
@@ -21,7 +21,7 @@ export default function UserForm({
   onClose?: () => void 
 }) {
   const router = useRouter();
-  
+
   // --- STATE ---
   const [formData, setFormData] = useState({
     name: initialData?.name || "",
@@ -30,7 +30,9 @@ export default function UserForm({
     clinicId: initialData?.clinicId || "", 
     phoneNumber: initialData?.phoneNumber || "",
     preferenceNote: initialData?.preferenceNote || "",
-    salesRepId: initialData?.salesRepId || "", // ✅ STATE
+    salesRepId: initialData?.salesRepId || "", 
+    // ✅ NEW: Strict Approval State
+    requiresStrictDesignApproval: initialData?.requiresStrictDesignApproval ?? false,
   });
 
   const [address, setAddress] = useState<AddressData>({
@@ -59,7 +61,6 @@ export default function UserForm({
   const isEdit = !!initialData;
 
   // --- HELPERS ---
-
   const toggleSecondary = (id: string) => {
     const next = new Set(secondaryIds);
     if (next.has(id)) next.delete(id);
@@ -71,7 +72,6 @@ export default function UserForm({
     return clinics.map(c => ({ id: c.id, label: c.name }));
   }, [clinics]);
 
-  // ✅ NEW: Rep Options
   const repOptions = useMemo(() => {
     return salesReps.map(r => ({ id: r.id, label: r.name || r.email }));
   }, [salesReps]);
@@ -81,7 +81,7 @@ export default function UserForm({
     
     return clinics
       .filter(c => 
-        c.id !== formData.clinicId && // Exclude primary
+        c.id !== formData.clinicId && 
         c.name.toLowerCase().includes(q)
       )
       .sort((a, b) => {
@@ -94,7 +94,6 @@ export default function UserForm({
   }, [clinics, formData.clinicId, secondarySearch, secondaryIds]);
 
   // --- SUBMIT ---
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
@@ -121,12 +120,12 @@ export default function UserForm({
       if (!res.ok) throw new Error(data.error || "Failed");
 
       setMsg(isEdit ? "User updated!" : "User created!");
-      
+
       if (!isEdit) {
         setFormData({
           name: "", email: "", role: "customer",
           clinicId: "", phoneNumber: "", preferenceNote: "",
-          salesRepId: ""
+          salesRepId: "", requiresStrictDesignApproval: false
         });
         setAddress({ id: null, street: "", city: "", state: "", zipCode: "" });
         setSecondaryIds(new Set());
@@ -173,7 +172,7 @@ export default function UserForm({
                 <option value="lab">Lab Tech</option>
                 <option value="admin">Admin</option>
                 <option value="milling">Milling Center</option>
-                <option value="sales">Sales Rep</option> {/* ✅ ADDED */}
+                <option value="sales">Sales Rep</option> 
               </select>
             </div>
           </div>
@@ -218,7 +217,7 @@ export default function UserForm({
                 />
               </div>
 
-              {/* ✅ NEW: SALES REP SELECTION */}
+              {/* SALES REP SELECTION */}
               <div className="bg-surface rounded-lg p-4 border border-border space-y-3">
                 <label className="block text-xs font-medium text-muted uppercase">Sales Representative</label>
                 <SearchableSelect
@@ -270,6 +269,24 @@ export default function UserForm({
                 </div>
               )}
 
+              {/* ✅ NEW: DOCTOR REVIEW TOGGLE */}
+              <div className="bg-surface rounded-lg p-4 border border-border space-y-2">
+                <label className="flex items-start gap-3 cursor-pointer group">
+                  <div className="pt-0.5">
+                    <input 
+                      type="checkbox" 
+                      checked={formData.requiresStrictDesignApproval}
+                      onChange={(e) => setFormData({...formData, requiresStrictDesignApproval: e.target.checked})}
+                      className="w-4 h-4 accent-emerald-500 cursor-pointer"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-sm font-medium text-foreground block">Requires Strict Design Approval</span>
+                    <span className="text-[10px] text-muted leading-tight block">If checked, the lab cannot auto-advance unproblematic cases. Every design must be manually approved by this doctor.</span>
+                  </div>
+                </label>
+              </div>
+
               <div>
                   <label className="block text-xs font-medium text-muted mb-1 uppercase">Preference Note</label>
                   <textarea rows={3} className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-foreground focus:border-accent/50 outline-none resize-none"
@@ -287,7 +304,6 @@ export default function UserForm({
             <button 
               type="button" 
               onClick={onClose} 
-              // ✅ FIX: Clean border, hover states, and pointer cursor
               className="px-4 py-2 text-muted bg-surface hover:text-foreground hover:bg-[var(--accent-dim)] border border-transparent hover:border-border transition-all rounded-lg font-bold shadow-sm cursor-pointer"
             >
               Cancel
@@ -296,7 +312,6 @@ export default function UserForm({
           <button 
             onClick={handleSubmit} 
             disabled={loading} 
-            // ✅ FIX: Perfectly flips between pure black/white depending on theme
             className="px-6 py-2 bg-foreground text-background font-bold border-2 border-foreground rounded-lg hover:opacity-80 transition-all shadow-sm cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? "Saving..." : (isEdit ? "Update User" : "Create User")}
