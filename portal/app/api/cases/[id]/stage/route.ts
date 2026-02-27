@@ -16,7 +16,6 @@ export async function POST(req: Request, { params }: Params) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   
-  // Basic role check
   if (session.role !== "admin" && session.role !== "lab") {
     return NextResponse.json(
       { error: "Only lab/admin can update the process." },
@@ -37,6 +36,8 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   const targetStage = body?.stage as Stage | undefined;
+  const forceReview = body?.forceReview === true; // ✅ Extract Manual Override Checkbox
+
   if (!targetStage || !STAGE_ORDER.includes(targetStage)) {
     return NextResponse.json(
       { error: "Invalid target stage." },
@@ -44,7 +45,6 @@ export async function POST(req: Request, { params }: Params) {
     );
   }
 
-  // LOGIC CHANGE: Lab cannot manually start milling. It happens via download.
   if (targetStage === "MILLING_GLAZING" && session.role === "lab") {
     return NextResponse.json(
         { error: "Lab users cannot manually start milling. This happens automatically when the Milling Center downloads the files." },
@@ -54,8 +54,9 @@ export async function POST(req: Request, { params }: Params) {
 
   const existing = await prisma.dentalCase.findUnique({
     where: { id },
+    include: { doctorUser: { select: { requiresStrictDesignApproval: true } } } // ✅ Pull Doctor Pref
   });
-  
+
   if (!existing) {
     return NextResponse.json({ error: "Case not found." }, { status: 404 });
   }
@@ -67,10 +68,7 @@ export async function POST(req: Request, { params }: Params) {
   const targetIndex = STAGE_ORDER.indexOf(targetStage);
 
   if (targetIndex === -1) {
-    return NextResponse.json(
-      { error: "Unsupported stage." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Unsupported stage." }, { status: 400 });
   }
 
   if (targetIndex === currentIndex) {
@@ -78,46 +76,46 @@ export async function POST(req: Request, { params }: Params) {
   }
 
   if (targetIndex < currentIndex) {
-    return NextResponse.json(
-      { error: "Process cannot move backwards." },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Process cannot move backwards." }, { status: 400 });
   }
 
   let nextStatus = currentStatus;
+  let newActionRequiredBy = existing.actionRequiredBy;
   
   if (currentStage === "DESIGN" && targetStage === "MILLING_GLAZING") {
+    // ✅ THE TRIAGE ENGINE: Evaluate Review Requirements
+    const needsReview = forceReview || existing.doctorUser?.requiresStrictDesignApproval;
+
     if (currentStatus !== "APPROVED") {
-      return NextResponse.json(
-        {
-          error:
-            "Case must be APPROVED before moving to Milling & Glazing.",
-        },
-        { status: 400 },
-      );
+        if (needsReview) {
+            // Intercept the progression. Set to Review, assign action to Doctor.
+            await prisma.dentalCase.update({
+                where: { id },
+                data: {
+                    status: "READY_FOR_REVIEW",
+                    actionRequiredBy: "DOCTOR"
+                }
+            });
+            await prisma.statusEvent.create({
+                data: { caseId: id, from: currentStatus, to: "READY_FOR_REVIEW", note: "Design submitted for Doctor approval.", actorId: session.userId }
+            });
+            return NextResponse.json({ ok: true, stage: currentStage, status: "READY_FOR_REVIEW" });
+        } else {
+            // Auto-Approve the case because the doctor trusts the lab and there are no issues.
+            nextStatus = "IN_MILLING";
+        }
+    } else {
+        nextStatus = "IN_MILLING";
     }
-    nextStatus = "IN_MILLING";
   } 
-  else if (
-    currentStage === "MILLING_GLAZING" &&
-    targetStage === "SHIPPING"
-  ) {
+  else if (currentStage === "MILLING_GLAZING" && targetStage === "SHIPPING") {
     nextStatus = "SHIPPED";
   } 
-  else if (
-    currentStage === "SHIPPING" &&
-    targetStage === "COMPLETED"
-  ) {
+  else if (currentStage === "SHIPPING" && targetStage === "COMPLETED") {
     nextStatus = "COMPLETED";
   }
   else if (currentStage === "DESIGN" && targetStage === "SHIPPING") {
-    return NextResponse.json(
-      {
-        error:
-          "Case must go through Milling & Glazing before Shipping.",
-      },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: "Case must go through Milling & Glazing before Shipping." }, { status: 400 });
   }
 
   const [updated] = await prisma.$transaction([
@@ -126,6 +124,7 @@ export async function POST(req: Request, { params }: Params) {
       data: {
         stage: targetStage,
         status: nextStatus as any,
+        actionRequiredBy: newActionRequiredBy
       },
       select: { id: true, stage: true, status: true },
     }),

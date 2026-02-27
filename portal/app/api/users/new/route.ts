@@ -9,7 +9,7 @@ import bcrypt from "bcryptjs";
 import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { Resend } from "resend";
-import { CreateUserSchema } from "@/lib/schemas"; 
+import { CreateUserSchema } from "@/lib/schemas";
 
 const resend = process.env.RESEND_API_KEY ? new Resend(process.env.RESEND_API_KEY) : null;
 
@@ -22,8 +22,9 @@ export async function POST(req: Request) {
 
     const body = await req.json().catch(() => ({}));
     
-    // Manual Extraction for fields not in Zod schema yet (secondaryClinicIds)
+    // Manual Extraction for fields not in Zod schema yet
     const secondaryIds = Array.isArray(body.secondaryClinicIds) ? body.secondaryClinicIds : [];
+    const requiresStrictDesignApproval = body.requiresStrictDesignApproval === true; // ✅ Extract Toggle
 
     // 1. Zod Validation
     const validation = CreateUserSchema.safeParse(body);
@@ -76,15 +77,13 @@ export async function POST(req: Request) {
         name: data.name,
         role: data.role,
         clinic: resolvedClinicId ? { connect: { id: resolvedClinicId } } : undefined,
-        
-        // ✅ NEW: Connect Secondary Clinics
         secondaryClinics: {
            connect: secondaryIds.map((id: string) => ({ id }))
         },
-
         phoneNumber: data.phoneNumber || null,
         preferenceNote: data.preferenceNote || null,
-        address: addressConfig
+        address: addressConfig,
+        requiresStrictDesignApproval // ✅ Save to DB
     };
 
     const user = await prisma.user.create({

@@ -6,6 +6,7 @@ import { useState } from "react";
 import CopyableId from "@/components/CopyableId";
 import { formatProductName } from "@/lib/pricing";
 
+// ✅ Added triage flags to the type definition
 type CaseRowData = {
   id: string;
   patientAlias: string;
@@ -16,10 +17,13 @@ type CaseRowData = {
   status: string;
   dueDate: Date | null;
   updatedAt: Date;
-  createdAt: Date; 
+  createdAt: Date;
   doctorName: string | null;
   clinic: { name: string };
   assigneeUser: { name: string | null; email: string } | null;
+  actionRequiredBy?: string | null;
+  unreadForDoctor?: boolean;
+  unreadForLab?: boolean;
 };
 
 // --- HELPER 1: Designer Avatar ---
@@ -29,7 +33,6 @@ const DesignerAvatar = ({ name, email }: { name: string | null, email: string })
         ? (name.split(" ")[0][0] + name.split(" ")[name.split(" ").length - 1][0]) 
         : name.slice(0, 2))
     : email.slice(0, 2);
-
   return (
     <div className="flex items-center gap-2">
       <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm 
@@ -48,10 +51,8 @@ const DesignerAvatar = ({ name, email }: { name: string | null, email: string })
 const StatusBadge = ({ status }: { status: string }) => {
   const s = status.toUpperCase();
   const baseClasses = "inline-flex items-center px-2.5 py-1 rounded-md text-[10px] font-bold border uppercase tracking-wide shadow-sm transition-colors";
-  
-  // This baseline ensures text is Black-ish in Light Mode and White in Dark Mode
   let colorClasses = "text-foreground dark:text-white ";
-
+  
   switch (s) {
     case "APPROVED":
       colorClasses += "bg-lime-300 border-lime-400 dark:bg-lime-500/20 dark:border-lime-500/40";
@@ -74,6 +75,7 @@ const StatusBadge = ({ status }: { status: string }) => {
     case "CANCELLED":
       colorClasses += "bg-surface-highlight border-border dark:bg-background dark:border-white/10";
       break;
+    case "READY_FOR_REVIEW": // ✅ Sub-status mapped to In Design styling
     case "IN_DESIGN":
     case "DESIGN":
     default:
@@ -81,9 +83,13 @@ const StatusBadge = ({ status }: { status: string }) => {
       break;
   }
 
+  // ✅ To completely mask it and make it say "IN DESIGN", use the commented line instead.
+  // const displayText = s === "READY_FOR_REVIEW" ? "IN DESIGN" : status.replace(/_/g, " ");
+  const displayText = status.replace(/_/g, " ");
+
   return (
     <span className={`${baseClasses} ${colorClasses}`}>
-      {status.replace(/_/g, " ")}
+      {displayText}
     </span>
   );
 };
@@ -91,6 +97,17 @@ const StatusBadge = ({ status }: { status: string }) => {
 export default function CaseListRow({ data, role }: { data: CaseRowData, role: string }) {
   const router = useRouter();
   const [busy, setBusy] = useState(false);
+
+  // ✅ TRIAGE LOGIC
+  const isDoctor = role === "customer";
+  const roleTarget = isDoctor ? "DOCTOR" : "LAB";
+  
+  const requiresAction = data.actionRequiredBy === roleTarget;
+  const hasUnread = isDoctor ? data.unreadForDoctor : data.unreadForLab;
+  
+  // Decide what dot to show (Red = Action Needed, Blue = Unread Message)
+  const isPriority = requiresAction || hasUnread;
+  const dotColor = requiresAction ? "bg-red-500" : "bg-blue-500";
 
   const handleRowClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("button, a")) return;
@@ -118,21 +135,29 @@ export default function CaseListRow({ data, role }: { data: CaseRowData, role: s
 
   return (
     <tr
-      // ✅ Only attach the click handler if the case IS NOT cancelled
       onClick={data.status === "CANCELLED" ? undefined : handleRowClick}
-      // ✅ Remove the hover effect and pointer cursor if the case IS cancelled
       className={`
-        border-t border-border transition-colors group
+        border-t border-border transition-colors group relative
         ${data.status === "CANCELLED" 
-          ? "opacity-50 bg-surface/50" // Dim cancelled cases slightly to show they are inactive
+          ? "opacity-50 bg-surface/50" 
           : "hover:bg-[var(--accent-dim)] cursor-pointer"
         }
+        ${isPriority && data.status !== "CANCELLED" ? "bg-[var(--accent-dim)]/50" : ""} // Highlight row slightly if priority
       `}
     >
       <td className="p-3">
-        <CopyableId id={data.id} truncate />
+        <div className="flex items-center gap-2">
+           {/* ✅ BREATHING DOT */}
+           {isPriority && data.status !== "CANCELLED" && (
+             <div className="relative flex h-2.5 w-2.5 shrink-0">
+               <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${dotColor}`}></span>
+               <span className={`relative inline-flex rounded-full h-2.5 w-2.5 ${dotColor}`}></span>
+             </div>
+           )}
+           <CopyableId id={data.id} truncate />
+        </div>
       </td>
-      <td className="p-3 font-medium text-foreground">
+      <td className={`p-3 font-medium ${isPriority ? "text-foreground font-bold" : "text-foreground"}`}>
         {data.patientAlias}
       </td>
       

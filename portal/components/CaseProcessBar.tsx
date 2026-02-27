@@ -27,8 +27,6 @@ export default function CaseProcessBar({
   const [err, setErr] = useState<string | null>(null);
   const [showShipModal, setShowShipModal] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
-  
-  // ✅ New state for Admin/Lab fee waiver
   const [waiveFee, setWaiveFee] = useState(false);
 
   // Status Checks
@@ -115,7 +113,6 @@ export default function CaseProcessBar({
 
   async function handleCancelCase() {
     setBusy(true);
-    // Pass waiveFee flag to backend
     await submitStatusChange("CANCELLED", waiveFee);
   }
 
@@ -179,12 +176,12 @@ export default function CaseProcessBar({
                    {isAdmin && <button onClick={() => setShowShipModal(true)} className="text-muted hover:text-foreground"><svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg></button>}
                </div>
                <a href={getTrackingLink(tracking, carrier)} target="_blank" rel="noopener noreferrer" className="text-sm font-mono font-medium text-foreground hover:text-accent flex items-center gap-1 group transition-colors">
-                  {tracking}
+                   {tracking}
                   <svg className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
                </a>
             </div>
           </div>
-        )}
+         )}
 
         {/* ACTION BUTTONS */}
         {!isCancelled && (
@@ -195,7 +192,7 @@ export default function CaseProcessBar({
               <button
                 onClick={() => setShowCancelModal(true)}
                 disabled={busy}
-                className="px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed bg-red-500/10 text-red-500 border-2 border-red-500/20 hover:bg-red-500 hover:text-white"
+                className="px-4 py-2 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 text-sm font-semibold hover:bg-red-500 hover:text-white hover:scale-105 transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 Cancel Case
               </button>
@@ -208,10 +205,10 @@ export default function CaseProcessBar({
                   onClick={handleAdvanceClick}
                   disabled={busy}
                   className={`
-                    px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer disabled:cursor-not-allowed
+                    px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
                     ${canAdvance 
-                      ? "bg-foreground text-background border-2 border-foreground hover:opacity-80 shadow-md" 
-                      : "bg-surface text-muted border-2 border-border !cursor-not-allowed"}
+                      ? "bg-foreground text-background border border-foreground hover:brightness-110 hover:scale-105" 
+                      : "bg-surface text-muted border border-border shadow-none"}
                   `}
                 >
                   {busy ? "Updating..." : <>{nextLabel} →</>}
@@ -264,7 +261,7 @@ export default function CaseProcessBar({
                         This case has already been designed. If you cancel now, you will be charged a design cancellation fee.
                       </p>
                     </div>
-                  ) : null}
+                   ) : null}
                 </>
               )}
 
@@ -276,9 +273,9 @@ export default function CaseProcessBar({
                             <span className="text-xs font-bold text-foreground block mb-1">Administrative Cancellation</span>
                             <span className="text-[10px] text-muted leading-tight block max-w-[200px]">
                                 {isProduced 
-                                    ? "Case is in production. Cancelling will apply a penalty fee matching Vendor Costs." 
+                                    ? "Case is in production. Cancelling will apply a penalty fee matching Vendor Costs."
                                     : hasDesignFiles 
-                                        ? "Case is designed. Cancelling will apply a penalty fee matching Design Costs." 
+                                        ? "Case is designed. Cancelling will apply a penalty fee matching Design Costs."
                                         : "Case has no work completed. No penalty fee will be applied."}
                             </span>
                         </div>
@@ -305,25 +302,28 @@ export default function CaseProcessBar({
                     )}
                  </div>
               )}
-            </div>
+             </div>
 
             <div className="flex justify-end gap-3">
+              {/* ✅ Standardized Keep Case Button */}
               <button
                 onClick={() => setShowCancelModal(false)}
                 disabled={busy}
-                className="px-4 py-2 rounded-lg text-sm font-bold border border-border bg-surface hover:bg-[var(--accent-dim)] transition-colors cursor-pointer disabled:opacity-50"
-              >
+                className="px-4 py-2 rounded-xl bg-surface border border-border text-foreground text-sm font-semibold hover:brightness-110 hover:scale-105 transition-all shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+               >
                 Keep Case
               </button>
+              
+              {/* ✅ Standardized Confirm Cancellation Button */}
               <button
                 onClick={handleCancelCase}
                 disabled={busy}
-                className="px-4 py-2 rounded-lg text-sm font-bold bg-red-500 text-white hover:bg-red-600 border border-red-700 transition-colors shadow-sm cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 rounded-xl border border-red-500/30 bg-red-500/10 text-red-500 text-sm font-semibold hover:bg-red-500 hover:text-white hover:scale-105 transition-all shadow-md flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                {busy && <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                {busy && <div className="w-3 h-3 border-2 border-current border-r-transparent rounded-full animate-spin" />}
                 Confirm Cancellation
               </button>
-            </div>
+             </div>
           </div>
         </div>
       )}

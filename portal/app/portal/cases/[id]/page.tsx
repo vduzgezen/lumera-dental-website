@@ -15,7 +15,6 @@ import { formatProductName } from "@/lib/pricing";
 export const dynamic = "force-dynamic";
 type ProductionStage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING" | "COMPLETED";
 type Params = Promise<{ id: string }>;
-
 function fmtDate(d?: Date | null) {
   if (!d) return "—";
   return new Date(d).toLocaleString();
@@ -34,7 +33,8 @@ function baseNameFromUrl(url?: string | null): string {
 
 function normalizeSlot(
   label: string | null,
-): "scan" | "design_with_model" | "design_only" | null {
+): "scan" | "design_with_model" |
+"design_only" | null {
   const lower = String(label ?? "").toLowerCase();
   if (lower === "scan") return "scan";
   if (lower === "design_with_model" || lower === "model_plus_design") {
@@ -61,21 +61,36 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
         include: { attachments: true },
         orderBy: { createdAt: "desc" } 
       },
-      assigneeUser: { select: { id: true, name: true, email: true } }
+   
+      assigneeUser: { select: { id: true, name: true, email: true } },
+      doctorUser: { select: { requiresStrictDesignApproval: true } } // ✅ Pull Doctor Pref
     },
   });
-
   if (!item) return notFound();
 
-  // ✅ THE BOUNCER: Kick anyone out who tries to view a cancelled case
   if (item.status === "CANCELLED") {
     redirect("/portal/cases");
   }
 
-  if (session.role === "customer") {
+  const isCustomer = session.role === "customer";
+
+  if (isCustomer) {
     const isOwner = item.doctorUserId === session.userId;
     const isPrimaryClinic = session.clinicId === item.clinicId;
     if (!isOwner && !isPrimaryClinic) return notFound();
+  }
+
+  const needsDoctorReset = isCustomer && item.unreadForDoctor;
+  const needsLabReset = !isCustomer && item.unreadForLab;
+
+  if (needsDoctorReset || needsLabReset) {
+      await prisma.dentalCase.update({
+          where: { id },
+          data: {
+              unreadForDoctor: isCustomer ? false : item.unreadForDoctor,
+              unreadForLab: !isCustomer ? false : item.unreadForLab
+          }
+      });
   }
 
   const hydratedFiles = await Promise.all(item.files.map(async (f) => {
@@ -97,11 +112,11 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
               const signed = await getSignedFileUrl(a.url);
               return { ...a, url: signed };
           } 
+ 
           catch (e) { return a; }
       }));
       return { ...c, attachments };
   }));
-
   const authorIds = Array.from(new Set(item.comments.map(c => c.authorId)));
   const authors = await prisma.user.findMany({
     where: { id: { in: authorIds } },
@@ -126,13 +141,14 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
       attachments: c.attachments.map(a => ({
         id: a.id,
         url: a.url,
+       
         kind: a.kind
       }))
     };
   });
-
   const isLabOrAdmin = session.role === "lab" || session.role === "admin";
-  let designers: { id: string; name: string | null; email: string }[] = [];
+  let designers: { id: string; name: string | null;
+  email: string }[] = [];
   if (session.role === "admin") {
     designers = await prisma.user.findMany({
       where: { role: { in: ["lab", "admin"] } },
@@ -153,9 +169,10 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
   const hasAllDesigns = item.isBridge ? hasBridgeDesign : (hasIndividualDesigns || hasBridgeDesign);
   const statusColor = 
     item.status === "CHANGES_REQUESTED" ? "text-red-400" :
-    item.status === "COMPLETED" || item.status === "DELIVERED" ? "text-emerald-400" :
+    item.status === "COMPLETED" ||
+    item.status === "DELIVERED" ? "text-emerald-400" :
     "text-foreground";
-
+    
   return (
     <section className="h-full w-full flex flex-col p-4 overflow-hidden">
       <AutoRefresh intervalMs={60000} />
@@ -174,16 +191,21 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
           <div className="min-w-0">
             <h1 className="text-xl font-semibold truncate">{item.patientAlias}</h1>
             <div className="text-muted text-xs mt-1 flex flex-wrap items-center gap-y-1 gap-x-3">
+             
               <span>Clinic: <span className="text-foreground">{item.clinic.name}</span></span>
+       
               <span>•</span>
               
               {isLabOrAdmin && item.doctorName && (
                 <><span>Doctor: <span className="text-foreground">{item.doctorName}</span></span><span>•</span></>
               )}
 
+            
               {isLabOrAdmin && item.assigneeUser && (
+           
                 <>
-                  <span>Designer: <span className="text-foreground">{item.assigneeUser.name || item.assigneeUser.email}</span></span>
+                  <span>Designer: <span className="text-foreground">{item.assigneeUser.name ||
+                  item.assigneeUser.email}</span></span>
                   <span>•</span>
                 </>
               )}
@@ -191,12 +213,14 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
               <span>Restoration: <span className="text-foreground capitalize">{formatProductName(item.product)}</span></span>
               <span>•</span>
               <span>Teeth: <span className="text-foreground">{item.toothCodes}</span></span>
+     
               <span>•</span>
               <span>Status: <span className={`${statusColor} font-medium`}>{item.status.replace(/_/g, " ")}</span></span>
               <span>•</span>
               <div className="flex items-center gap-1.5">
                  <span>ID:</span><CopyableId id={item.id} />
               </div>
+   
             </div>
           </div>
           
@@ -206,8 +230,10 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
         </div>
       </div>
 
+  
       <div className="flex-1 min-h-0 flex flex-col lg:flex-row gap-4">
-        <div className="flex-none w-full lg:w-[350px] xl:w-[400px] h-full min-h-0">
+   
+       <div className="flex-none w-full lg:w-[350px] xl:w-[400px] h-full min-h-0">
            <CaseDetailSidebar 
             caseId={item.id}
             role={session.role as any}
@@ -216,13 +242,14 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
             events={item.events}
             currentUserName={currentUserName}
             doctorPreferences={item.doctorPreferences}
-            caseNotes={item.caseNotes as string} // ✅ PASSED THE PROP HERE
+            caseNotes={item.caseNotes as string} 
             assigneeId={item.assigneeId}
             designers={designers}
             toothCodes={item.toothCodes}
             isBridge={item.isBridge}
             product={item.product}
           />
+ 
         </div>
 
         <div className="flex-1 h-full min-h-0 flex flex-col gap-4">
@@ -234,10 +261,12 @@ export default async function CaseDetailPage({ params }: { params: Params }) {
               files={item.files}
               toothCodes={item.toothCodes}
               isBridge={item.isBridge}
+              requiresStrictApproval={item.doctorUser?.requiresStrictDesignApproval} // ✅ PASSED PROP
             />
           </div>
        </div>
       </div>
+    
     </section>
   );
 }

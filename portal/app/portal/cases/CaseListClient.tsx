@@ -1,6 +1,5 @@
 // app/portal/cases/CaseListClient.tsx
 "use client";
-
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation"; 
 import CaseListRow from "@/components/CaseListRow";
@@ -29,7 +28,6 @@ const SortableHeader = ({
   onSort: (k: string) => void 
 }) => {
   const isActive = sortConfig.key === colKey;
-
   return (
     <th 
       className={`
@@ -77,10 +75,10 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
         case "restoration": aVal = a.product; bVal = b.product; break;
         case "status": aVal = a.status; bVal = b.status; break;
         case "due": aVal = a.dueDate ? new Date(a.dueDate).getTime() : 0; bVal = b.dueDate ? new Date(b.dueDate).getTime() : 0; break;
-        case "created": aVal = new Date(a.createdAt).getTime(); bVal = new Date(b.createdAt).getTime(); break;
+        case "created": aVal = new Date(a.createdAt).getTime();
+        bVal = new Date(b.createdAt).getTime(); break;
       }
 
-      // Case-insensitive alphabetical sorting for strings
       if (typeof aVal === "string" && typeof bVal === "string") {
          aVal = aVal.toLowerCase();
          bVal = bVal.toLowerCase();
