@@ -20,29 +20,39 @@ const SortableHeader = ({
   label, 
   colKey, 
   sortConfig, 
-  onSort 
+  onSort,
+  isAnySorted
 }: { 
   label: string, 
   colKey: string, 
   sortConfig: SortConfig, 
-  onSort: (k: string) => void 
+  onSort: (k: string) => void,
+  isAnySorted: boolean
 }) => {
   const isActive = sortConfig.key === colKey;
+  
+  // ✅ THE FIX: Inset shadows for the sticky bug bypass
+  let focusStyle = "";
+  if (isActive) {
+    focusStyle = "shadow-[inset_0_-2px_0_var(--accent)] text-[var(--accent)]";
+  } else if (!isAnySorted) {
+    focusStyle = "shadow-[inset_0_-2px_0_var(--foreground)] text-muted hover:text-[var(--foreground)]";
+  } else {
+    focusStyle = "shadow-[inset_0_0_0_transparent] text-muted hover:text-[var(--foreground)]";
+  }
+
   return (
     <th 
       className={`
-        p-4 font-medium cursor-pointer transition-colors duration-200 select-none group border-b outline-none whitespace-nowrap
-        ${isActive 
-          ? "text-accent border-accent" 
-          : "border-transparent text-muted hover:text-foreground"
-        }
+        p-4 font-medium cursor-pointer transition-all duration-200 select-none group outline-none whitespace-nowrap
+        ${focusStyle}
       `}
       onClick={() => onSort(colKey)}
     >
       <div className={`flex items-center gap-1 ${colKey === "status" ? "justify-center" : ""}`}>
         {label}
         {isActive && (
-          <span className="text-accent text-[10px] leading-none">
+          <span className="text-[var(--accent)] text-[10px] leading-none">
             {sortConfig.direction === "asc" ? "▲" : "▼"}
           </span>
         )}
@@ -57,6 +67,9 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
   
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
   const [loadingMore, setLoadingMore] = useState(false);
+
+  // ✅ Calculate if ANY column is currently being sorted
+  const isAnySorted = sortConfig.key !== null;
 
   const sortedCases = useMemo(() => {
     if (!sortConfig.key || !sortConfig.direction) return cases;
@@ -75,8 +88,7 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
         case "restoration": aVal = a.product; bVal = b.product; break;
         case "status": aVal = a.status; bVal = b.status; break;
         case "due": aVal = a.dueDate ? new Date(a.dueDate).getTime() : 0; bVal = b.dueDate ? new Date(b.dueDate).getTime() : 0; break;
-        case "created": aVal = new Date(a.createdAt).getTime();
-        bVal = new Date(b.createdAt).getTime(); break;
+        case "created": aVal = new Date(a.createdAt).getTime(); bVal = new Date(b.createdAt).getTime(); break;
       }
 
       if (typeof aVal === "string" && typeof bVal === "string") {
@@ -112,28 +124,29 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
     <div className="flex-1 min-h-0 flex flex-col rounded-xl border border-border bg-surface shadow-2xl overflow-hidden">
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         <table className="w-full text-sm text-left border-collapse min-w-[1000px]">
-          <thead className="bg-surface/90 sticky top-0 backdrop-blur-md z-10 border-b border-border">
+          {/* ✅ Removed buggy border-b, relying strictly on the shadows from TH cells */}
+          <thead className="bg-surface sticky top-0 z-10">
             <tr>
-              <SortableHeader label="Case ID" colKey="id" sortConfig={sortConfig} onSort={handleSort} />
-              <SortableHeader label="Alias" colKey="alias" sortConfig={sortConfig} onSort={handleSort} />
+              <SortableHeader label="Case ID" colKey="id" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
+              <SortableHeader label="Alias" colKey="alias" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
               {isDoctor ? (
                 <>
-                    <SortableHeader label="Patient Name" colKey="patient" sortConfig={sortConfig} onSort={handleSort} />
-                    <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />
+                    <SortableHeader label="Patient Name" colKey="patient" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
+                    <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
                 </>
               ) : (
                 <>
-                    <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={handleSort} />
-                    <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} />
+                    <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
+                    <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
                 </>
               )}
               {!isDoctor && (
-                <SortableHeader label="Designer" colKey="designer" sortConfig={sortConfig} onSort={handleSort} />
+                <SortableHeader label="Designer" colKey="designer" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
               )}
-              <SortableHeader label="Restoration" colKey="restoration" sortConfig={sortConfig} onSort={handleSort} />
-              <SortableHeader label="Status" colKey="status" sortConfig={sortConfig} onSort={handleSort} />
-              <SortableHeader label="Due Date" colKey="due" sortConfig={sortConfig} onSort={handleSort} />
-              <SortableHeader label="Created" colKey="created" sortConfig={sortConfig} onSort={handleSort} />
+              <SortableHeader label="Restoration" colKey="restoration" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
+              <SortableHeader label="Status" colKey="status" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
+              <SortableHeader label="Due Date" colKey="due" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
+              <SortableHeader label="Created" colKey="created" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -156,11 +169,11 @@ export default function CaseListClient({ cases, role, totalCount }: Props) {
             <button
               onClick={handleLoadMore}
               disabled={loadingMore}
-              className="px-4 py-1.5 rounded-lg border border-border bg-surface hover:bg-[var(--accent-dim)] text-xs font-bold text-foreground transition-colors flex items-center gap-2 cursor-pointer"
+              className="px-4 py-1.5 rounded-lg border border-border bg-surface hover:bg-[var(--accent-dim)] text-xs font-bold text-[var(--foreground)] transition-colors flex items-center gap-2 cursor-pointer"
             >
               {loadingMore ? (
                 <>
-                  <span className="w-3 h-3 border-2 border-muted border-t-foreground rounded-full animate-spin" />
+                  <span className="w-3 h-3 border-2 border-muted border-t-[var(--foreground)] rounded-full animate-spin" />
                   Loading...
                 </>
               ) : "Load More"}

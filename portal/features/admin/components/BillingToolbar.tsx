@@ -4,6 +4,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import BillingPayButton from "./BillingPayButton"; // ✅ Imported the payment button
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -20,6 +21,10 @@ type Props = {
   isAdminOrLab: boolean;
   showClinicFilter: boolean;
   isFiltered: boolean;
+  // ✅ Restored the 3 missing props required for payments
+  showPayButton?: boolean; 
+  activeClinicId?: string | null;
+  totalOwed?: number;
 };
 
 export default function BillingToolbar({
@@ -32,6 +37,9 @@ export default function BillingToolbar({
   isAdminOrLab,
   showClinicFilter,
   isFiltered,
+  showPayButton,
+  activeClinicId,
+  totalOwed,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -89,21 +97,33 @@ export default function BillingToolbar({
 
   return (
     <div className="flex-none space-y-4 mb-6">
-      <header>
-        <h1 className="text-2xl font-semibold text-foreground">Billing & Invoices</h1>
-        <p className="text-muted text-sm mt-1">
-          Manage costs, view history, and track monthly usage.
-        </p>
+      {/* ✅ Converted to a flex container so the button sits on the right side */}
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Billing & Invoices</h1>
+          <p className="text-muted text-sm mt-1">
+            Manage costs, view history, and track monthly usage.
+          </p>
+        </div>
+        
+        {/* ✅ The Pay Button dynamically appears when owed > 0 and user is authorized */}
+        {showPayButton && activeClinicId && totalOwed && totalOwed > 0 && (
+          <BillingPayButton 
+            clinicId={activeClinicId} 
+            amount={totalOwed} 
+            month={selMonth} 
+            year={selYear} 
+          />
+        )}
       </header>
 
       <div className="flex flex-wrap gap-2 items-center bg-surface p-2 rounded-xl border border-border">
-        
         {/* Year Select */}
         <div className="relative flex items-center">
           <select
             value={filters.year}
             onChange={(e) => updateInstant("year", Number(e.target.value))}
-            className="bg-surface-highlight border border-border rounded-lg pl-3 pr-8 py-1.5 text-sm text-foreground focus:border-accent/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)]"
+            className="bg-surface-highlight border border-border rounded-lg pl-3 pr-8 py-1.5 text-sm text-foreground focus:border-[var(--accent)]/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)]"
           >
             {years.map((y) => (
               <option key={y} value={y} className="bg-surface">
@@ -121,7 +141,7 @@ export default function BillingToolbar({
           <select
             value={filters.month}
             onChange={(e) => updateInstant("month", Number(e.target.value))}
-            className="bg-surface-highlight border border-border rounded-lg pl-3 pr-8 py-1.5 text-sm text-foreground focus:border-accent/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)]"
+            className="bg-surface-highlight border border-border rounded-lg pl-3 pr-8 py-1.5 text-sm text-foreground focus:border-[var(--accent)]/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)]"
           >
             {MONTHS.map((m, i) => (
               <option key={m} value={i + 1} className="bg-surface">
@@ -139,7 +159,7 @@ export default function BillingToolbar({
           value={filters.q}
           onChange={(e) => updateInstant("q", e.target.value)}
           placeholder="Search Patient or Case ID..."
-          className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-accent/50 outline-none w-48 transition"
+          className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-[var(--accent)]/50 outline-none w-48 transition"
         />
 
         {/* Admin Doctor Filter */}
@@ -148,17 +168,17 @@ export default function BillingToolbar({
             value={filters.doctor}
             onChange={(e) => updateInstant("doctor", e.target.value)}
             placeholder="Filter by Doctor..."
-            className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-accent/50 outline-none w-40 transition"
+            className="bg-surface-highlight border border-border rounded-lg px-3 py-1.5 text-sm text-foreground placeholder-muted focus:border-[var(--accent)]/50 outline-none w-40 transition"
           />
         )}
         
-        {/* ✅ Multi-Clinic Dropdown Filter with Chevron */}
+        {/* Multi-Clinic Dropdown Filter with Chevron */}
         {showClinicFilter && (
           <div className="relative flex items-center">
             <select
               value={filters.clinic}
               onChange={(e) => updateInstant("clinic", e.target.value)}
-              className="bg-surface-highlight border border-border rounded-lg pl-3 pr-8 py-1.5 text-sm text-foreground focus:border-accent/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)] max-w-[200px] truncate"
+              className="bg-surface-highlight border border-border rounded-lg pl-3 pr-8 py-1.5 text-sm text-foreground focus:border-[var(--accent)]/50 outline-none transition appearance-none cursor-pointer hover:bg-[var(--accent-dim)] max-w-[200px] truncate"
             >
               <option value="">All Clinics</option>
               {availableClinics.map((c) => (

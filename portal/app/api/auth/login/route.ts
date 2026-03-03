@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { cookies } from "next/headers";
 import bcrypt from "bcryptjs";
-import { signToken, COOKIE_OPTIONS } from "@/lib/auth"; // ✅ Import rules
+import { signToken, COOKIE_OPTIONS } from "@/lib/auth";
 
 export async function POST(req: Request) {
   try {
@@ -57,7 +57,8 @@ export async function POST(req: Request) {
       tokenPayload.millingCenterId = user.millingCenterId;
     }
 
-    const token = signToken(tokenPayload);
+    // Await the new async signToken from jose
+    const token = await signToken(tokenPayload);
 
     // ✅ Set Secure Cookie
     const jar = await cookies();
