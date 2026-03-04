@@ -4,8 +4,9 @@ import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 
-// Initialize Stripe (Auto-pins to your SDK's default API version)
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// ✅ FIX: Added a fallback string. Next.js evaluates this file during the build phase 
+// before runtime variables are injected. This prevents the "Neither apiKey provided" crash.
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || "dummy_build_key");
 
 export async function POST(req: Request) {
   try {
