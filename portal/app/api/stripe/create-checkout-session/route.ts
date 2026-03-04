@@ -1,24 +1,37 @@
-// app/api/stripe/create-checkout-session/route.ts
+// portal/app/api/stripe/create-checkout-session/route.ts
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/auth";
 
 // Initialize Stripe (Auto-pins to your SDK's default API version)
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(req: Request) {
   try {
+    // 1. Authenticate the request
+    const session = await getSession();
+    if (!session) {
+      return NextResponse.json({ error: "Please sign in." }, { status: 401 });
+    }
+
     const { clinicId, amount, month, year } = await req.json();
 
     if (!clinicId || amount === undefined || !month || !year) {
       return NextResponse.json({ error: "Missing required billing parameters" }, { status: 400 });
     }
 
+    // 2. Authorize the user against the requested clinicId
+    // Customers can only generate invoices for their own clinic. Admin/Lab bypasses this.
+    if (session.role === "customer" && session.clinicId !== clinicId) {
+      return NextResponse.json({ error: "Unauthorized access to clinic billing." }, { status: 403 });
+    }
+
     // Calculate the exact date range for this billing cycle
     const periodStart = new Date(year, month - 1, 1);
     const periodEnd = new Date(year, month, 0, 23, 59, 59, 999);
 
-    // 1. Fetch the clinic
+    // 3. Fetch the clinic
     const clinic = await prisma.clinic.findUnique({
       where: { id: clinicId }
     });
@@ -27,7 +40,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Clinic not found" }, { status: 404 });
     }
 
-    // 2. Find or Create the Invoice in your database
+    // 4. Find or Create the Invoice in your database
     let invoice = await prisma.invoice.findFirst({
       where: {
         clinicId,
@@ -48,7 +61,8 @@ export async function POST(req: Request) {
     } else {
       // Create a brand new invoice for this month
       const dueDate = new Date(periodEnd);
-      dueDate.setDate(dueDate.getDate() + clinic.paymentTerms); // Usually +30 days
+      // Fallback to 30 days if paymentTerms isn't strictly defined on the model
+      dueDate.setDate(dueDate.getDate() + ((clinic as any).paymentTerms || 30)); 
 
       invoice = await prisma.invoice.create({
         data: {
@@ -58,12 +72,12 @@ export async function POST(req: Request) {
           periodEnd,
           dueDate,
           status: "UNPAID"
-        }
+        } as any
       });
     }
 
-    // 3. Auto-create a Stripe Customer if this clinic doesn't have one yet
-    let customerId = clinic.stripeCustomerId;
+    // 5. Auto-create a Stripe Customer if this clinic doesn't have one yet
+    let customerId = (clinic as any).stripeCustomerId;
     if (!customerId) {
       const customer = await stripe.customers.create({
         name: clinic.name,
@@ -73,12 +87,12 @@ export async function POST(req: Request) {
       
       await prisma.clinic.update({
         where: { id: clinic.id },
-        data: { stripeCustomerId: customerId },
+        data: { stripeCustomerId: customerId } as any,
       });
     }
 
-    // 4. Create the Embedded Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    // 6. Create the Embedded Checkout Session
+    const checkoutSession = await stripe.checkout.sessions.create({
       ui_mode: 'embedded',
       customer: customerId as string, // ✅ Added type assertion just in case TS complains
       // ✅ Removed success_url and cancel_url because they are invalid in embedded mode
@@ -104,7 +118,7 @@ export async function POST(req: Request) {
       return_url: `${req.headers.get('origin')}/portal/billing?month=${month}&year=${year}&session_id={CHECKOUT_SESSION_ID}`,
     });
 
-    return NextResponse.json({ clientSecret: session.client_secret });
+    return NextResponse.json({ clientSecret: checkoutSession.client_secret });
 
   } catch (error: any) {
     console.error("Stripe Session Creation Error:", error);
