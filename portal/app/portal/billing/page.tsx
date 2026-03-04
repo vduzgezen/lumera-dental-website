@@ -1,4 +1,4 @@
-// portal/app/portal/billing/page.tsx
+// app/portal/billing/page.tsx
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import BillingToolbar from "@/features/admin/components/BillingToolbar";
 import BillingStats from "@/features/admin/components/BillingStats";
 import BillingList from "@/features/admin/components/BillingList";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -36,17 +37,27 @@ export default async function BillingPage({
   const qFilter = getParam("q") || "";
   const doctorFilter = getParam("doctor") || "";
   const clinicFilter = getParam("clinic") || ""; 
+  const personalFilter = getParam("personal") === "true";
+  
   const isAdminOrLab = session.role === "admin" || session.role === "lab";
+
+  const cookieJar = await cookies();
+  const savedClinicCookie = cookieJar.get("lumera_active_clinic")?.value;
 
   let authorizedClinicIds: string[] = [];
   let availableClinics: { id: string; name: string }[] = [];
+  let primaryClinicId: string | null = null;
 
   if (session.role === "customer") {
     const userRecord = await prisma.user.findUnique({
       where: { id: session.userId },
       include: { secondaryClinics: { select: { id: true } } }
     });
-    if (userRecord?.clinicId) authorizedClinicIds.push(userRecord.clinicId);
+
+    if (userRecord?.clinicId) {
+      authorizedClinicIds.push(userRecord.clinicId);
+      primaryClinicId = userRecord.clinicId;
+    }
     if (userRecord?.secondaryClinics) {
       userRecord.secondaryClinics.forEach(c => authorizedClinicIds.push(c.id));
     }
@@ -70,18 +81,29 @@ export default async function BillingPage({
   const start = new Date(selYear, selMonth - 1, 1);
   const end = new Date(selYear, selMonth, 0, 23, 59, 59, 999);
 
-  // --- 1. BASE WHERE (Only Date & Clinic) ---
+  let activeClinicId = clinicFilter.trim() || savedClinicCookie || "";
+  if (!activeClinicId && session.role === "customer") {
+    activeClinicId = primaryClinicId || authorizedClinicIds[0];
+  } else if (!activeClinicId && authorizedClinicIds.length === 1) {
+    activeClinicId = authorizedClinicIds[0];
+  }
+
+  if (session.role === "customer" && !authorizedClinicIds.includes(activeClinicId)) {
+      activeClinicId = primaryClinicId || authorizedClinicIds[0];
+  }
+
+  const activeClinicName = availableClinics.find(c => c.id === activeClinicId)?.name || "";
+
   const baseWhere: Prisma.DentalCaseWhereInput = {
     orderDate: { gte: start, lte: end }
   };
 
-  if (clinicFilter.trim()) {
-    baseWhere.clinicId = clinicFilter.trim();
+  if (activeClinicId) {
+    baseWhere.clinicId = activeClinicId;
   } else if (session.role === "customer") {
     baseWhere.clinicId = { in: authorizedClinicIds };
   }
 
-  // --- 2. FILTERED WHERE (Adds UI Filters) ---
   const filteredWhere: Prisma.DentalCaseWhereInput = { ...baseWhere };
 
   if (qFilter.trim()) {
@@ -97,23 +119,23 @@ export default async function BillingPage({
     filteredWhere.doctorName = { contains: doctorFilter.trim(), mode: 'insensitive' };
   }
 
-  const showClinicFilter = isAdminOrLab || authorizedClinicIds.length > 1;
-  const showClinicColumn = true;
+  if (session.role === "customer" && personalFilter) {
+    filteredWhere.doctorUserId = session.userId;
+  }
 
-  // --- 3. FETCH DATA ---
+  const showClinicFilter = isAdminOrLab; 
+  const showClinicColumn = isAdminOrLab || authorizedClinicIds.length > 1;
+
   const [statementStats, filteredStats, rawCases] = await Promise.all([
-    // Query 1: Absolute total for the month
     prisma.dentalCase.aggregate({
         where: baseWhere,
         _sum: { cost: true }
     }),
-    // Query 2: Stats for the currently filtered table
     prisma.dentalCase.aggregate({
         where: filteredWhere,
         _sum: { cost: true, units: true },
         _count: { id: true }
     }),
-    // Query 3: Actual cases for the table
     prisma.dentalCase.findMany({
         where: filteredWhere,
         orderBy: { orderDate: "desc" },
@@ -140,13 +162,10 @@ export default async function BillingPage({
     cost: Number(c.cost),
   }));
 
-  const isFiltered = !!qFilter || (isAdminOrLab && !!doctorFilter) || !!clinicFilter || selYear !== currentYear || selMonth !== currentMonth;
-  const activeClinicId = clinicFilter.trim() || (authorizedClinicIds.length === 1 ? authorizedClinicIds[0] : null);
+  const isFiltered = !!qFilter || (isAdminOrLab && !!doctorFilter) || !!clinicFilter || selYear !== currentYear || selMonth !== currentMonth || personalFilter;
 
-  // ✅ Extract the unshakeable total for the Pay Button
   let trueMonthlyTotal = Number(statementStats._sum.cost || 0);
 
-  // ✅ Check if an invoice exists and is PAID. If so, set the total to 0!
   if (activeClinicId) {
     const currentInvoice = await prisma.invoice.findFirst({
       where: { 
@@ -155,33 +174,37 @@ export default async function BillingPage({
         periodEnd: { lte: end } 
       }
     });
-    
+
     if (currentInvoice?.status === "PAID") {
-      trueMonthlyTotal = 0; // This instantly flips the pill to AMOUNT PAID and hides the button
+      trueMonthlyTotal = 0;
     }
   }
 
-  const showPayButton = session.role === "customer" && !!activeClinicId && trueMonthlyTotal > 0;
+  const showPayButton = session.role === "customer" && !!activeClinicId && trueMonthlyTotal > 0 && !personalFilter;
 
   return (
-    <section className="h-screen w-full flex flex-col p-6 overflow-hidden">
+    // ✅ CHANGED: Replaced p-6 with px-6 pb-6 pt-0 to lock flush with the top edge
+    <section className="h-screen w-full flex flex-col px-6 pb-6 pt-0 overflow-hidden">
       <BillingToolbar 
         selYear={selYear}
         selMonth={selMonth}
         qFilter={qFilter}
         doctorFilter={doctorFilter}
-        clinicFilter={clinicFilter}
+        clinicFilter={activeClinicId || ""}
+        personalFilter={personalFilter} 
         availableClinics={availableClinics}
         isAdminOrLab={isAdminOrLab}
         showClinicFilter={showClinicFilter}
         isFiltered={isFiltered}
         showPayButton={showPayButton}
         activeClinicId={activeClinicId}
+        activeClinicName={activeClinicName} 
         totalOwed={trueMonthlyTotal}
+        sessionRole={session.role} 
       />
 
-      {/* ✅ STATS & PAYMENT HEADER with restored mb-4 spacing */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 mt-2">
+      {/* ✅ CHANGED: Removed margins so the exact layout gap handles the alignment */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between w-full">
         <div className="w-full">
           <BillingStats 
             totalCost={Number(filteredStats._sum.cost || 0)}

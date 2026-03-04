@@ -15,10 +15,13 @@ export default function StripeCheckoutModal({ clientSecret, onClose }: Props) {
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
       
-      <div className="bg-surface text-foreground w-full max-w-2xl h-auto max-h-[85vh] rounded-2xl shadow-2xl flex flex-col relative overflow-hidden">
+      {/* 1. Reduced width to max-w-md to natively frame the Stripe form.
+        2. overflow-hidden enforces the rounded-2xl clipping onto the iframe.
+      */}
+      <div className="bg-surface text-foreground w-full max-w-md h-auto max-h-[85vh] rounded-2xl shadow-2xl flex flex-col relative overflow-hidden border border-[var(--border)]">
         
         {/* Header */}
-        <div className="flex items-center justify-between p-4 bg-surface-highlight shrink-0">
+        <div className="flex items-center justify-between p-4 bg-surface-highlight shrink-0 z-10 border-b border-[var(--border)]">
           <h2 className="text-lg font-bold">Secure Checkout</h2>
           <button 
             onClick={onClose}
@@ -31,13 +34,13 @@ export default function StripeCheckoutModal({ clientSecret, onClose }: Props) {
         </div>
 
         {/* Stripe Embedded UI */}
-        <div className="overflow-y-auto custom-scrollbar p-6 bg-surface">
+        {/* Removed p-6: The iframe now sits completely flush with the edges, eliminating the sharp inner borders */}
+        <div className="overflow-y-auto custom-scrollbar w-full flex-1 bg-white">
           <EmbeddedCheckoutProvider
             stripe={stripePromise}
-            // ✅ Removed the invalid 'appearance' prop
             options={{ clientSecret }}
           >
-            <EmbeddedCheckout />
+            <EmbeddedCheckout className="w-full" />
           </EmbeddedCheckoutProvider>
         </div>
 

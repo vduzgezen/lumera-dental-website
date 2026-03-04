@@ -22,8 +22,8 @@ type BillingCase = {
 
 type Props = {
   cases: BillingCase[];
-  isAdminOrLab: boolean;
-  showClinicColumn: boolean; 
+  isAdminOrLab?: boolean;     // Kept optional to prevent TS errors from page.tsx
+  showClinicColumn?: boolean; // Kept optional to prevent TS errors from page.tsx
   totalCount: number;
 };
 
@@ -36,8 +36,7 @@ const SortableHeader = ({
   label, colKey, sortConfig, onSort, align = "left", className = "", isAnySorted 
 }: any) => {
   const isActive = sortConfig.key === colKey;
-  
-  // ✅ THE FIX: We use inset shadows instead of borders to bypass the sticky-table scrolling bug.
+
   let focusStyle = "";
   if (isActive) {
     focusStyle = "shadow-[inset_0_-2px_0_var(--accent)] text-[var(--accent)]";
@@ -69,14 +68,13 @@ const SortableHeader = ({
   );
 };
 
-export default function BillingList({ cases, isAdminOrLab, showClinicColumn, totalCount }: Props) {
+export default function BillingList({ cases, totalCount }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
   const [sortConfig, setSortConfig] = useState<SortConfig>({ key: null, direction: null });
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // ✅ Calculate if ANY column is currently being sorted
   const isAnySorted = sortConfig.key !== null;
 
   const sortedCases = useMemo(() => {
@@ -86,8 +84,6 @@ export default function BillingList({ cases, isAdminOrLab, showClinicColumn, tot
       let bVal: any = "";
       switch (sortConfig.key) {
         case "date": aVal = new Date(a.orderDate).getTime(); bVal = new Date(b.orderDate).getTime(); break;
-        case "clinic": aVal = a.clinic.name; bVal = b.clinic.name; break;
-        case "alias": aVal = a.patientAlias; bVal = b.patientAlias; break;
         case "doctor": aVal = a.doctorName || ""; bVal = b.doctorName || ""; break;
         case "patientName": 
             aVal = `${a.patientLastName} ${a.patientFirstName}`; 
@@ -95,6 +91,7 @@ export default function BillingList({ cases, isAdminOrLab, showClinicColumn, tot
             break;
         case "product": aVal = a.product; bVal = b.product; break;
         case "cost": aVal = Number(a.cost); bVal = Number(b.cost); break;
+        case "alias": aVal = a.patientAlias; bVal = b.patientAlias; break;
       }
       if (aVal < bVal) return sortConfig.direction === "asc" ? -1 : 1;
       if (aVal > bVal) return sortConfig.direction === "asc" ? 1 : -1;
@@ -120,7 +117,8 @@ export default function BillingList({ cases, isAdminOrLab, showClinicColumn, tot
     setTimeout(() => setLoadingMore(false), 2000);
   };
 
-  const colCount = 5 + (showClinicColumn ? 1 : 0) + (isAdminOrLab ? 1 : 0);
+  // Fixed column count since Doctor is always shown and Clinic is always hidden
+  const colCount = 6; 
 
   return (
     <div className="flex-1 min-h-0 rounded-xl border border-border bg-surface overflow-hidden flex flex-col shadow-2xl">
@@ -129,12 +127,11 @@ export default function BillingList({ cases, isAdminOrLab, showClinicColumn, tot
           <thead className="bg-surface text-muted sticky top-0 z-10">
             <tr>
               <SortableHeader label="Created On" colKey="date" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
-              {showClinicColumn && <SortableHeader label="Clinic" colKey="clinic" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />}
+              <SortableHeader label="Doctor Name" colKey="doctor" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
               <SortableHeader label="Patient Name" colKey="patientName" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
-              <SortableHeader label="Alias" colKey="alias" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
-              {isAdminOrLab && <SortableHeader label="Doctor" colKey="doctor" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />}
               <SortableHeader label="Product (Units)" colKey="product" sortConfig={sortConfig} onSort={handleSort} isAnySorted={isAnySorted} />
-              <SortableHeader label="Cost" colKey="cost" sortConfig={sortConfig} onSort={handleSort} align="right" isAnySorted={isAnySorted} />
+              <SortableHeader label="Cost" colKey="cost" sortConfig={sortConfig} onSort={handleSort} align="left" isAnySorted={isAnySorted} />
+              <SortableHeader label="Alias" colKey="alias" sortConfig={sortConfig} onSort={handleSort} align="left" isAnySorted={isAnySorted} />
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -152,16 +149,20 @@ export default function BillingList({ cases, isAdminOrLab, showClinicColumn, tot
 
                 return (
                   <tr key={c.id} className="hover:bg-[var(--accent-dim)] transition-colors">
+                    {/* 1. Created On */}
                     <td className="p-4 text-muted">{new Date(c.orderDate).toLocaleDateString()}</td>
-                    {showClinicColumn && <td className="p-4 text-muted">{c.clinic.name}</td>}
-                    <td className="p-4 font-medium text-[var(--foreground)]">{c.patientLastName}, {c.patientFirstName}</td>
-                    <td className="p-4 font-mono text-xs text-muted">{c.patientAlias}</td>
-                    {isAdminOrLab && <td className="p-4 text-muted">{c.doctorName || "—"}</td>}
+                    
+                    {/* 2. Doctor Name (Now font-bold) */}
+                    <td className="p-4 font-bold text-[var(--foreground)]">{c.doctorName || "—"}</td>
+                    
+                    {/* 3. Patient Name (Now font-bold) */}
+                    <td className="p-4 font-bold text-[var(--foreground)]">{c.patientLastName}, {c.patientFirstName}</td>
   
-                    <td className="p-4 text-muted">
+                    {/* 4. Product (units) (Product now font-bold) */}
+                    <td className="p-4">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-medium text-[var(--foreground)]">{formatProductName(c.product)}</span>
-                        <span className="text-xs opacity-70">({c.units} unit{c.units > 1 ? 's' : ''})</span>
+                        <span className="font-bold text-[var(--foreground)]">{formatProductName(c.product)}</span>
+                        <span className="text-xs text-muted">({c.units} unit{c.units > 1 ? 's' : ''})</span>
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         {isWarranty && <span className="px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 uppercase tracking-wide">Warranty</span>}
@@ -169,9 +170,13 @@ export default function BillingList({ cases, isAdminOrLab, showClinicColumn, tot
                       </div>
                     </td>
    
-                    <td className={`p-4 text-right font-mono ${isWarranty ? "text-muted line-through" : isCancelled && displayCost === 0 ? "text-muted" : "text-emerald-600"}`}>
+                    {/* 5. Cost */}
+                    <td className={`p-4 font-semibold ${isWarranty ? "text-muted line-through" : isCancelled && displayCost === 0 ? "text-muted" : "text-emerald-600"}`}>
                       {formatCurrency(displayCost)}
                     </td>
+
+                    {/* 6. Alias */}
+                    <td className="p-4 text-muted">{c.patientAlias}</td>
                   </tr>
                 );
               })

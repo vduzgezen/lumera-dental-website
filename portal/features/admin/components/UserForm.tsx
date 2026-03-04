@@ -31,7 +31,6 @@ export default function UserForm({
     phoneNumber: initialData?.phoneNumber || "",
     preferenceNote: initialData?.preferenceNote || "",
     salesRepId: initialData?.salesRepId || "", 
-    // ✅ NEW: Strict Approval State
     requiresStrictDesignApproval: initialData?.requiresStrictDesignApproval ?? false,
   });
 
@@ -120,7 +119,6 @@ export default function UserForm({
       if (!res.ok) throw new Error(data.error || "Failed");
 
       setMsg(isEdit ? "User updated!" : "User created!");
-
       if (!isEdit) {
         setFormData({
           name: "", email: "", role: "customer",
@@ -133,7 +131,6 @@ export default function UserForm({
       
       router.refresh();
       if (onClose) setTimeout(onClose, 800);
-
     } catch (err: any) {
       setError(err.message || "Error saving user.");
     } finally {
@@ -257,7 +254,8 @@ export default function UserForm({
                           return (
                             <label key={c.id} className={`flex items-center gap-3 p-2 rounded hover:bg-[var(--accent-dim)] cursor-pointer transition ${isChecked ? "bg-[var(--accent-dim)] border border-border" : "border border-transparent"}`}>
                               <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${isChecked ? "bg-accent border-accent" : "border-border"}`}>
-                                {isChecked && <svg className="w-3 h-3 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7" /></svg>}
+                                 {/* ✅ FIX: Changed text-white to text-[var(--background)] for automatic dark/light inversion */}
+                                 {isChecked && <svg className="w-3 h-3 text-[var(--foreground)]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M5 13l4 4L19 7" /></svg>}
                               </div>
                               <input type="checkbox" className="hidden" checked={isChecked} onChange={() => toggleSecondary(c.id)} />
                               <span className={`text-sm ${isChecked ? "text-foreground font-medium" : "text-muted"}`}>{c.name}</span>
@@ -269,9 +267,9 @@ export default function UserForm({
                 </div>
               )}
 
-              {/* ✅ NEW: DOCTOR REVIEW TOGGLE */}
+              {/* DOCTOR REVIEW TOGGLE */}
               <div className="bg-surface rounded-lg p-4 border border-border space-y-2">
-                <label className="flex items-start gap-3 cursor-pointer group">
+                 <label className="flex items-start gap-3 cursor-pointer group">
                   <div className="pt-0.5">
                     <input 
                       type="checkbox" 

@@ -1,11 +1,10 @@
 // app/portal/cases/StandardView.tsx
 import { prisma } from "@/lib/prisma";
-import Link from "next/link";
 import AutoRefresh from "@/components/ui/AutoRefresh";
 import CaseListClient from "./CaseListClient";
 import CasesFilterBar from "./CasesFilterBar";
-import TriageBar from "./TriageBar"; 
 import { CaseRow } from "./types";
+import { cookies } from "next/headers";
 
 export default async function StandardView({ 
   searchParams, 
@@ -44,17 +43,64 @@ export default async function StandardView({
   const statusFilter = getParamArray("status");
   
   const unreadFilter = getParam("unread") === "true";
-  const actionFilter = getParam("action") === "true"; // ✅ Capture Action Toggle
+  const actionFilter = getParam("action") === "true";
   
-  // ✅ 1. BUILD THE BASE WHERE (Search, Dates, Clinics ONLY - No Status/Unread)
-  const baseWhere: any = {};
+  // ✅ Extract the global cookie
+  const cookieJar = await cookies();
+  const savedClinicCookie = cookieJar.get("lumera_active_clinic")?.value;
+
+  // ✅ 1. CLINIC SCOPING LOGIC
+  let authorizedClinicIds: string[] = [];
+  let availableClinics: { id: string; name: string }[] = [];
+  let primaryClinicId: string | null = null;
 
   if (isDoctor) {
-    baseWhere.OR = [
-      { doctorUserId: session.userId },
-      { clinicId: session.clinicId ?? "__none__" }
-    ];
+    const userRecord = await prisma.user.findUnique({
+      where: { id: session.userId },
+      include: { secondaryClinics: { select: { id: true } } }
+    });
 
+    if (userRecord?.clinicId) {
+      authorizedClinicIds.push(userRecord.clinicId);
+      primaryClinicId = userRecord.clinicId;
+    }
+    if (userRecord?.secondaryClinics) {
+      userRecord.secondaryClinics.forEach(c => authorizedClinicIds.push(c.id));
+    }
+    
+    availableClinics = await prisma.clinic.findMany({
+      where: { id: { in: authorizedClinicIds } },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' }
+    });
+  }
+
+  const baseWhere: any = {};
+  
+  let activeClinicId = "";
+  if (isDoctor) {
+    // Order of precedence: URL Param -> Global Cookie -> Primary Clinic -> First Available
+    activeClinicId = clinicFilter?.trim() || savedClinicCookie || primaryClinicId || authorizedClinicIds[0] || "";
+    
+    // Security check: ensure the cookie/param isn't maliciously requesting an unauthorized clinic
+    if (!authorizedClinicIds.includes(activeClinicId)) {
+       activeClinicId = primaryClinicId || authorizedClinicIds[0] || "";
+    }
+
+    if (activeClinicId) {
+      baseWhere.clinicId = activeClinicId;
+    } else {
+      baseWhere.clinicId = { in: authorizedClinicIds };
+    }
+
+    // ✅ CRITICAL PRIVACY FIX: Doctors strictly only see their OWN cases.
+    baseWhere.doctorUserId = session.userId;
+  }
+
+  const activeClinicName = availableClinics.find(c => c.id === activeClinicId)?.name || "";
+
+  // Apply other text searches
+  if (isDoctor) {
     const query = searchFilter || aliasFilter;
     if (query && query.trim()) {
       baseWhere.AND = {
@@ -70,6 +116,7 @@ export default async function StandardView({
   } else if (currentRole === "sales") {
     baseWhere.salesRepId = session.userId;
   } else {
+    // Admins use text-based clinic filtering
     if (clinicFilter?.trim()) baseWhere.clinic = { name: { contains: clinicFilter.trim(), mode: 'insensitive' } };
     if (doctorFilter?.trim()) baseWhere.doctorName = { contains: doctorFilter.trim(), mode: 'insensitive' };
     if (caseIdFilter?.trim()) baseWhere.id = { contains: caseIdFilter.trim() };
@@ -106,7 +153,7 @@ export default async function StandardView({
     }
   }
 
-  // ✅ 2. CALCULATE STABLE TRIAGE COUNTS (Unaffected by radio button clicks)
+  // ✅ 2. CALCULATE STABLE TRIAGE COUNTS
   const roleTarget = isDoctor ? "DOCTOR" : "LAB";
   
   const triageCases = await prisma.dentalCase.findMany({
@@ -119,18 +166,16 @@ export default async function StandardView({
   const shippedCount = triageCases.filter(c => c.status === "SHIPPED").length;
 
 
-  // ✅ 3. BUILD THE TABLE WHERE (Applies the Status/Unread filters for the actual grid)
+  // ✅ 3. BUILD THE TABLE WHERE
   const tableWhere = { ...baseWhere };
 
   if (statusFilter.length > 0) {
-    // ✅ SUB-STATUS INJECTION: If filtering for IN_DESIGN, automatically include READY_FOR_REVIEW
     const expandedStatuses = [...statusFilter];
     if (expandedStatuses.includes("IN_DESIGN") && !expandedStatuses.includes("READY_FOR_REVIEW")) {
         expandedStatuses.push("READY_FOR_REVIEW");
     }
     tableWhere.status = { in: expandedStatuses };
   } else if (!unreadFilter && !actionFilter) {
-    // ✅ Hide delivered/completed by default ONLY if we aren't explicitly searching for priority messages
     if (isDoctor) {
         tableWhere.status = { notIn: ["DELIVERED"] };
     } else {
@@ -143,7 +188,6 @@ export default async function StandardView({
       else tableWhere.unreadForLab = true;
   }
 
-  // ✅ Apply explicit action filter if toggled
   if (actionFilter) {
       tableWhere.actionRequiredBy = roleTarget;
   }
@@ -181,6 +225,7 @@ export default async function StandardView({
             clinic: { select: { name: true, phone: true } }, 
             assigneeUser: { select: { name: true, email: true } },
             product: true,
+            units: true,
             material: true,
             serviceLevel: true,
             actionRequiredBy: true,
@@ -212,43 +257,23 @@ export default async function StandardView({
   });
 
   return (
-    <section className="flex flex-col h-full w-full p-6 overflow-hidden bg-background text-foreground">
+    <section className="flex flex-col h-full w-full px-6 pb-6 pt-0 overflow-hidden bg-background text-foreground">
       <AutoRefresh intervalMs={60000} />
 
-      <div className="flex-none space-y-4 mb-4">
-        <header className="flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-4 flex-wrap">
-            <div className="flex items-baseline gap-3">
-              <h1 className="text-2xl font-semibold text-foreground">Cases</h1>
-              <span className="text-sm text-muted">Total: {totalCount}</span>
-            </div>
-            
-            {/* Stable counts passed to the Triage Bar */}
-            <TriageBar 
-              actionCount={actionCount} 
-              unreadCount={unreadCount} 
-              shippedCount={shippedCount} 
-              isDoctor={isDoctor} 
-            />
-          </div>
-  
-          {canCreate && (
-            <Link
-            href="/portal/cases/new"
-            className="px-4 py-2 rounded-xl bg-surface text-foreground text-sm font-semibold hover:brightness-110 hover:scale-105 transition-all shadow-md border border-border"
-            >
-            + New Case
-            </Link>
-          )}
-        </header>
-
-        <CasesFilterBar 
-            role={role}
-            isAdmin={isAdmin}
-            isDoctor={isDoctor}
-            labUsers={labUsers}
-        />
-      </div>
+      <CasesFilterBar 
+        role={role}
+        isAdmin={isAdmin}
+        isDoctor={isDoctor}
+        labUsers={labUsers}
+        canCreate={canCreate}
+        availableClinics={availableClinics}
+        activeClinicId={activeClinicId}
+        activeClinicName={activeClinicName}
+        totalCount={totalCount}
+        actionCount={actionCount}
+        unreadCount={unreadCount}
+        shippedCount={shippedCount}
+      />
 
       <CaseListClient 
         cases={fullySortedRows as CaseRow[]} 

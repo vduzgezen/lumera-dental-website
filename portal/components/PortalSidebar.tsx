@@ -14,17 +14,13 @@ import {
 const COOKIE_NAME = "lumera_sidebar_v2";
 
 function setSidebarCookie(isOpen: boolean) {
-  // Set new global cookie
   document.cookie = `${COOKIE_NAME}=${isOpen}; path=/; max-age=31536000; SameSite=Lax`;
 }
 
-// FIX: Aggressively delete old conflicting cookies on any path
 function nukeOldCookies() {
   const oldCookies = ["lumera_sidebar", "lumera_sidebar_state"];
   oldCookies.forEach(name => {
-    // Delete generic
     document.cookie = `${name}=; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
-    // Delete root path
     document.cookie = `${name}=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT`;
   });
 }
@@ -39,7 +35,6 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
   const [expanded, setExpanded] = useState(defaultOpen);
   const [loggingOut, setLoggingOut] = useState(false);
 
-  // Run cleanup once on mount
   useEffect(() => {
     nukeOldCookies();
   }, []);
@@ -47,13 +42,11 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
   const toggleSidebar = () => {
     const next = !expanded;
     setExpanded(next);
-    // Save new V2 cookie
     setSidebarCookie(next);
     window.localStorage.setItem(COOKIE_NAME, String(next));
   };
 
   const navItems = [
-    // ✅ FIX: Removed "milling" from the general Dashboard so they only see the Production one
     { label: "Dashboard", href: "/portal/cases", icon: LayoutDashboard, roles: ["customer", "lab", "admin", "sales"] },
     { label: "New Case", href: "/portal/cases/new", icon: FolderOpen, roles: ["lab", "admin"] },
     { label: "Billing", href: "/portal/billing", icon: CreditCard, roles: ["customer", "admin"] },
@@ -80,20 +73,22 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
       className={`
         h-full bg-sidebar border-r border-border
         transition-all duration-300 ease-in-out flex flex-col shrink-0 relative
-        ${expanded ? "w-64" : "w-20"}
+        ${expanded ? "w-64" : "w-[84px]"} // ✅ Nudged collapsed width slightly to house the bigger 52px buttons
       `}
     >
       <div className="h-24 flex items-center justify-center shrink-0 p-6">
-        <div className={`${expanded ? "w-48" : "w-8"} transition-all duration-300 flex justify-center items-center`}>
-          <Logo showText={expanded} />
-        </div>
+        {/* ✅ Wrapped in a Next Link for quick dashboard access */}
+        <Link href="/portal/cases" className="cursor-pointer block">
+          <div className={`${expanded ? "w-48" : "w-8"} transition-all duration-300 flex justify-center items-center`}>
+            <Logo showText={expanded} />
+          </div>
+        </Link>
       </div>
 
       <nav className="flex-1 px-3 py-4 space-y-2 overflow-y-auto custom-scrollbar flex flex-col items-center">
         {filteredNav.map((item) => {
           let isActive = false;
           
-          // ✅ FIX: Strict routing logic for both Dashboard AND Production Dashboard
           if (item.label === "Dashboard") {
              const isMilling = pathname.startsWith("/portal/cases/milling");
              const isNew = pathname.startsWith("/portal/cases/new");
@@ -112,8 +107,8 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
               key={item.href}
               href={item.href}
               className={`
-                h-11 flex items-center rounded-lg group relative transition-[background-color] duration-200
-                ${expanded ? "w-full px-3 justify-start" : "w-11 justify-center"}
+                flex items-center rounded-lg group relative transition-[background-color] duration-200
+                ${expanded ? "h-[50px] w-full px-3 justify-start" : "h-[50px] w-[50px] justify-center mx-auto"} {/* ✅ Upgraded to 52px square */}
                 ${isActive 
                   ? "bg-[var(--accent-dim)] text-accent font-semibold shadow-sm" 
                   : "text-muted hover:bg-[var(--accent-dim)] hover:text-accent"
@@ -136,8 +131,8 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
           onClick={handleLogout}
           disabled={loggingOut}
           className={`
-            h-11 flex items-center rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 transition-[background-color] duration-200 group cursor-pointer
-            ${expanded ? "w-full px-3 justify-start" : "w-11 justify-center"}
+            flex items-center rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 transition-[background-color] duration-200 group cursor-pointer
+            ${expanded ? "h-[52px] w-full px-3 justify-start" : "h-[52px] w-[52px] justify-center mx-auto"} {/* ✅ Upgraded to 52px square */}
           `}
           title={!expanded ? "Log Out" : ""}
         >

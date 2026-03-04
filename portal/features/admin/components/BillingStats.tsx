@@ -1,4 +1,4 @@
-// portal/components/BillingStats.tsx
+// features/admin/components/BillingStats.tsx
 "use client";
 
 import { formatCurrency } from "@/lib/pricing";
@@ -14,7 +14,6 @@ type Props = {
 
 export default function BillingStats({ totalCost, caseCount, totalUnits, trueMonthlyTotal, selMonth, selYear }: Props) {
   
-  // --- Billing Status Logic ---
   let statusText = "NO ACTIVITY";
   let statusColor = "bg-surface-highlight text-muted border-border";
 
@@ -23,13 +22,9 @@ export default function BillingStats({ totalCost, caseCount, totalUnits, trueMon
       statusText = "AMOUNT PAID";
       statusColor = "bg-green-500/10 text-green-500 border-green-500/20";
     } else {
-      // Find the absolute last millisecond of the selected billing month
       const endOfBillingMonth = new Date(selYear, selMonth, 0, 23, 59, 59, 999);
-      
-      // Calculate Net 30 Due Date
       const dueDate = new Date(endOfBillingMonth);
       dueDate.setDate(dueDate.getDate() + 30);
-      
       const now = new Date();
 
       if (now <= endOfBillingMonth) {
@@ -46,8 +41,9 @@ export default function BillingStats({ totalCost, caseCount, totalUnits, trueMon
   }
 
   return (
-    // ✅ Note: mb-8 is intentionally removed here so the parent controls the gap
-    <div className="flex-none grid grid-cols-1 md:grid-cols-3 gap-6">
+    // ✅ Added exactly pb-4 here to ensure the table list beneath it breathes correctly, 
+    //    but strictly kept top margins out so the math from the Toolbar stays perfectly accurate.
+    <div className="flex-none grid grid-cols-1 md:grid-cols-3 gap-6 pb-4">
       <div className="rounded-2xl border border-border bg-surface p-6 shadow-sm flex flex-col justify-center">
         <div className="text-sm text-muted mb-1 font-medium">Total Cost (Filtered)</div>
         <div className="text-4xl font-light text-[var(--accent)]">

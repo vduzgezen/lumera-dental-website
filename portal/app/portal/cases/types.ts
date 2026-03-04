@@ -16,6 +16,7 @@ export type CaseRow = {
   };
   assigneeUser: { name: string | null; email: string } | null;
   product: string;
+  units: number;
   material: string | null;
   serviceLevel: string | null;
   doctorUser: {
