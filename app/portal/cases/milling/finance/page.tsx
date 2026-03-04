@@ -3,9 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import MillingFinanceTable from "./MillingFinanceTable";
-import MillingFinanceFilters from "./MillingFinanceFilters";
-import MillingFinanceStats from "./MillingFinanceStats";
+import MillingFinanceTable from "@/features/portal/cases/milling/finance/components/MillingFinanceTable";
+import MillingFinanceFilters from "@/features/portal/cases/milling/finance/components/MillingFinanceFilters";
+import MillingFinanceStats from "@/features/portal/cases/milling/finance/components/MillingFinanceStats";
 import { calculateProductionCosts } from "@/lib/cost-engine";
 
 export const dynamic = "force-dynamic";

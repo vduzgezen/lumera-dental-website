@@ -1,6 +1,6 @@
 // portal/app/portal/admin/addresses/page.tsx
 import { prisma } from "@/lib/prisma";
-import AddressListClient from "./AddressListClient";
+import AddressListClient from "@/features/portal/admin/addresses/components/AddressListClient";
 
 export const dynamic = "force-dynamic";
 

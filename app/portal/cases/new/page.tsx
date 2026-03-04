@@ -3,8 +3,8 @@ import { getSession } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import NewCaseForm from "@/features/new-case/NewCaseForm";
-import type { DoctorRow } from "@/features/new-case/components/types";
+import NewCaseForm from "@/features/portal/cases/new/components/NewCaseForm";
+import type { DoctorRow } from "@/features/portal/cases/new/components/types";
 
 export const dynamic = "force-dynamic";
 

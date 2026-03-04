@@ -1,7 +1,7 @@
 // app/portal/cases/milling/page.tsx
 import { getSession } from "@/lib/auth";
 import { notFound } from "next/navigation";
-import MillingView from "../MillingView";
+import MillingView from "@/features/portal/cases/components/MillingView";
 
 export const dynamic = "force-dynamic";
 

@@ -1,10 +1,10 @@
 // app/portal/cases/page.tsx
 import { getSession } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation"; // ✅ Added redirect
-import MillingView from "./MillingView";
-import StandardView from "./StandardView";
+import MillingView from "@/features/portal/cases/components/MillingView";
+import StandardView from "@/features/portal/cases/components/StandardView";
 
-export type { CaseRow } from "./types";
+export type { CaseRow } from "@/features/portal/cases/components/types";
 
 export const dynamic = "force-dynamic";
 

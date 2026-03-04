@@ -1,6 +1,6 @@
 // portal/app/portal/admin/requests/page.tsx
 import { prisma } from "@/lib/prisma";
-import RequestListClient from "./RequestListClient";
+import RequestListClient from "@/features/portal/admin/requests/components/RequestListClient";
 
 export const dynamic = "force-dynamic";
 

@@ -1,5 +1,5 @@
 // app/portal/layout.tsx
-import PortalSidebar from "@/components/PortalSidebar";
+import PortalSidebar from "@/features/portal/shared/components/PortalSidebar";
 import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";

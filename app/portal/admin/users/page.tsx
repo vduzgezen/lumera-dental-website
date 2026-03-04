@@ -1,6 +1,6 @@
 // portal/app/portal/admin/users/page.tsx
 import { prisma } from "@/lib/prisma";
-import UserListClient from "./UserListClient";
+import UserListClient from "@/features/portal/admin/users/components/UserListClient";
 
 export const dynamic = "force-dynamic";
 

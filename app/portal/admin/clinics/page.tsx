@@ -1,6 +1,6 @@
 // portal/app/portal/admin/clinics/page.tsx
 import { prisma } from "@/lib/prisma";
-import ClinicListClient from "./ClinicListClient";
+import ClinicListClient from "@/features/portal/admin/clinics/components/ClinicListClient";
 
 export const dynamic = "force-dynamic";
 

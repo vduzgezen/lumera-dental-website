@@ -3,9 +3,9 @@ import { getSession } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import BillingToolbar from "@/features/admin/components/BillingToolbar";
-import BillingStats from "@/features/admin/components/BillingStats";
-import BillingList from "@/features/admin/components/BillingList";
+import BillingToolbar from "@/features/portal/admin/shared/components/BillingToolbar";
+import BillingStats from "@/features/portal/admin/shared/components/BillingStats";
+import BillingList from "@/features/portal/admin/shared/components/BillingList";
 import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
