@@ -3,6 +3,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 export function AdminTabs() {
   const pathname = usePathname();
@@ -13,11 +14,12 @@ export function AdminTabs() {
     return (
       <Link
         href={href}
-        className={`px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm ${
+        className={cn(
+          "px-4 py-2 rounded-lg text-sm font-bold transition-all shadow-sm",
           active 
             ? "bg-foreground text-background border-2 border-foreground" // ✅ Flips perfectly in Light/Dark
             : "text-muted border-2 border-transparent bg-surface hover:bg-[var(--accent-dim)] hover:text-foreground hover:border-border"
-        }`}
+        )}
       >
         {label}
       </Link>

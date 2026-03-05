@@ -1,6 +1,7 @@
 // portal/app/portal/cases/milling/finance/MillingFinanceStats.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/pricing";
 
 interface Props {

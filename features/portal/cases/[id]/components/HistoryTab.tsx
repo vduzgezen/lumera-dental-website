@@ -1,5 +1,7 @@
 // features/case-dashboard/components/HistoryTab.tsx
 import { memo } from "react";
+import { cn } from "@/lib/utils";
+import React from "react";
 
 type HistoryEvent = {
   id: string;
@@ -28,12 +30,15 @@ const HistoryTabComponent = ({ isActive, events }: Props) => {
   if (!isActive) return null;
 
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar p-4 animate-in fade-in duration-200 block">
+    <div className="flex-1 h-full min-h-0 overflow-y-auto custom-scrollbar p-2 animate-in fade-in duration-200 block">
       {events.length === 0 ? (
         <p className="text-muted text-sm text-center mt-4">No events yet.</p>
       ) : (
-        <div className="relative border-l-2 border-border/60 ml-3 space-y-6 pt-2 pb-4">
-          {events.map((ev) => {
+        <div className="grid grid-cols-[16px_1fr] gap-x-4 gap-y-6 pt-2 pb-4 ml-2 pr-4">
+          {events.map((ev, index) => {
+            const isFirst = index === 0;
+            const isLast = index === events.length - 1;
+
             // Explicitly format every single status
             let displayStatus = ev.to.replace(/_/g, " ");
             let colorClass = "bg-accent";
@@ -80,28 +85,44 @@ const HistoryTabComponent = ({ isActive, events }: Props) => {
             }
 
             return (
-              <div key={ev.id} className="ml-5 relative">
-                {/* The Color-Coded Glow Dot */}
-                <div
-                  className={`absolute -left-[27.5px] top-1.5 w-3 h-3 rounded-full ${colorClass} border-2 border-surface transition-colors duration-200 z-10`}
-                />
+              <React.Fragment key={ev.id}>
+                {/* Left Column: Timeline Dot & Connecting Line */}
+                <div className="relative flex items-center justify-center w-full h-full">
+                  {/* The Line Segment (Only draw if multiple events exist) */}
+                  {events.length > 1 && (
+                    <div
+                      className={cn(
+                        "absolute w-[2px] bg-gray-400 z-0",
+                        isFirst ? "top-1/2 bottom-[-24px]" :
+                        isLast ? "top-[-24px] bottom-1/2" :
+                        "top-[-24px] bottom-[-24px]"
+                      )}
+                    />
+                  )}
 
-                <div className="flex flex-col bg-surface p-3 rounded-xl border border-border/50 shadow-sm transition-all hover:border-border hover:shadow-md">
+                  {/* The Color-Coded Glow Dot (Locked to static gray border) */}
+                  <div
+                    className={`relative w-3 h-3 rounded-full ${colorClass} border-2 border-gray-400 z-10`}
+                  />
+                </div>
+
+                {/* Right Column: The Content Box */}
+                <div className="flex flex-col min-w-0 bg-surface p-3 rounded-xl border border-gray-400 shadow-sm transition-all hover:border-gray-500 hover:shadow-md">
                   <div className="flex items-start justify-between gap-2">
-                    <span className="text-sm font-semibold text-foreground tracking-tight">
+                    <span className="text-sm font-semibold text-foreground tracking-tight truncate">
                       {displayStatus}
                     </span>
-                    <span className="text-[10px] text-muted font-mono whitespace-nowrap mt-0.5">
+                    <span className="text-[10px] text-muted font-mono whitespace-nowrap mt-0.5 shrink-0">
                       {fmtDate(ev.at)}
                     </span>
                   </div>
                   {ev.note && (
-                    <div className="mt-2 text-[11px] text-foreground/80 bg-background/50 p-2 rounded-lg border border-border/50 italic leading-relaxed">
+                    <div className="mt-2 text-[11px] text-foreground/80 bg-background/50 p-2 rounded-lg border border-gray-400/60 italic leading-relaxed break-words whitespace-pre-wrap">
                       &quot;{ev.note}&quot;
                     </div>
                   )}
                 </div>
-              </div>
+              </React.Fragment>
             );
           })}
         </div>

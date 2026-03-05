@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import UserForm from "@/features/portal/admin/shared/components/UserForm";
 import { AdminTabs } from "@/features/portal/admin/shared/components/AdminTabs";
+import { cn } from "@/lib/utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function UserListClient({ users, clinics }: { users: any[], clinics: any[] }) {
@@ -97,9 +98,10 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
     const isActive = sortConfig.key === colKey;
     return (
       <th
-        className={`p-4 font-medium cursor-pointer select-none transition-colors hover:bg-[var(--accent-dim)] hover:text-foreground ${
+        className={cn(
+          "p-4 font-medium cursor-pointer select-none transition-colors hover:bg-[var(--accent-dim)] hover:text-foreground",
           isActive ? "text-accent" : "text-muted"
-        }`}
+        )}
         onClick={() => handleSort(colKey)}
       >
         <div className="flex items-center gap-2">
@@ -254,7 +256,7 @@ export default function UserListClient({ users, clinics }: { users: any[], clini
               <button 
                 onClick={confirmDelete} 
                 disabled={isDeleting} 
-                className="px-4 py-2 bg-red-500 text-white rounded font-bold hover:bg-red-600 shadow-sm transition-all cursor-pointer"
+                className="px-4 py-2 bg-red-500 text-foreground rounded font-bold hover:bg-red-600 shadow-sm transition-all cursor-pointer"
               >
                 Delete
               </button>

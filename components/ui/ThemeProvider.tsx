@@ -4,29 +4,28 @@
 import { createContext, useContext, useEffect, useState } from "react";
 
 const ThemeContext = createContext({
-  isDark: true,
+  isDark: false,
   toggleTheme: () => {},
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [isDark, setIsDark] = useState(true);
+  const [isDark, setIsDark] = useState(false);
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const saved = localStorage.getItem("lumera-theme");
-    // Default to dark if no preference or explicitly dark
-    const initial = saved ? saved === "dark" : true; 
+    // Default to light if no preference; only go dark if explicitly saved
+    const initial = saved ? saved === "dark" : false;
     setIsDark(initial);
+    applyTheme(initial);
   }, []);
 
   const applyTheme = (dark: boolean) => {
     if (dark) {
       document.documentElement.classList.add("dark");
-      document.documentElement.classList.remove("light");
     } else {
       document.documentElement.classList.remove("dark");
-      document.documentElement.classList.add("light");
     }
   };
 
@@ -48,13 +47,9 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
             (function() {
               try {
                 var saved = localStorage.getItem('lumera-theme');
-                var isDark = saved ? saved === 'dark' : true;
-                if (isDark) {
+                // Default to light; only apply dark if explicitly saved
+                if (saved === 'dark') {
                   document.documentElement.classList.add('dark');
-                  document.documentElement.classList.remove('light');
-                } else {
-                  document.documentElement.classList.remove('dark');
-                  document.documentElement.classList.add('light');
                 }
               } catch (e) {}
             })();

@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import StripeCheckoutModal from "./StripeCheckoutModal";
+import { cn } from "@/lib/utils";
 
 type Props = {
   caseId?: string;

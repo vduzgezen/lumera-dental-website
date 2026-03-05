@@ -1,6 +1,7 @@
 // portal/components/ThemeToggle.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/ui/ThemeProvider";
 import { Sun, Moon } from "lucide-react";
 
@@ -10,14 +11,10 @@ export default function ThemeToggle({ expanded = true }: { expanded?: boolean })
   return (
     <button
       onClick={toggleTheme}
-      className={`
-        h-11 flex items-center rounded-lg transition-colors duration-200 group relative
-        ${expanded 
-          ? "w-full px-3 justify-start" 
-          : "w-11 justify-center"
-        }
-        text-muted hover:bg-[var(--accent-dim)] hover:text-accent cursor-pointer
-      `}
+      className={cn(
+        "h-11 flex items-center rounded-lg transition-colors duration-200 group relative text-muted hover:bg-[var(--accent-dim)] hover:text-accent cursor-pointer",
+        expanded ? "w-full px-3 justify-start" : "w-11 justify-center"
+      )}
       title={isDark ? "Switch to Light Mode" : "Switch to Night Mode"}
     >
       <div className="shrink-0 group-hover:scale-110 transition-transform flex items-center justify-center">
@@ -29,10 +26,10 @@ export default function ThemeToggle({ expanded = true }: { expanded?: boolean })
       </div>
       
       <span 
-        className={`
-          ml-3 font-medium whitespace-nowrap transition-opacity duration-300 overflow-hidden
-          ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"}
-        `}
+        className={cn(
+          "ml-3 font-medium whitespace-nowrap transition-opacity duration-300 overflow-hidden",
+          expanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"
+        )}
       >
         {isDark ? "Light Mode" : "Night Mode"}
       </span>

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import Image from "next/image";
 import ImageAnnotator from "./ImageAnnotator";
 
@@ -195,16 +196,16 @@ export default function CommentsPanel({
             const displayInitials = maskAsLumera ? "L" : displayAuthor.substring(0, 2).toUpperCase();
             
             const bubbleStyle = isInternal 
-              ? "shadow-sm bg-gray-300 border border-gray-400 text-foreground dark:bg-[#9696e2]/50 dark:border-[#9696e2]/70 dark:text-white"
-              : "shadow-sm bg-gray-300 border border-gray-400 text-foreground dark:bg-[#FFA800]/50 dark:border-[#FFA800]/70 dark:text-white";
+              ? "shadow-sm border-2 bg-indigo-100 border-indigo-500 text-foreground dark:bg-[#9696e2]/50 dark:border-[#9696e2] dark:text-white"
+              : "shadow-sm border-2 bg-orange-100 border-orange-500 text-foreground dark:bg-[#FFA800]/50 dark:border-[#FFA800] dark:text-white";
 
             return (
               <div key={c.id} className="group flex gap-3">
                 <div 
-                  className={`
-                    w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0
-                    ${bubbleStyle}
-                  `}
+                  className={cn(
+                    "w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0",
+                    bubbleStyle
+                  )}
                 >
                   {displayInitials}
                 </div>

@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/types";
 
 type Props = {
@@ -135,7 +136,7 @@ export default function CaseActions({
                             onClick={() => {
                                 if (!act.disabled) change(act.to);
                             }}
-                            className={`w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors flex flex-col ${colorClasses}`}
+                            className={cn("w-full text-left px-3 py-2.5 rounded-lg text-sm font-semibold transition-colors flex flex-col", colorClasses)}
                           >
                               <span>{act.label}</span>
                               {act.subtext && <span className="text-[10px] font-medium opacity-80 mt-0.5">{act.subtext}</span>}

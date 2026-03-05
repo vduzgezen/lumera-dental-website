@@ -4,6 +4,7 @@
 import { useState, Fragment } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { formatCurrency } from "@/lib/pricing";
 
 export default function MillingFinanceTable({ 

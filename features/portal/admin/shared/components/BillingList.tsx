@@ -4,6 +4,7 @@
 import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { formatCurrency, BillingType, formatProductName } from "@/lib/pricing";
+import { cn } from "@/lib/utils";
 
 type BillingCase = {
   id: string;
@@ -48,12 +49,12 @@ const SortableHeader = ({
 
   return (
     <th 
-      className={`
-        p-4 font-medium cursor-pointer transition-all duration-200 select-none group outline-none whitespace-nowrap
-        ${focusStyle}
-        ${align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left"}
-        ${className}
-      `}
+      className={cn(
+        "p-4 font-medium cursor-pointer transition-all duration-200 select-none group outline-none whitespace-nowrap",
+        focusStyle,
+        align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left",
+        className
+      )}
       onClick={() => onSort(colKey)}
     >
       <div className={`flex items-center gap-1 ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start"}`}>
@@ -166,7 +167,7 @@ export default function BillingList({ cases, totalCount }: Props) {
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         {isWarranty && <span className="px-2 py-0.5 rounded text-[10px] bg-yellow-500/10 text-yellow-600 border border-yellow-500/20 uppercase tracking-wide">Warranty</span>}
-                        {isCancelled && <span className="px-2 py-0.5 rounded text-[10px] bg-gray-500/10 text-gray-500 border border-gray-500/20 uppercase tracking-wide">Cancelled</span>}
+                        {isCancelled && <span className="px-2 py-0.5 rounded text-[10px] bg-muted/10 text-muted border border-muted/20 uppercase tracking-wide">Cancelled</span>}
                       </div>
                     </td>
    

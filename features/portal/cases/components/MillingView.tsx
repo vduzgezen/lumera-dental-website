@@ -1,6 +1,7 @@
 // app/portal/cases/MillingView.tsx
 import { prisma } from "@/lib/prisma";
 import { getSession } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import MillingDashboard from "@/features/portal/cases/milling/components/MillingDashboard";
 import AutoRefresh from "@/components/ui/AutoRefresh";
 

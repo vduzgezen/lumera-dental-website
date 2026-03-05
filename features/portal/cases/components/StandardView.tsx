@@ -1,5 +1,6 @@
 // app/portal/cases/StandardView.tsx
 import { prisma } from "@/lib/prisma";
+import { cn } from "@/lib/utils";
 import AutoRefresh from "@/components/ui/AutoRefresh";
 import CaseListClient from "./CaseListClient";
 import CasesFilterBar from "./CasesFilterBar";

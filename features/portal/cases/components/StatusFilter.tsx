@@ -1,6 +1,7 @@
 // portal/components/StatusFilter.tsx
 "use client";
 import { useState, useRef, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
 // ✅ Added CANCELLED to the list
 const ALL_STATUSES = [

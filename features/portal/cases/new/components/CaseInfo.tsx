@@ -1,6 +1,7 @@
 // portal/components/new-case/CaseInfo.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import { CaseData } from "./types";
 import {
   RESTORATION_OPTIONS,
@@ -154,7 +155,7 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
             required
             value={data.orderDate}
             onChange={handleOrderDateChange}
-            className={`w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted outline-none transition-colors duration-200 ${orderFormatInvalid ? 'border-red-500/50' : 'border-border focus:border-accent/50'}`}
+            className={cn("w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted outline-none transition-colors duration-200", orderFormatInvalid ? "border-red-500/50" : "border-border focus:border-accent/50")}
           />
           {orderFormatInvalid && (
             <p className="text-xs text-red-400 font-medium animate-pulse">
@@ -170,7 +171,7 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
             required
             value={data.dueDate} 
             onChange={(e) => update({ dueDate: e.target.value })} 
-            className={`w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted outline-none transition-colors duration-200 ${dueFormatInvalid || timingInvalid ? 'border-red-500/50' : 'border-border focus:border-accent/50'}`}
+            className={cn("w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted outline-none transition-colors duration-200", dueFormatInvalid || timingInvalid ? "border-red-500/50" : "border-border focus:border-accent/50")}
           />
           {(dueFormatInvalid || timingInvalid) && (
             <p className="text-xs text-red-400 font-medium animate-pulse">
@@ -210,11 +211,7 @@ export default function CaseInfo({ data, update }: CaseInfoProps) {
               onChange={handleMaterialChange}
               disabled={data.restorationType === "INLAY_ONLAY"}
               // ✅ Added cursor logic and appearance-none for the locked state
-              className={`w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition-colors duration-200 ${
-                data.restorationType === "INLAY_ONLAY" 
-                  ? "opacity-60 cursor-not-allowed appearance-none" 
-                  : "cursor-pointer hover:bg-[var(--accent-dim)]"
-              }`}
+              className={cn("w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition-colors duration-200", data.restorationType === "INLAY_ONLAY" ? "opacity-60 cursor-not-allowed appearance-none" : "cursor-pointer hover:bg-[var(--accent-dim)]")}
             >
               {materialOptions.map((opt) => (
                 <option key={opt.value} value={opt.value}>

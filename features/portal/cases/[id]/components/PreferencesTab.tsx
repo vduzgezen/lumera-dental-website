@@ -1,6 +1,7 @@
 // features/case-dashboard/components/PreferencesTab.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import CaseNotesEditor from "./CaseNotesEditor";
 
 type Props = {

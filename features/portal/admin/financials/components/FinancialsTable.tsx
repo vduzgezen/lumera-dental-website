@@ -5,6 +5,7 @@ import { useState, useMemo } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import CopyableId from "@/features/portal/shared/components/CopyableId";
 import { formatProductName } from "@/lib/pricing";
+import { cn } from "@/lib/utils";
 
 type SortConfig = {
   key: string | null;
@@ -25,11 +26,11 @@ const SortableHeader = ({
 
   return (
     <th 
-      className={`
-        h-12 p-0 font-medium cursor-pointer transition-colors duration-200 select-none group border-b-2 outline-none whitespace-nowrap align-middle
-        ${isActive ? "text-accent border-accent" : "text-muted border-transparent hover:text-foreground hover:bg-[var(--accent-dim)]"}
-        ${className}
-      `}
+      className={cn(
+        "h-12 p-0 font-medium cursor-pointer transition-colors duration-200 select-none group border-b-2 outline-none whitespace-nowrap align-middle",
+        isActive ? "text-accent border-accent" : "text-muted border-transparent hover:text-foreground hover:bg-[var(--accent-dim)]",
+        className
+      )}
       onClick={() => onSort(colKey)}
     >
       <div className={`flex items-center h-full px-4 ${align === "right" ? "justify-end" : align === "center" ? "justify-center" : "justify-start"}`}>

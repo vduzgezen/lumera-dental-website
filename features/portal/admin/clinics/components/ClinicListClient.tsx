@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import ClinicForm from "@/features/portal/admin/shared/components/ClinicForm";
 import { AdminTabs } from "@/features/portal/admin/shared/components/AdminTabs";
+import { cn } from "@/lib/utils";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function ClinicListClient({ clinics }: { clinics: any[] }) {
@@ -104,9 +105,10 @@ export default function ClinicListClient({ clinics }: { clinics: any[] }) {
     const isActive = sortConfig.key === colKey;
     return (
       <th
-        className={`p-4 font-medium cursor-pointer select-none transition-colors hover:bg-[var(--accent-dim)] hover:text-foreground ${
+        className={cn(
+          "p-4 font-medium cursor-pointer select-none transition-colors hover:bg-[var(--accent-dim)] hover:text-foreground",
           isActive ? "text-accent" : "text-muted"
-        }`}
+        )}
         onClick={() => handleSort(colKey)}
       >
         <div className="flex items-center gap-2">
@@ -248,7 +250,7 @@ export default function ClinicListClient({ clinics }: { clinics: any[] }) {
               <button 
                 onClick={confirmDelete} 
                 disabled={isDeleting} 
-                className="px-4 py-2 bg-red-500 text-white rounded font-bold hover:bg-red-600 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-4 py-2 bg-red-500 text-foreground rounded font-bold hover:bg-red-600 shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isDeleting ? "Deleting..." : "Delete"}
               </button>

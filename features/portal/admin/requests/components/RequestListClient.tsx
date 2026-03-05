@@ -4,6 +4,7 @@
 import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { AdminTabs } from "@/features/portal/admin/shared/components/AdminTabs";
+import { cn } from "@/lib/utils";
 
 export default function RequestListClient({ requests }: { requests: any[] }) {
   const router = useRouter();
@@ -85,9 +86,10 @@ export default function RequestListClient({ requests }: { requests: any[] }) {
     const isActive = sortConfig.key === colKey;
     return (
       <th
-        className={`p-4 font-medium cursor-pointer select-none transition-colors hover:bg-[var(--accent-dim)] hover:text-foreground ${
+        className={cn(
+          "p-4 font-medium cursor-pointer select-none transition-colors hover:bg-[var(--accent-dim)] hover:text-foreground",
           isActive ? "text-accent" : "text-muted"
-        }`}
+        )}
         onClick={() => handleSort(colKey)}
       >
         <div className="flex items-center gap-2">

@@ -2,6 +2,7 @@
 "use client";
 
 import { formatCurrency } from "@/lib/pricing";
+import { cn } from "@/lib/utils";
 
 type Props = {
   totalCost: number;

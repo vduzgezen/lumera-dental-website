@@ -2,6 +2,7 @@
 "use client";
 
 import { useRef } from "react";
+import { cn } from "@/lib/utils";
 import { CaseData } from "./types";
 import { useTheme } from "@/components/ui/ThemeProvider";
 

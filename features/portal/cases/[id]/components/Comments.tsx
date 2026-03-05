@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { cn } from "@/lib/utils";
 
 // Helper to detect if a line is an image URL
 function extractImage(body: string) {

@@ -1,6 +1,7 @@
 // portal/app/portal/cases/milling/MillingTable.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import { CaseRow } from "@/features/portal/cases/components/types";
 import { formatProductName } from "@/lib/pricing";
 
@@ -143,7 +144,7 @@ export default function MillingTable({
                            ? "bg-purple-500/10 text-purple-400 border-purple-500/20"
                            : c.status === "SHIPPED"
                            ? "bg-blue-500/10 text-blue-400 border-blue-500/20"
-                           : "bg-white/5 text-white/50 border-white/10"
+                           : "bg-surface-highlight text-muted border-border"
                        }`}
                   >
                     {c.status.replace(/_/g, " ")}

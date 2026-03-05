@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AddressPicker, { AddressData } from "./AddressPicker";
 import SearchableSelect from "@/features/portal/shared/components/SearchableSelect";
 import ClinicForm from "./ClinicForm";
+import { cn } from "@/lib/utils";
 
 type Clinic = { id: string; name: string };
 type UserOption = { id: string; name: string | null; email: string };

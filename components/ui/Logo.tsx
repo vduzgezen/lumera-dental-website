@@ -1,6 +1,7 @@
 // portal/components/Logo.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import { useTheme } from "@/components/ui/ThemeProvider";
@@ -22,7 +23,7 @@ export default function Logo({ className = "", showText = true }: LogoProps) {
   const showLightLogo = mounted && !isDark;
 
   return (
-    <div className={`relative flex items-center justify-center select-none ${className}`}>
+    <div className={cn("relative flex items-center justify-center select-none", className)}>
       {showText ? (
         <div className="relative w-full h-16 flex items-center justify-center">
           {showLightLogo ? (

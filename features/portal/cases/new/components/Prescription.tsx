@@ -1,6 +1,7 @@
 // portal/features/new-case/components/Prescription.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import { CaseData, ProductType } from "./types";
 
 interface Props {
@@ -30,7 +31,7 @@ export default function Prescription({ data, onChange }: Props) {
             className="w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition-colors duration-200 appearance-none"
           >
             {PRODUCTS.map(p => (
-              <option key={p} value={p} className="bg-gray-900">
+              <option key={p} value={p} className="bg-surface">
                 {p.replace(/_/g, " ")}
               </option>
             ))}
@@ -59,7 +60,7 @@ export default function Prescription({ data, onChange }: Props) {
             value={data.shade}
             onChange={(e) => onChange({ shade: e.target.value })}
             placeholder={isShadeRequired ? "Required (e.g. A2)" : "Optional"}
-            className={`w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200 ${isShadeRequired && !data.shade ? "border-red-500/50" : "border-border"}`}
+            className={cn("w-full rounded-lg bg-surface-highlight border px-4 py-3 text-foreground placeholder:text-muted focus:border-accent/50 outline-none transition-colors duration-200", isShadeRequired && !data.shade ? "border-red-500/50" : "border-border")}
           />
         </div>
 

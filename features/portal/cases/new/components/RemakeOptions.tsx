@@ -1,6 +1,7 @@
 // features/new-case/components/RemakeOptions.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import { CaseData } from "./types";
 
 interface Props {

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import BillingPayButton from "./BillingPayButton";
+import { cn } from "@/lib/utils";
 
 const MONTHS = [
   "January", "February", "March", "April", "May", "June",
@@ -231,7 +232,7 @@ export default function BillingToolbar({
                  type="checkbox" 
                  checked={filters.personal} 
                  onChange={(e) => updateInstant("personal", e.target.checked)} 
-                 className="w-4 h-4 rounded border-gray-300 text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer" 
+                 className="w-4 h-4 rounded border-border text-[var(--accent)] focus:ring-[var(--accent)] cursor-pointer" 
                />
                Show my cases only
              </label>

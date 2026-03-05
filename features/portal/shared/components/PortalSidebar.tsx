@@ -1,6 +1,7 @@
 // components/PortalSidebar.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import { useState, useEffect } from "react";
@@ -70,11 +71,10 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
 
   return (
     <aside 
-      className={`
-        h-full bg-sidebar border-r border-border
-        transition-all duration-300 ease-in-out flex flex-col shrink-0 relative
-        ${expanded ? "w-64" : "w-[84px]"} // ✅ Nudged collapsed width slightly to house the bigger 52px buttons
-      `}
+      className={cn(
+        "h-full bg-sidebar border-r border-border transition-all duration-300 ease-in-out flex flex-col shrink-0 relative",
+        expanded ? "w-64" : "w-[84px]"
+      )}
     >
       <div className="h-24 flex items-center justify-center shrink-0 p-6">
         {/* ✅ Wrapped in a Next Link for quick dashboard access */}
@@ -106,18 +106,17 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
             <Link
               key={item.href}
               href={item.href}
-              className={`
-                flex items-center rounded-lg group relative transition-[background-color] duration-200
-                ${expanded ? "h-[50px] w-full px-3 justify-start" : "h-[50px] w-[50px] justify-center mx-auto"} {/* ✅ Upgraded to 52px square */}
-                ${isActive 
+              className={cn(
+                "flex items-center rounded-lg group relative transition-[background-color] duration-200",
+                expanded ? "h-[50px] w-full px-3 justify-start" : "h-[50px] w-[50px] justify-center mx-auto",
+                isActive 
                   ? "bg-[var(--accent-dim)] text-accent font-semibold shadow-sm" 
                   : "text-muted hover:bg-[var(--accent-dim)] hover:text-accent"
-                }
-              `}
+              )}
               title={!expanded ? item.label : ""}
             >
-              <Icon size={20} className={`shrink-0 transition-transform ${isActive ? "" : "group-hover:scale-110"}`} />
-              <span className={`ml-3 font-medium whitespace-nowrap overflow-hidden transition-opacity duration-300 ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"}`}>
+              <Icon size={20} className={cn("shrink-0 transition-transform", !isActive && "group-hover:scale-110")} />
+              <span className={cn("ml-3 font-medium whitespace-nowrap overflow-hidden transition-opacity duration-300", expanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden")}>
                 {item.label}
               </span>
             </Link>
@@ -130,14 +129,14 @@ export default function PortalSidebar({ userRole, defaultOpen = true }: Props) {
         <button 
           onClick={handleLogout}
           disabled={loggingOut}
-          className={`
-            flex items-center rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 transition-[background-color] duration-200 group cursor-pointer
-            ${expanded ? "h-[52px] w-full px-3 justify-start" : "h-[52px] w-[52px] justify-center mx-auto"} {/* ✅ Upgraded to 52px square */}
-          `}
+          className={cn(
+            "flex items-center rounded-lg text-muted hover:text-red-400 hover:bg-red-500/10 transition-[background-color] duration-200 group cursor-pointer",
+            expanded ? "h-[52px] w-full px-3 justify-start" : "h-[52px] w-[52px] justify-center mx-auto"
+          )}
           title={!expanded ? "Log Out" : ""}
         >
           <LogOut size={20} className="shrink-0 group-hover:scale-110 transition-transform" />
-          <span className={`ml-3 font-medium whitespace-nowrap transition-opacity duration-300 overflow-hidden ${expanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden"}`}>
+          <span className={cn("ml-3 font-medium whitespace-nowrap transition-opacity duration-300 overflow-hidden", expanded ? "opacity-100 w-auto" : "opacity-0 w-0 hidden")}>
             {loggingOut ? "..." : "Log Out"}
           </span>
         </button>

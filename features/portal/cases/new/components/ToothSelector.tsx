@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 export interface ToothSelectorProps {
   value: string;
@@ -40,13 +41,7 @@ export default function ToothSelector({ value, onChange }: ToothSelectorProps) {
         type="button"
         onClick={() => toggleTooth(num)}
         // ✅ FIX: "Tighter" padding (p-1), "Smaller" scale (105), Ring Indicator.
-        className={`
-          group flex flex-col items-center justify-end transition-all duration-200 
-          p-1 rounded-md flex-1 min-w-[32px] max-w-[50px] cursor-pointer relative
-          ${active 
-            ? "scale-105 z-20 ring-2 ring-accent bg-accent/20 opacity-100 shadow-sm" 
-            : "scale-100 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:scale-105 hover:bg-black/5 dark:hover:bg-white/5"}
-        `}
+        className={cn("group flex flex-col items-center justify-end transition-all duration-200 p-1 rounded-md flex-1 min-w-[32px] max-w-[50px] cursor-pointer relative", active ? "scale-105 z-20 ring-2 ring-accent bg-accent/20 opacity-100 shadow-sm" : "scale-100 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 hover:scale-105 hover:bg-black/5 dark:hover:bg-white/5")}
       >
         {/* Responsive Image Container */}
         <div className="relative w-full aspect-[2/3]">
@@ -61,10 +56,7 @@ export default function ToothSelector({ value, onChange }: ToothSelectorProps) {
         </div>
         
         {/* Number */}
-        <span className={`
-          mt-1 font-bold transition-colors text-[10px] sm:text-xs leading-none
-          ${active ? "text-accent" : "text-muted group-hover:text-foreground/80"}
-        `}>
+        <span className={cn("mt-1 font-bold transition-colors text-[10px] sm:text-xs leading-none", active ? "text-accent" : "text-muted group-hover:text-foreground/80")}>
           #{num}
         </span>
       </button>

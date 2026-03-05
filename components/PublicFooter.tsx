@@ -1,4 +1,6 @@
 // portal/components/PublicFooter.tsx
+import { cn } from "@/lib/utils";
+
 export default function PublicFooter() {
   return (
     <footer className="border-t border-border bg-background py-12 text-center">

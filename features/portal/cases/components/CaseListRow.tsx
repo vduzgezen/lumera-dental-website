@@ -3,6 +3,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { cn } from "@/lib/utils";
 import CopyableId from "@/features/portal/shared/components/CopyableId";
 import { formatProductName } from "@/lib/pricing";
 
@@ -34,7 +35,7 @@ const DesignerAvatar = ({ name, email }: { name: string | null, email: string })
     : email.slice(0, 2);
   return (
     <div className="flex items-center gap-2">
-      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm bg-gray-300 border border-gray-400 text-foreground dark:bg-[#9696e2]/30 dark:border-[#9696e2]/50 dark:text-white">
+      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shadow-sm bg-surface-highlight border border-border text-foreground">
         {initials.toUpperCase()}
       </div>
       <span className="text-muted text-xs truncate max-w-[100px]">

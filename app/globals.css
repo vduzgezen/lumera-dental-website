@@ -1,24 +1,56 @@
 @import "tailwindcss";
 
 :root {
-  /* --- DARK MODE (Midnight Hierarchy) --- */
-  /* Level 1: Page Background (Deepest) */
-  --background: #020617; 
+  /* --- LIGHT MODE (Default - High Contrast Hierarchy) --- */
+  /* Level 1: Page Background */
+  --background: #f1f5f9;
   
-  /* Level 2: Sidebar (Mid-Tone) */
-  --sidebar-bg: #0f172a; 
+  /* Level 2: Sidebar */
+  --sidebar-bg: #f8fafc;
   
-  /* Level 3: Surface/Tables (Elevated/Lightest) */
-  /* ✅ FIX: Updated to Dark Midnight #111b2d as requested */
-  --surface: #111b2d;    
+  /* Level 3: Surface/Tables (Pure White) */
+  --surface: #ffffff;
   
   /* Inputs */
-  --surface-highlight: #1e293b; 
+  --surface-highlight: #f1f5f9;
   
   /* Text & Borders */
-  --foreground: #f8fafc; /* White-ish */
-  --muted: #94a3b8;      
-  --border: rgba(255, 255, 255, 0.1); 
+  --foreground: #0f172a;
+  --muted: #64748b;
+  --border: #cbd5e1;
+  
+  /* Brand */
+  --accent: #6366f1;
+  --accent-dim: rgba(99, 102, 241, 0.1);
+  
+  /* Glass */
+  --glass-bg: rgba(255, 255, 255, 0.8);
+  --glass-border: #cbd5e1;
+  
+  /* Progress Bar Lines (Light Mode) */
+  --line-active: #000000;
+  --line-inactive: #d1d5db;
+  --node-border: #d1d5db;
+}
+
+.dark {
+  /* --- DARK MODE (Midnight Hierarchy) --- */
+  /* Level 1: Page Background (Deepest) */
+  --background: #020617;
+  
+  /* Level 2: Sidebar (Mid-Tone) */
+  --sidebar-bg: #0f172a;
+  
+  /* Level 3: Surface/Tables (Elevated/Lightest) */
+  --surface: #111b2d;
+  
+  /* Inputs */
+  --surface-highlight: #1e293b;
+  
+  /* Text & Borders */
+  --foreground: #f8fafc;
+  --muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.1);
   
   /* Brand */
   --accent: #9696e2;
@@ -29,42 +61,9 @@
   --glass-border: rgba(255, 255, 255, 0.1);
   
   /* Progress Bar Lines (Dark Mode) */
-  --line-active: #ffffff;      /* White for active lines in dark mode */
-  --line-inactive: #4b5563;    /* Gray-600 for inactive lines in dark mode */
-  --node-border: #374151;      /* Gray-700 for node borders in dark mode */
-}
-
-.light {
-  /* --- LIGHT MODE (High Contrast Hierarchy) --- */
-  /* Level 1: Page Background */
-  --background: #f1f5f9; 
-  
-  /* Level 2: Sidebar */
-  --sidebar-bg: #f8fafc; 
-  
-  /* Level 3: Surface/Tables (Pure White) */
-  --surface: #ffffff;    
-  
-  /* Inputs */
-  --surface-highlight: #f1f5f9; 
-  
-  /* Text & Borders */
-  --foreground: #0f172a; /* Black-ish */
-  --muted: #64748b;      
-  --border: #cbd5e1;     /* Visible Slate Border */
-  
-  /* Brand */
-  --accent: #6366f1;     
-  --accent-dim: rgba(99, 102, 241, 0.1);
-  
-  /* Glass */
-  --glass-bg: rgba(255, 255, 255, 0.8);
-  --glass-border: #cbd5e1;
-  
-  /* Progress Bar Lines (Light Mode) */
-  --line-active: #000000;      /* Black for active lines in light mode */
-  --line-inactive: #d1d5db;    /* Gray-300 for inactive lines in light mode */
-  --node-border: #d1d5db;      /* Gray-300 for node borders in light mode */
+  --line-active: #ffffff;
+  --line-inactive: #4b5563;
+  --node-border: #374151;
 }
 
 body {

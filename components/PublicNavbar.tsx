@@ -1,6 +1,7 @@
 // portal/components/PublicNavbar.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Logo from "@/components/ui/Logo";
@@ -13,9 +14,10 @@ export default function PublicNavbar() {
     return (
       <Link
         href={path}
-        className={`text-sm font-medium transition-colors hover:text-foreground ${
+        className={cn(
+          "text-sm font-medium transition-colors hover:text-foreground",
           isActive ? "text-foreground" : "text-muted"
-        }`}
+        )}
       >
         {label}
       </Link>

@@ -1,7 +1,8 @@
 // app/portal/cases/CaseListClient.tsx
 "use client";
 import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation"; 
+import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import CaseListRow from "./CaseListRow";
 import { CaseRow } from "./types";
 

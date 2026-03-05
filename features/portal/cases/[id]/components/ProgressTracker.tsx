@@ -1,5 +1,6 @@
 // portal/components/ProgressTracker.tsx
 "use client";
+import { cn } from "@/lib/utils";
 
 // Export this type so others can reuse it if needed
 export type Stage = "DESIGN" | "MILLING_GLAZING" | "SHIPPING";
@@ -29,15 +30,15 @@ export default function ProgressTracker({
               type="button"
               onClick={() => isClickable && onClickStage(s)}
               disabled={!isClickable}
-              className={`
-                flex-1 py-2 rounded-lg text-xs font-medium border transition-all
-                ${active
+              className={cn(
+                "flex-1 py-2 rounded-lg text-xs font-medium border transition-all",
+                active
                   ? "bg-accent text-white border-accent shadow-md scale-105"
                   : done
                   ? "bg-accent/20 text-foreground border-accent/30"
-                  : "bg-surface text-muted border-border"}
-                ${isClickable ? "cursor-pointer hover:bg-[var(--accent-dim)]" : "cursor-default"}
-              `}
+                  : "bg-surface text-muted border-border",
+                isClickable ? "cursor-pointer hover:bg-[var(--accent-dim)]" : "cursor-default"
+              )}
             >
               {s.replace("_", " ")}
             </button>

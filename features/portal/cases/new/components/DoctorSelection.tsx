@@ -2,6 +2,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { cn } from "@/lib/utils";
 import SearchableSelect from "@/features/portal/shared/components/SearchableSelect";
 import { CaseData, DoctorRow, ServiceLevel } from "./types";
 
@@ -115,8 +116,7 @@ export default function DoctorSelection({ doctors, data, update }: DoctorSelecti
               value={data.clinicId || ""} // Fallback to empty string if undefined
               onChange={handleClinicChange}
               disabled={availableClinics.length === 1} 
-              className={`w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition appearance-none 
-                ${availableClinics.length === 1 ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-[var(--accent-dim)]"}`}
+              className={cn("w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-foreground focus:border-accent/50 outline-none transition appearance-none", availableClinics.length === 1 ? "opacity-60 cursor-not-allowed" : "cursor-pointer hover:bg-[var(--accent-dim)]")}
             >
               {/* ✅ ADDED: Placeholder option to catch edge cases */}
               <option value="" disabled>Select a clinic...</option>

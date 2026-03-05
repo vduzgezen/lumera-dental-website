@@ -4,6 +4,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import StatusFilter from "./StatusFilter";
 import TriageBar from "./TriageBar";
 

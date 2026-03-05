@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { CaseData, ServiceLevel } from "./types";
 import ToothSelector from "./ToothSelector";
 import { formatProductName } from "@/lib/pricing";
@@ -123,11 +124,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
             {(["IN_HOUSE", "STANDARD"] as ServiceLevel[]).map((level) => (
               <label 
                 key={level} 
-                className={`flex-1 flex items-center justify-center gap-2 cursor-pointer py-2 px-3 rounded-lg border transition-all duration-200 shadow-sm
-                ${data.serviceLevel === level 
-                  // ✅ FIX: Uses semantic foreground/background for perfect theme switching
-                  ? "bg-foreground text-background border-foreground" 
-                  : "bg-surface-highlight text-muted border-border hover:bg-[var(--accent-dim)] hover:text-foreground"}`}
+                className={cn("flex-1 flex items-center justify-center gap-2 cursor-pointer py-2 px-3 rounded-lg border transition-all duration-200 shadow-sm", data.serviceLevel === level ? "bg-foreground text-background border-foreground" : "bg-surface-highlight text-muted border-border hover:bg-[var(--accent-dim)] hover:text-foreground")}
               >
                 <input 
                   type="radio" 
@@ -198,7 +195,7 @@ export default function TeethSelection({ data, update }: TeethSelectionProps) {
                           onChange={(e) => update({ isBridge: e.target.checked })}
                           className="accent-accent w-4 h-4 cursor-pointer"
                       />
-                      <span className={`text-xs font-medium transition-colors ${data.isBridge ? "text-accent" : "text-muted group-hover:text-foreground"}`}>
+                      <span className={cn("text-xs font-medium transition-colors", data.isBridge ? "text-accent" : "text-muted group-hover:text-foreground")}>
                           Bridge Restoration
                       </span>
                    </label>

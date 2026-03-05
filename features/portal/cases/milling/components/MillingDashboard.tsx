@@ -2,7 +2,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { useRouter, useSearchParams } from "next/navigation"; 
+import { useRouter, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { CaseRow } from "@/features/portal/cases/components/types";
 import MillingHeader from "./MillingHeader";
 import MillingFilters from "./MillingFilters";

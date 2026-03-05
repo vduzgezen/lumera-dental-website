@@ -3,6 +3,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
+import { cn } from "@/lib/utils";
 
 interface Props {
   uniqueDoctors: string[];

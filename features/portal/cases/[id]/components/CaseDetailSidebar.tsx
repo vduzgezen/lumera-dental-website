@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { cn } from "@/lib/utils";
 import HtmlViewerUploader from "./HtmlViewerUploader";
 import FileUploader from "@/components/ui/FileUploader";
 import CommentsPanel from "./CommentsPanel";
@@ -121,18 +122,20 @@ export default function CaseDetailSidebar({
     <div className="h-14 flex items-center border-b border-border bg-surface shrink-0 px-2">
       <button
         onClick={() => handleTabChange("discussion")}
-        className={`flex-1 h-full flex items-center justify-center text-sm font-medium border-b-2 transition-colors ${
+        className={cn(
+          "flex-1 h-full flex items-center justify-center text-sm font-medium border-b-2 transition-colors",
           activeTab === "discussion" ? "border-accent text-foreground" : "border-transparent text-muted hover:text-foreground"
-        }`}
+        )}
       >
          Discussion
       </button>
   
       <button
         onClick={() => handleTabChange("history")}
-        className={`flex-1 h-full flex items-center justify-center text-sm font-medium border-b-2 transition-colors ${
+        className={cn(
+          "flex-1 h-full flex items-center justify-center text-sm font-medium border-b-2 transition-colors",
           activeTab === "history" ? "border-accent text-foreground" : "border-transparent text-muted hover:text-foreground"
-        }`}
+        )}
       >
         History
       </button>

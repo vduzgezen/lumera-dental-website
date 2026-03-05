@@ -23,7 +23,13 @@ export async function POST(
         shippingEta: eta ? new Date(eta) : null,
         shippedAt: new Date(), // Auto-set shipped timestamp
         status: "SHIPPED",     // Auto-update status
-        stage: "SHIPPING"      // Auto-update stage
+        stage: "SHIPPING",     // Auto-update stage
+        events: {
+          create: {
+            to: "SHIPPED",
+            note: `Shipped via ${carrier} (Tracking: ${tracking})`,
+          }
+        }
       },
     });
 

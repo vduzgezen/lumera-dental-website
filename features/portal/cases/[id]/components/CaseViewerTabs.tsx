@@ -1,6 +1,7 @@
 // features/case-dashboard/components/CaseViewerTabs.tsx
 "use client";
 import { useEffect, useState, memo, useRef } from "react";
+import { cn } from "@/lib/utils";
 import dynamic from "next/dynamic";
 import CaseActions from "./CaseActions";
 import type { Role, CaseStatus } from "@/lib/types";
@@ -200,7 +201,7 @@ export default function CaseViewerTabs({
         
         {/* TABS RENDERER */}
         {/* ✅ DYNAMIC OVERFLOW: When dropdown is open, remove overflow-x-auto to prevent clipping */}
-        <div className={`flex items-center h-full ${isDesignDropdownOpen ? "overflow-visible" : "overflow-x-auto custom-scrollbar"}`}>
+        <div className={cn("flex items-center h-full", isDesignDropdownOpen ? "overflow-visible" : "overflow-x-auto custom-scrollbar")}>
             
             {/* 1. FIXED TABS */}
             {fixedTabs.map(t => (
@@ -209,15 +210,14 @@ export default function CaseViewerTabs({
                   type="button"
                   onClick={() => !t.disabled && selectTab(t.key)}
                   disabled={t.disabled}
-                  className={`
-                    px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center whitespace-nowrap cursor-pointer
-                    ${tab === t.key
+                  className={cn(
+                    "px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center whitespace-nowrap cursor-pointer",
+                    tab === t.key
                         ? "border-[#9696e2] text-[#9696e2]" 
                         : t.disabled
                         ? "border-transparent text-muted/30 !cursor-not-allowed"
                         : "border-transparent text-muted hover:text-foreground"
-                    }
-                  `}
+                  )}
                 >
                   {t.label}
                 </button>
@@ -229,15 +229,14 @@ export default function CaseViewerTabs({
                     type="button"
                     onClick={() => !designTabs[0].disabled && selectTab(designTabs[0].key)}
                     disabled={designTabs[0].disabled}
-                    className={`
-                        px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center whitespace-nowrap cursor-pointer
-                        ${tab === designTabs[0].key
+                    className={cn(
+                        "px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center whitespace-nowrap cursor-pointer",
+                        tab === designTabs[0].key
                             ? "border-[#9696e2] text-[#9696e2]" 
                             : designTabs[0].disabled
                             ? "border-transparent text-muted/30 !cursor-not-allowed"
                             : "border-transparent text-muted hover:text-foreground"
-                        }
-                    `}
+                    )}
                 >
                     {designTabs[0].label}
                 </button>
@@ -247,16 +246,15 @@ export default function CaseViewerTabs({
                 <div className="relative h-full flex items-center" ref={designDropdownRef}>
                     <button
                         onClick={() => setIsDesignDropdownOpen(!isDesignDropdownOpen)}
-                        className={`
-                            px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer
-                            ${isDesignDropdownActive
+                        className={cn(
+                            "px-4 h-full text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer",
+                            isDesignDropdownActive
                                 ? "border-[#9696e2] text-[#9696e2]" 
                                 : "border-transparent text-muted hover:text-foreground"
-                            }
-                        `}
+                        )}
                     >
                         {isDesignDropdownActive ? activeDesignTab?.label : "Designs"}
-                        <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${isDesignDropdownOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className={cn("w-3.5 h-3.5 transition-transform duration-200", isDesignDropdownOpen && "rotate-180")} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
@@ -275,15 +273,14 @@ export default function CaseViewerTabs({
                                             }
                                         }}
                                         disabled={t.disabled}
-                                        className={`
-                                            w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer
-                                            ${tab === t.key 
+                                        className={cn(
+                                            "w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors cursor-pointer",
+                                            tab === t.key 
                                                 ? "bg-[var(--accent-dim)] text-accent font-semibold" 
                                                 : t.disabled 
                                                 ? "text-muted opacity-50 !cursor-not-allowed" 
                                                 : "text-foreground hover:bg-surface-highlight hover:text-accent"
-                                            }
-                                        `}
+                                        )}
                                     >
                                         {t.label}
                                     </button>

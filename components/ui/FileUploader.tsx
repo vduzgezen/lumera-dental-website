@@ -1,6 +1,7 @@
 // components/ui/FileUploader.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
 import { useState } from "react";
 
 type Role = "customer" | "lab" | "admin" | "milling";

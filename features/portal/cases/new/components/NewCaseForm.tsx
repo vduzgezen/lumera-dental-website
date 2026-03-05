@@ -3,6 +3,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { cn } from "@/lib/utils";
 import { CaseData, INITIAL_DATA, DoctorRow, ServiceLevel } from "./types";
 import { useTheme } from "@/components/ui/ThemeProvider";
 

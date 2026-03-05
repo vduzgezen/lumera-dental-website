@@ -2,6 +2,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 interface Props {
   actionCount: number;

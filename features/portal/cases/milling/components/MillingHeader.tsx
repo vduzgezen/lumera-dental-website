@@ -1,6 +1,8 @@
 // portal/app/portal/cases/milling/MillingHeader.tsx
 "use client";
 
+import { cn } from "@/lib/utils";
+
 interface Props {
   queueCount: number;
   selectedCount: number;

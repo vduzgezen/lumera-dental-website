@@ -1,5 +1,6 @@
 // portal/components/SearchableSelect.tsx
 "use client";
+import { cn } from "@/lib/utils";
 import { useState, useRef, useEffect } from "react";
 
 type Option = { id: string; label: string; subLabel?: string };
@@ -64,10 +65,10 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
         type="button"
         disabled={disabled}
         onClick={handleToggle}
-        className={`
-          w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-left flex items-center justify-between transition
-          ${disabled ? "opacity-50 cursor-not-allowed" : "hover:border-accent/30 focus:border-accent/50 cursor-pointer"}
-        `}
+        className={cn(
+          "w-full rounded-lg bg-surface-highlight border border-border px-4 py-3 text-left flex items-center justify-between transition",
+          disabled ? "opacity-50 cursor-not-allowed" : "hover:border-accent/30 focus:border-accent/50 cursor-pointer"
+        )}
       >
         <div className="flex flex-col items-start truncate">
             <span className={selectedOption ? "text-foreground" : "text-muted"}>
@@ -107,10 +108,10 @@ export default function SearchableSelect({ label, options, value, onChange, onSe
                     onChange(opt.id);
                     setIsOpen(false);
                   }}
-                  className={`
-                    w-full text-left px-4 py-3 text-sm border-b border-border hover:bg-[var(--accent-dim)] transition cursor-pointer
-                    ${value === opt.id ? "bg-accent/10 text-accent" : "text-foreground/80"}
-                  `}
+                  className={cn(
+                    "w-full text-left px-4 py-3 text-sm border-b border-border hover:bg-[var(--accent-dim)] transition cursor-pointer",
+                    value === opt.id ? "bg-accent/10 text-accent" : "text-foreground/80"
+                  )}
                 >
                   <div className="font-medium">{opt.label}</div>
                   {opt.subLabel && <div className="text-xs text-muted">{opt.subLabel}</div>}

@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { cn } from "@/lib/utils";
 
 interface ImageAnnotatorProps {
   file: File;
@@ -218,11 +219,38 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
   };
 
   // Zoom Handlers
-  const handleZoomIn = () => setZoom(prev => Math.min(prev + 0.5, 4));
-  const handleZoomOut = () => setZoom(prev => Math.max(prev - 0.5, 0.5));
+  const adjustZoom = (newZoom: number) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const oldZoom = zoom;
+    if (oldZoom === newZoom) return;
+
+    // 1. Find the current center pixel of your screen
+    const centerX = container.scrollLeft + container.clientWidth / 2;
+    const centerY = container.scrollTop + container.clientHeight / 2;
+
+    // 2. Calculate the ratio (0 to 1) of where we are looking
+    const ratioX = centerX / (baseSize.w * oldZoom);
+    const ratioY = centerY / (baseSize.h * oldZoom);
+
+    // 3. Apply the zoom
+    setZoom(newZoom);
+
+    // 4. Wait 1 frame for the DOM to resize, then perfectly center the new scroll position
+    requestAnimationFrame(() => {
+      if (containerRef.current) {
+        containerRef.current.scrollLeft = (ratioX * (baseSize.w * newZoom)) - containerRef.current.clientWidth / 2;
+        containerRef.current.scrollTop = (ratioY * (baseSize.h * newZoom)) - containerRef.current.clientHeight / 2;
+      }
+    });
+  };
+
+  const handleZoomIn = () => adjustZoom(Math.min(zoom + 0.5, 4));
+  const handleZoomOut = () => adjustZoom(Math.max(zoom - 0.5, 1));
   const handleResetZoom = () => {
-    setZoom(1);
-    setTool('draw'); // Reset to draw when zoomed out
+    adjustZoom(1);
+    setTool('draw');
   };
 
   return (
@@ -238,13 +266,13 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
           <div className="flex items-center bg-surface border border-border rounded-lg p-1 shadow-sm">
              <button 
                onClick={() => setTool('draw')} 
-               className={`px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition-all duration-200 ${tool === 'draw' ? 'bg-[var(--accent-dim)] text-accent shadow-sm' : 'text-muted hover:bg-surface-highlight hover:text-foreground'}`}
+               className={cn("px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition-all duration-200", tool === 'draw' ? 'bg-[var(--accent-dim)] text-accent shadow-sm' : 'text-muted hover:bg-surface-highlight hover:text-foreground')}
              >
                Draw
              </button>
              <button 
                onClick={() => setTool('pan')} 
-               className={`px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition-all duration-200 ${tool === 'pan' ? 'bg-[var(--accent-dim)] text-accent shadow-sm' : 'text-muted hover:bg-surface-highlight hover:text-foreground'}`}
+               className={cn("px-4 py-1.5 text-xs font-bold rounded cursor-pointer transition-all duration-200", tool === 'pan' ? 'bg-[var(--accent-dim)] text-accent shadow-sm' : 'text-muted hover:bg-surface-highlight hover:text-foreground')}
              >
                Pan
              </button>
@@ -296,7 +324,7 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
           <button 
             onClick={handleSave}
             disabled={!imageLoaded}
-            className="px-6 py-2 rounded-lg font-bold transition-all shadow-sm bg-foreground text-background border-2 border-foreground hover:opacity-80 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            className="px-4 py-2 rounded-lg border border-border bg-surface hover:bg-[var(--accent-dim)] transition-colors shadow-sm cursor-pointer"
           >
             Save Annotation
           </button>
@@ -309,9 +337,9 @@ export default function ImageAnnotator({ file, onSave, onCancel }: ImageAnnotato
         className={`relative bg-surface rounded-lg shadow-2xl border border-border w-full max-w-5xl max-h-[75vh] overflow-auto custom-scrollbar ${tool === 'pan' ? 'cursor-grab active:cursor-grabbing' : ''}`}
       >
         {/* INNER WRAPPER: Forces expansion for proportional zooming */}
-        <div className="flex items-center justify-center min-h-full min-w-full p-2">
+        <div className="flex min-h-full min-w-full p-2">
           <div 
-            className="relative transition-all duration-200"
+            className="relative m-auto"
             style={{ 
               width: baseSize.w ? `${baseSize.w * zoom}px` : 'auto', 
               height: baseSize.h ? `${baseSize.h * zoom}px` : 'auto',

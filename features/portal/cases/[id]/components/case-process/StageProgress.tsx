@@ -2,6 +2,7 @@
 "use client";
 
 import React from "react";
+import { cn } from "@/lib/utils";
 import type { ProductionStage } from "@/lib/types";
 
 // The strict 4-stage order
@@ -39,28 +40,28 @@ export function StageProgress({ currentStage, isFullyDelivered }: StageProgressP
             {/* NODE */}
             <div className="flex flex-col items-center relative z-10">
               <div
-                className={`
-                  w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all duration-300
-                  ${isFullyFinished
+                className={cn(
+                  "w-7 h-7 rounded-full flex items-center justify-center text-[10px] font-bold border-2 transition-all duration-300",
+                  isFullyFinished
                     ? "bg-green-600 border-green-600 text-white shadow-lg shadow-green-500/30 scale-110" 
                     : (isDone || (isLast && isCurrent))
                       ? "!bg-[#9696e2] !border-[#9696e2] text-white" 
                       : isCurrent
                         ? "bg-surface !border-[#9696e2] text-[#9696e2] scale-110 shadow-lg shadow-[#9696e2]/20"
-                        : "bg-surface border-foreground text-foreground"}
-                `}
+                        : "bg-surface border-foreground text-foreground"
+                )}
               >
                 {(isDone || isFullyFinished) ? "✓" : idx + 1}
               </div>
 
               {/* LABEL */}
               <span
-                className={`
-                  absolute -bottom-7 whitespace-nowrap text-[9px] font-bold tracking-wider uppercase transition-colors
-                  ${isFullyFinished
+                className={cn(
+                  "absolute -bottom-7 whitespace-nowrap text-[9px] font-bold tracking-wider uppercase transition-colors",
+                  isFullyFinished
                     ? "text-green-600 dark:text-green-400"
-                    : isCurrent ? "text-[#9696e2]" : "text-gray-400"}
-                `}
+                    : isCurrent ? "text-[#9696e2]" : "text-muted"
+                )}
               >
                 {(isLast && isFullyDelivered) ? STAGE_LABEL.DELIVERED : STAGE_LABEL[s]}
               </span>

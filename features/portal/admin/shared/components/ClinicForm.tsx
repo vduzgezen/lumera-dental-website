@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AddressPicker, { AddressData } from "./AddressPicker";
+import { cn } from "@/lib/utils";
 
 export default function ClinicForm({ initialData, onClose }: { initialData?: any, onClose: () => void }) {
   const router = useRouter();
